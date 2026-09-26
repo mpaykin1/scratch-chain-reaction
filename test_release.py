@@ -11,6 +11,7 @@ with zipfile.ZipFile(p) as z:
   blocks=t['blocks']
   for costume in t['costumes']:
    if costume['md5ext'] not in assets: missing.append(costume['md5ext'])
+   if costume['dataFormat']=='png':assert costume.get('bitmapResolution')==1,('PNG bitmap scale bug',t['name'])
    assert costume['rotationCenterX']>=0 and costume['rotationCenterY']>=0
   for bid,b in blocks.items():
    for key in ('next','parent'):

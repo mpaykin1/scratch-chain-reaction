@@ -10,7 +10,7 @@ def image_costume(name,path):
     md5=hashlib.md5(data).hexdigest(); fname=f'{md5}.{ext}';ASSETS[fname]=data
     from PIL import Image
     with Image.open(path) as im: w,h=im.size
-    return dict(assetId=md5,name=name,md5ext=fname,dataFormat=ext,rotationCenterX=w//2,rotationCenterY=h//2)
+    return dict(assetId=md5,name=name,md5ext=fname,dataFormat=ext,bitmapResolution=1,rotationCenterX=w//2,rotationCenterY=h//2)
 def svg_costume(name,body,w,h):
     raw=f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">{body}</svg>'.encode()
     md5=hashlib.md5(raw).hexdigest();fn=md5+'.svg';ASSETS[fn]=raw
