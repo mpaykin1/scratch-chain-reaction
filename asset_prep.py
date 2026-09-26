@@ -16,7 +16,7 @@ bg=ImageEnhance.Color(bg).enhance(.95)
 save(bg,'start_world.png')
 # Isolate visually unique sectors of lush world for reveal overlays with feathered boundaries.
 sectors={'city':((56,165,555,490),(225,135)),
-         'forest':((570,138,1007,435),(232,160)),
+         'forest':((530,164,820,364),(232,160)),
          'energy':((833,155,1198,510),(232,161)),
          'volcano':((1278,124,1660,550),(219,175)),
          'river':((655,352,1058,642),(170,135))}

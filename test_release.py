@@ -50,3 +50,8 @@ with zipfile.ZipFile(p) as z:
  print('ANIMATION_PASS '+str({n:len(next(t['costumes'] for t in targets if t['name']==n)) for n in ['Злой Джинн','Бредущие люди','Дым и лава','Ветряк 1','Пыль и ветер']}))
  assert 1_000_000<os.path.getsize(p)<15_000_000
  print('BUNDLE_PASS '+str(os.path.getsize(p))+' bytes zip valid and assets included')
+
+# Genie must overhang the dialogue without covering the interactive city choice.
+layers={t['name']:t['layerOrder'] for t in project['targets']}
+assert layers['Диалог Джинна']<layers['Злой Джинн']<layers['Выбор Город'],layers
+print('CLICK_VISIBILITY_PASS city button rendered above genie')

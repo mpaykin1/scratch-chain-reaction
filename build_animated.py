@@ -213,6 +213,12 @@ put('Начать заново',[svg_costume('Сброс',restart_svg,27,24)],re
 # Genie upper body + purple smoke 4 real source-created frames; overhangs the panel boundaries.
 g=Script();g.link(g.hat('flag'),g.show(),g.size(100));g.link(g.hat('flag',12,120),g.forever([g.next(),g.wait(.3)]))
 put('Злой Джинн',[image_costume('Джинн '+str(i),f'genie_{i}.png') for i in range(4)],g,x=-177,y=-78,size=95)
+# Keep genie above his dialogue but below the choice cards, so his outstretched
+# hand cannot intercept taps on the first card. Scratch uses drawable order.
+genie=targets.pop()
+panel_i=next(i for i,t in enumerate(targets) if t['name']=='Диалог Джинна')
+targets.insert(panel_i+1,genie)
+for order,t in enumerate(targets):t['layerOrder']=order
 monitors=[]
 project={'targets':targets,'monitors':monitors,'extensions':[],'meta':{'semver':'3.0.0','vm':'11.3.0','agent':'World Server · animated Scratch native sb3'}}
 with zipfile.ZipFile(OUT,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
