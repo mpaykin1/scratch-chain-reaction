@@ -23,7 +23,7 @@ scene = """<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#122b5
 <text x="21" y="29" fill="#ffdc91" font-family="Arial,sans-serif" font-size="16" font-weight="bold">ЦЕПНАЯ РЕАКЦИЯ</text>
 <text x="21" y="45" fill="#cbecf0" font-family="Arial,sans-serif" font-size="10">Каждое решение меняет живой мир</text>
 <rect x="0" y="302" width="480" height="58" fill="#102333" opacity=".93"/>
-<text x="240" y="316" font-family="Arial" text-anchor="middle" font-size="10" fill="#d3edeb">Нажми на объект, чтобы построить • ответь Джинну 1–5</text>
+<rect x="0" y="258" width="480" height="28" fill="#102333" opacity=".84"/><text x="240" y="276" font-family="Arial" text-anchor="middle" font-size="10" fill="#d3edeb">Нажми на объект, чтобы построить • ответь Джинну 1–5</text>
 <path d="M0 302H480" stroke="#f7cb83" opacity=".65"/>"""
 button_style = '<rect x="2" y="2" width="92" height="46" rx="12" fill="#142e42" stroke="#fbd48d" stroke-width="2"/><rect x="5" y="5" width="86" height="40" rx="9" fill="#214757"/>'
 buttons = [
@@ -108,11 +108,12 @@ tick.append(S.ifvar("Вода",18,[S.change("Еда",-12),S.change("Эколог
 tick.append(S.ifvar("Экология",18,[S.change("Еда",-7),S.set("Последствие","Экологический кризис! Урожай и пищевые цепочки нарушены.")]))
 for var in ["Энергия","Вода","Еда","Экология","Население","Бюджет"]:
     tick.append(S.ifvar(var,0,[S.set(var,0)]))
+    tick.append(S.ifvar(var,100,[S.set(var,100)],less=False))
 tick.append(S.emit("genie"))
 S.link(*tick)
 stage=make_target("Stage",[backdrop],S.blocks,stage=True)
 stage["variables"]={name:[name,{"Ход":0,"Население":20,"Энергия":65,"Вода":70,"Еда":70,"Экология":68,"Бюджет":100,"Последствие":"","Идея":""}.get(name,0)] for name in ["Ход","Население","Энергия","Вода","Еда","Экология","Бюджет","Последствие","Идея"]}
-stage["broadcasts"]={name:name for name in ["city","forest","energy","volcano","changed","genie","render"]}
+stage["broadcasts"]={name:name for name in ["city","forest","energy","volcano","changed","genie","render","visual_city","visual_forest","visual_energy","visual_volcano","visual_project"]}
 targets=[stage]
 for title,key,x,art in buttons:
     icon=svg(title,button_style+art+f'<text x="47" y="47" text-anchor="middle" font-family="Arial" font-size="11" fill="#f9e4aa" font-weight="bold">{title}</text>',96,54)
@@ -132,7 +133,12 @@ for idx,(key,(title,x,y,art)) in enumerate(world.items()):
         show.append(b.add("looks_changesizeby",inputs={"CHANGE":b.inp(7)}))
         show.append(b.wait(.05))
     b.link(*show)
+    b.link(b.hat("visual_"+key,600,15),b.show())
     targets.append(make_target(title,[costume],b.blocks,x=x,y=y,visible=False,size=90))
+idea_art='<rect x="8" y="8" width="83" height="61" rx="13" fill="#3a5774" stroke="#ffda91" stroke-width="3"/><path d="M30 21L74 21 68 60 38 60Z" fill="#ffdc8b"/><path d="M43 31Q47 19 58 28Q68 34 56 45V52H46V43Q39 39 43 31Z" fill="#f9a951"/><path d="M47 56H56" stroke="#654d54" stroke-width="3"/><text x="50" y="17" font-family="Arial" font-size="9" fill="#ffeaad" text-anchor="middle">НОВЫЙ ПРОЕКТ</text>'
+idea_block=Blocks();idea_block.link(idea_block.hat("flag",10,10),idea_block.hide())
+idea_block.link(idea_block.hat("visual_project",10,110),idea_block.show())
+targets.append(make_target("Новый проект",[svg("Идея",idea_art,100,76)],idea_block.blocks,x=-35,y=-82,size=78,visible=False))
 genie_art="""<ellipse cx="47" cy="92" rx="38" ry="8" fill="#143345" opacity=".4"/>
 <path d="M25 58Q15 25 47 18Q84 18 77 59L65 81H34Z" fill="#6c58bd"/>
 <path d="M21 53Q34 71 36 87H59Q54 66 77 53Q67 63 56 54L42 51Z" fill="#9c8cfc"/>
@@ -142,21 +148,46 @@ genie_art="""<ellipse cx="47" cy="92" rx="38" ry="8" fill="#143345" opacity=".4"
 <path d="M20 63L6 47M75 62L89 47" stroke="#e7ba8e" stroke-width="9" stroke-linecap="round"/>
 <path d="M46 0L39 -10 48 -23 57 -10Z" fill="#fbd17e"/>"""
 g=Blocks()
-hello=g.hat("flag",20,20);g.link(hello,g.say("Я — Злой Джинн! Построй что-нибудь. За каждым решением будет цена.",5))
+hello=g.hat("flag",20,20);g.link(hello,g.say("Я — Злой Джинн! Нажми Город, Лес, Энергию или Вулкан.",2))
 seq=[g.hat("genie",20,170),g.add("looks_sayforsecs",inputs={"MESSAGE":g.variable("Последствие"),"SECS":g.inp(3)}),
      g.ask("Джинн: 1 Сжечь лес  2 Мегазавод  3 Импорт  4 Компромисс  5 Свой вариант. Введи 1-5")]
+def clamp(g):
+    return [g.ifvar(v,limit,[g.set(v,limit)],less=(limit==0))
+            for v in ["Энергия","Вода","Еда","Экология","Население","Бюджет"]
+            for limit in [0,100]]
+def append_effect(msg):
+    join=g.add("operator_join",inputs={"STRING1":g.variable("Последствие"),"STRING2":g.txt(msg)})
+    node=g.add("data_setvariableto",fields={"VARIABLE":["Последствие","Последствие"]},inputs={"VALUE":[2,join]})
+    g.blocks[join]["parent"]=node
+    return node
+def if_idea(words,body):
+    checks=[g.add("operator_contains",inputs={"STRING1":g.variable("Идея"),"STRING2":g.txt(w)}) for w in words]
+    cond=checks[0]
+    if len(checks)>1:
+        cond=g.add("operator_or",inputs={"OPERAND1":[2,checks[0]],"OPERAND2":[2,checks[1]]})
+        for item in checks:g.blocks[item]["parent"]=cond
+    node=g.add("control_if",inputs={"CONDITION":[2,cond],"SUBSTACK":[2,body[0]]})
+    g.blocks[cond]["parent"]=node;g.blocks[body[0]]["parent"]=node
+    g.link(*body)
+    return node
 for val,changeset,comment in [
     ("1",{"Энергия":14,"Экология":-18,"Вода":-7},"Лес сожжён ради энергии. Вода и экология падают."),
     ("2",{"Энергия":10,"Экология":-14,"Еда":-8},"Мегазавод заработал. Загрязнение и нехватка еды."),
     ("3",{"Энергия":10,"Бюджет":-20,"Вода":-3},"Импорт спас сеть, но бюджет тает, растёт зависимость."),
     ("4",{"Энергия":5,"Экология":6,"Бюджет":-11},"Компромисс: модернизация + восстановление леса.")
 ]:
-    body=[g.change(k,v) for k,v in changeset.items()]+[g.set("Последствие",comment),g.add("looks_sayforsecs",inputs={"MESSAGE":g.variable("Последствие"),"SECS":g.inp(3)})]
+    body=[g.change(k,v) for k,v in changeset.items()]+[g.set("Последствие",comment)]+clamp(g)+[g.add("looks_sayforsecs",inputs={"MESSAGE":g.variable("Последствие"),"SECS":g.inp(3)})]
     seq.append(g.eqanswer(val,body))
-own=[g.ask("Опиши свой проект: лес / город / энергия / вулкан или любая идея"),
+own=[g.ask("Опиши свой проект: лес / город / солнечная энергия / вулкан или любая идея"),
      g.add("data_setvariableto",fields={"VARIABLE":["Идея","Идея"]},inputs={"VALUE":[2,g.add("sensing_answer")]}),
-     g.change("Бюджет",-8),g.change("Экология",3),g.set("Последствие","Жители начали исследовать твою идею. Пока эффект: -8 бюджет, +3 экология."),
-     g.add("looks_sayforsecs",inputs={"MESSAGE":g.variable("Последствие"),"SECS":g.inp(4)})]
+     g.change("Бюджет",-8),g.change("Экология",3),
+     g.set("Последствие","Твой проект начался. Базовый эффект: -8 бюджет, +3 экология. "),
+     g.emit("visual_project"),
+     if_idea(["лес","дерев"],[g.change("Экология",10),g.change("Вода",7),g.emit("visual_forest"),append_effect("Посажен новый лес: +10 экология, +7 вода. ")]),
+     if_idea(["город","дом"],[g.change("Население",8),g.change("Вода",-5),g.emit("visual_city"),append_effect("Построены дома: +8 жителей, -5 вода. ")]),
+     if_idea(["солн","энерг"],[g.change("Энергия",18),g.change("Бюджет",-8),g.emit("visual_energy"),append_effect("Запущена энергия: +18 ток, -8 бюджет. ")]),
+     if_idea(["вулкан","геотерм"],[g.change("Энергия",17),g.change("Экология",-12),g.emit("visual_volcano"),append_effect("Запущена геотермия: +17 ток, -12 экология. ")])
+] + clamp(g) + [g.add("looks_sayforsecs",inputs={"MESSAGE":g.variable("Последствие"),"SECS":g.inp(4)})]
 # connect answer reporter parent to set-variable block
 g.blocks[own[1]]["inputs"]["VALUE"][1] and g.blocks[g.blocks[own[1]]["inputs"]["VALUE"][1]] .update({"parent":own[1]})
 seq.append(g.eqanswer("5",own))
