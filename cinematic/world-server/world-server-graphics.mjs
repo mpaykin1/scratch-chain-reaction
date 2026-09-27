@@ -84,5 +84,5 @@ export function createWorldServerGraphics(host,{win=window,doc=document}={}){
     if(!canvas.hidden)paint();
   }
   win.addEventListener('resize',paint);
-  return {update,destroy(){win.removeEventListener('resize',paint);canvas.remove();}};
+  return {update,repaint:paint,destroy(){win.removeEventListener('resize',paint);canvas.remove();}};
 }
