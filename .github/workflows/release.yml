@@ -18,6 +18,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: python test_native_scratch.py
+      - name: Causal simulator regression tests
+        run: node --test test/scenario-engine.test.mjs
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
       - name: Serve game
@@ -28,10 +30,18 @@ jobs:
         run: node qa_release.cjs
         env:
           CI: 'true'
+      - name: End-to-end water-crisis scenario on three screen sizes
+        run: node test/scenario-ui.cjs
+        env:
+          CI: 'true'
+          BASE_URL: http://127.0.0.1:8765
+          ARTIFACT_DIR: scenario-qa
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: scratch-visual-qa
-          path: qa-artifacts/*.png
+          path: |
+            qa-artifacts/*.png
+            scenario-qa/*.png
           if-no-files-found: ignore
           retention-days: 5
