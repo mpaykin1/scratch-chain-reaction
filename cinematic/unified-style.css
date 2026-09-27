@@ -35,3 +35,36 @@
   #game[data-unified="true"] .flying-dragon:not([hidden]),
   #game .flying-dragon.dragon-hit{animation:none}
 }
+
+/* Active server fire and persistent ruins, not a client-side random effect. */
+#game[data-unified="true"] .city-fire:not([hidden]){
+  position:absolute;z-index:7;left:14%;bottom:34%;pointer-events:none;
+  display:flex;justify-content:center;align-items:flex-end;
+  width:min(29vw,355px);height:min(14vw,150px);
+  color:#ff9b38;font-size:clamp(32px,7vw,100px);
+  text-shadow:0 0 17px #ec5b1a,0 0 45px #f94915;
+  filter:drop-shadow(0 -8px 12px #cb5b23);
+  animation:chain-fire 1.25s ease-in-out infinite alternate;
+}
+#game[data-unified="true"][data-ruined="true"] #cityArt{
+  opacity:.53;transform:scale(1) translateY(12px);
+  filter:grayscale(1) sepia(.9) brightness(.35) saturate(.4);
+}
+#game[data-unified="true"][data-burning="true"] .scenery{
+  filter:sepia(.27) saturate(.82) contrast(1.09);
+}
+#game[data-unified="true"][data-ruined="true"] .world-server-isometric{
+  filter:grayscale(1) sepia(.8) brightness(.42);
+}
+@keyframes chain-fire{
+  from{transform:translateY(2px) scale(.94);opacity:.85}
+  to{transform:translateY(-12px) scale(1.07);opacity:1}
+}
+@media(orientation:portrait){
+  #game[data-unified="true"] .city-fire:not([hidden]){
+    left:0;bottom:42%;width:46vw;height:20vw;font-size:clamp(37px,10vw,76px);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #game[data-unified="true"] .city-fire:not([hidden]){animation:none}
+}
