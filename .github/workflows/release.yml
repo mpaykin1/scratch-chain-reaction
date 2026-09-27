@@ -20,6 +20,8 @@ jobs:
       - run: python test_native_scratch.py
       - name: Causal simulator regression tests
         run: node --test test/scenario-engine.test.mjs
+      - name: Reactive engine deterministic and safety regression tests
+        run: node --test test/world-engine.test.mjs
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
       - name: Serve game
@@ -28,6 +30,10 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
       - name: Desktop, portrait, landscape and gameplay
         run: node qa_release.cjs
+        env:
+          CI: 'true'
+      - name: Follow-up actions, causal timeline and 85% viewport on phone and desktop
+        run: node test/world-ui.cjs
         env:
           CI: 'true'
       - name: End-to-end water-crisis scenario on three screen sizes
