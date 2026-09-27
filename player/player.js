@@ -11,11 +11,14 @@
   const message = el('message');
   const retry = el('retry');
   const info = el('info');
-  const portrait = window.matchMedia('(orientation: portrait) and (max-width: 900px)').matches;
+  const orientation = window.matchMedia('(orientation: portrait) and (max-width: 900px)');
+  let portrait = orientation.matches;
   const width = 480;
-  const gameHeight = portrait
-    ? Math.max(720, Math.min(1300, Math.round(width * stage.clientHeight / stage.clientWidth)))
+  const stageHeight = () => portrait
+    ? Math.max(720, Math.min(1300, Math.round(width * stage.clientHeight / Math.max(1,stage.clientWidth))))
     : 360;
+  let orientationPending = false;
+  let generation = 0;
   let player = null;
   let ready = false;
   let busy = false;
@@ -104,10 +107,57 @@
     target('Помощь')?.setVisible?.(false);
     target('Начать заново')?.setVisible?.(false);
   }
-  async function start() {
-    if (busy) return;
+  function snapshotState() {
+    const vars = player?.vm?.runtime?.getTargetForStage?.()?.variables || {};
+    return Object.fromEntries(Object.values(vars).map(v => [v.name, v.value]));
+  }
+  function restoreState(snapshot) {
+    if (!snapshot || !player) return;
+    const runtime = player.vm.runtime;
+    const vars = runtime.getTargetForStage().variables;
+    for (const v of Object.values(vars)) {
+      if (Object.prototype.hasOwnProperty.call(snapshot, v.name)) {
+        v.value = v.name === 'Занято' ? 0 : snapshot[v.name];
+      }
+    }
+    const visuals = {Город: 'city', Лес: 'forest', Энергия: 'energy', Вулкан: 'volcano'};
+    for (const [name, event] of Object.entries(visuals)) {
+      if (Number(snapshot['Построено' + name]) > 0) {
+        runtime.startHats('event_whenbroadcastreceived', {BROADCAST_OPTION: 'visual_' + event});
+      }
+    }
+    for (const event of ['panel', 'render']) {
+      runtime.startHats('event_whenbroadcastreceived', {BROADCAST_OPTION: event});
+    }
+  }
+  function disposePlayer() {
+    ready = false;
+    window.__ownTurboWarp = null;
+    if (player) {
+      try { player.stopAll?.(); } catch (error) { console.warn('stopAll', error); }
+      try { player.dispose?.(); } catch (error) { console.warn('dispose', error); }
+      try { player.vm?.quit?.(); } catch (error) { console.warn('vm.quit', error); }
+      player = null;
+    }
+    stage.replaceChildren();
+  }
+  async function verifyBundle(bytes, expected) {
+    if (!expected || !window.crypto?.subtle) return true;
+    const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+    const actual = Array.from(new Uint8Array(digest), v => v.toString(16).padStart(2, '0')).join('');
+    return actual === expected;
+  }
+  async function start({preserveState = false} = {}) {
+    if (busy) {
+      orientationPending = true;
+      return;
+    }
     busy = true;
+    const snapshot = preserveState && ready ? snapshotState() : null;
+    const run = ++generation;
     diagnostics.error = null;
+    portrait = orientation.matches;
+    diagnostics.portrait = portrait;
     retry.hidden = true;
     loading.classList.remove('error');
     loading.hidden = false;
@@ -116,10 +166,10 @@
       if (!window.Scaffolding?.Scaffolding) {
         throw new Error('Локальный TurboWarp не загружен (vendor/scaffolding-with-music.js)');
       }
-      stage.replaceChildren();
+      disposePlayer();
       player = new window.Scaffolding.Scaffolding();
       player.width = width;
-      player.height = gameHeight;
+      player.height = stageHeight();
       player.resizeMode = 'dynamic-resize';
       player.editableLists = false;
       player.shouldConnectPeripherals = true;
@@ -127,25 +177,52 @@
       player.setup();
       player.appendTo(stage);
       diagnostics.source = portrait ? './chain-reaction-portrait.sb3' : './chain-reaction-wide.sb3';
-      const response = await fetch(diagnostics.source, {cache: 'no-cache'});
-      if (!response.ok) throw new Error('Наш файл игры недоступен: HTTP ' + response.status);
-      const bytes = await response.arrayBuffer();
-      if (bytes.byteLength < 200_000) throw new Error('Файл Scratch слишком мал или повреждён');
+      const manifestResponse = await fetch('./build-manifest.json', {cache: 'no-store'});
+      const manifest = manifestResponse.ok ? await manifestResponse.json() : null;
+      const version = manifest?.version || 'legacy';
+      diagnostics.buildVersion = version;
+      const sourceName = diagnostics.source.slice(2);
+      const url = diagnostics.source + '?v=' + encodeURIComponent(version);
+      const download = async cache => {
+        const response = await fetch(url, {cache});
+        if (!response.ok) throw new Error('Наш файл игры недоступен: HTTP ' + response.status);
+        const bytes = await response.arrayBuffer();
+        if (bytes.byteLength < 200_000) throw new Error('Файл Scratch слишком мал или повреждён');
+        return bytes;
+      };
+      let bytes = await download('default');
+      const expected = manifest?.sha256?.[sourceName];
+      if (!(await verifyBundle(bytes, expected))) {
+        // The manifest is tiny and fresh; recover once from a stale/corrupt cached bundle.
+        bytes = await download('reload');
+        if (!(await verifyBundle(bytes, expected))) throw new Error('SHA-256 Scratch-файла не совпал');
+      }
       await player.loadProject(bytes);
+      if (run !== generation) return;
       player.greenFlag();
       ready = true;
       diagnostics.started = true;
       loading.hidden = true;
-      requestAnimationFrame(responsiveLayout);
-      setTimeout(responsiveLayout, 500);
       window.__ownTurboWarp = {
         diagnostics, player, relocate, relayout: responsiveLayout,
-        restart: () => { player.stopAll(); player.greenFlag(); setTimeout(responsiveLayout, 150); }
+        restart: () => { player.stopAll(); player.greenFlag(); requestAnimationFrame(responsiveLayout); }
       };
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (run !== generation) return;
+        restoreState(snapshot);
+        responsiveLayout();
+      }));
     } catch (error) {
-      setError(error);
+      if (run === generation) {
+        disposePlayer();
+        setError(error);
+      }
     } finally {
       busy = false;
+      if (orientationPending || portrait !== orientation.matches) {
+        orientationPending = false;
+        if (portrait !== orientation.matches) void start({preserveState: ready});
+      }
     }
   }
 
@@ -169,7 +246,12 @@
   el('help').addEventListener('click', () => info.classList.add('open'));
   el('close-info').addEventListener('click', () => info.classList.remove('open'));
   info.addEventListener('click', e => { if (e.target === info) info.classList.remove('open'); });
-  retry.addEventListener('click', start);
+  retry.addEventListener('click', () => start());
+  orientation.addEventListener('change', () => {
+    if (busy) orientationPending = true;
+    else if (ready) void start({preserveState: true});
+    else void start();
+  });
   window.addEventListener('resize', () => {
     if (!ready) return;
     requestAnimationFrame(responsiveLayout);
