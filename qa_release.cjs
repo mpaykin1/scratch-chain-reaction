@@ -9,7 +9,7 @@ const views=[{name:'iphone-portrait',w:390,h:844,mobile:true},{name:'iphone-land
 for(const v of views){
  const page=await browser.newPage({viewport:{width:v.w,height:v.h},isMobile:v.mobile,hasTouch:v.mobile,deviceScaleFactor:v.mobile?3:1});
  let errors=[];page.on('pageerror',e=>errors.push(e.message));
- const start=Date.now();await page.goto(base,{waitUntil:'domcontentloaded',timeout:25000});await page.waitForURL('**/cinematic/',{timeout:12000});await page.locator('#game').waitFor();
+ const start=Date.now();await page.goto(base,{waitUntil:'domcontentloaded',timeout:25000});await page.waitForURL('**/cinematic/',{timeout:12000});await page.locator('#game').waitFor();await page.waitForFunction(()=>typeof window.__chainReaction?.advance==='function',{timeout:12000});
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.option img,.genie')).every(i=>i.complete&&i.naturalWidth>0),{timeout:14000});
  const stat=await page.evaluate(()=>{let g=document.getElementById('game').getBoundingClientRect();let b=document.querySelector('.action-dock').getBoundingClientRect();return{width:g.width,height:g.height,viewport:[innerWidth,innerHeight],scrollX:document.documentElement.scrollWidth-innerWidth,scrollY:document.documentElement.scrollHeight-innerHeight,buttons:[...document.querySelectorAll('.option')].map(e=>{let r=e.getBoundingClientRect();return {w:Math.round(r.width),h:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y),end:Math.round(r.right)}}),bg:getComputedStyle(document.querySelector('.scenery')).backgroundImage.slice(0,170),count:document.querySelectorAll('.world-object.active').length}});
  assert.ok(Math.abs(stat.width-v.w)<=2&&Math.abs(stat.height-v.h)<=2,'viewport should be covered');
@@ -31,6 +31,30 @@ for(const v of views){
  await page.getByRole('button',{name:'Вулкан',exact:true}).click();
  assert.ok(await page.locator('#scenery').evaluate(x=>x.classList.contains('developed')));
  await page.screenshot({path:shot+'/'+v.name+'-developed.png',fullPage:true});
+ // Regression gates for modular UI, replay and existing WebGL/audio enhancements.
+ const beforeTick=await page.evaluate(()=>__chainReaction.getState());
+ await page.getByRole('button',{name:'Следующий ход'}).click();
+ const afterTick=await page.evaluate(()=>__chainReaction.getState());
+ assert.equal(afterTick.turn,beforeTick.turn+1,'next turn advances simulation');
+ assert.ok((await page.evaluate(()=>__chainReaction.getHistory())).length>=3,'causal history exists');
+ await page.getByRole('button',{name:'Меню',exact:true}).click();
+ assert.ok(await page.locator('#historyList li').count()>0,'history is visible');
+ await page.getByRole('button',{name:/Отменить ход/}).click();
+ assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),beforeTick,'undo restores all resources');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__chainReaction?.getState,{timeout:12000});
+ assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),beforeTick,'save persists across reload');
+ assert.equal(await page.locator('#soundBtn').count(),1,'audio/effects integration survives refactor');
+ await page.getByRole('button',{name:'Предложить свою идею'}).click();
+ const beforeUnknown=await page.evaluate(()=>__chainReaction.getState());
+ await page.locator('#ideaText').fill('Дракон разговаривает с луной');
+ await page.getByRole('button',{name:/Отправить идею/}).click();
+ assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),beforeUnknown,
+   'unknown idea must not fabricate world changes');
+ await page.getByRole('button',{name:'Предложить свою идею'}).click();
+ await page.keyboard.press('Escape');
+ assert.ok(await page.locator('#ideaBox').isHidden(),'Escape closes modal');
+
  const imgs=await page.locator('img').evaluateAll(xs=>xs.filter(x=>!x.complete||x.naturalWidth===0).map(x=>x.src));
  const seconds=(Date.now()-start)/1000;
  console.log('QA_PASS',v.name,JSON.stringify({...stat,seconds,imagesBroken:imgs.length,errors:errors.length}));
