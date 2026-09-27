@@ -25,9 +25,11 @@ test('precaches all first-party scripts and CSS used by cinematic HTML',()=>{
     ))visit(match[1]);
   }
   assets.forEach(visit);
+  assert.ok(cached.has('./cinematic/unified-main.mjs'));
+  assert.ok(cached.has('./cinematic/assets/dragon.svg'));
   assert.ok(visited.size>=7,'should check nested imports and CSS');
 });
 test('new SW version upgrades the reactive cache without losing offline assets',()=>{
-  assert.match(sw,/chain-reaction-v5-causal-economy-20260927/);
+  assert.match(sw,/chain-reaction-v6-unified-world-20260927/);
   assert.match(sw,/caches\.delete\(key\)/);
 });
