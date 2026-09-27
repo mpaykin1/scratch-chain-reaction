@@ -8,7 +8,7 @@ on:
 jobs:
   responsive-and-native:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +22,8 @@ jobs:
         run: node --test test/scenario-engine.test.mjs
       - name: Reactive world engine regression tests
         run: node --test test/world-engine.test.mjs
+      - name: Cinematic state, idea, offline and Genie regression tests
+        run: npm run test:cinematic
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
       - name: Serve game
@@ -30,6 +32,10 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
       - name: Desktop, portrait, landscape and gameplay
         run: node qa_release.cjs
+        env:
+          CI: 'true'
+      - name: Cinematic accessibility, economy and portable-save browser gates
+        run: node test_cinematic_enhancements.cjs && node test/portable-ui.cjs
         env:
           CI: 'true'
       - name: Reactive follow-up events and 85% screen visibility
