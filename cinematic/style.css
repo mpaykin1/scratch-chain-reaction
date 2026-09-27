@@ -79,7 +79,7 @@
 /* Gameplay messages stay readable without hiding most of the movable map.
    Players can expand them explicitly; the next action collapses them again. */
 #dialog.compact{left:2%;right:auto;bottom:clamp(115px,16vh,160px);
-  width:min(670px,96%);min-height:0;max-height:105px;overflow:hidden;
+  width:min(670px,96%);min-height:96px;max-height:105px;overflow:hidden;
   padding:10px 84px 9px 14px;border-radius:13px}
 #dialog.compact .genie,#dialog.compact #waterScenario,
 #dialog.compact .dialog-text{display:none}
@@ -96,10 +96,10 @@
 #dialog.compact.expanded .choice-trigger{margin-top:8px}
 @media (orientation:portrait){
   #dialog.compact{left:2%;right:2%;width:96%;bottom:max(124px,calc(14vh + var(--safe-bottom)));
-    padding:9px 70px 7px 12px;max-height:80px}
+    padding:9px 70px 7px 12px;min-height:80px;max-height:80px}
   #dialog.compact .dialog-title{font-size:16px}
   #dialog.compact .choice-trigger{padding:5px 7px;font-size:12px}
   #dialog.compact.expanded{max-height:60dvh}
 }
 
-@media(max-height:500px) and (orientation:landscape){#dialog.compact{top:54px;bottom:auto;left:auto;right:1%;width:35%;max-height:108px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
+@media(max-height:500px) and (orientation:landscape){#dialog.compact{top:54px;bottom:auto;left:auto;right:1%;width:35%;min-height:108px;max-height:108px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
