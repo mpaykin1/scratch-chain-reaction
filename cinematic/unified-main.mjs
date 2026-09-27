@@ -2,11 +2,13 @@
 import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
+import {createUnifiedStoryEffects} from './unified-story-effects.mjs';
 
 const API='https://world-server.mmmpaykin.workers.dev/api/chain';
 const TOKEN='chain-world-browser-token-v1';
 const $=id=>document.getElementById(id);
 $('game').dataset.unified='true';
+const storyEffects=createUnifiedStoryEffects($('game'));
 const sheets=createSheets(document);
 const {openSheet,closeSheets}=sheets;
 const renderView=createView(()=>({state:snapshot.state,placed:snapshot.placed,
@@ -57,6 +59,7 @@ function showDragon(){
 }
 function render(){
   renderView.render();
+  storyEffects.update(snapshot);
   showDragon();
   const options=snapshot.choices||[];
   const title=options.length?'Злой Джинн: выбери следующий проект':'Злой Джинн: проживи день или предложи идею';
@@ -82,7 +85,8 @@ function accept(next,{notify=true}={}){
       void $('dragonArt')?.offsetWidth;
       $('dragonArt')?.classList.add('dragon-hit');
     }
-    if(next.notice)show(last?.title||'Мир изменился',next.notice);
+    if(next.notice)show(last?.title||'Мир изменился',
+      last?.reaction==='dragon_counterattack'?last.description:next.notice);
     else if(old>=0)show(last?.title||'Мир изменился в Telegram',
       last?.description||next.history?.at(-1)?.text||'Другой экран изменил мир.');
     window.dispatchEvent(new CustomEvent('worldAction',{detail:{
@@ -153,19 +157,22 @@ $('linkForm').onsubmit=async event=>{
   if(busy)return;
   setBusy(true);
   const code=$('linkCode').value.replace(/\s/g,'').toUpperCase();
-  if(!snapshot.linked&&snapshot.revision>0&&!confirm('На этом устройстве уже есть гостевой мир. Привязка откроет существующий мир Telegram вместо гостевого. Продолжить?')){setBusy(false);return;}
   try{
     const next=await request('/link','POST',{code});
     accept(next,{notify:false});$('linkCode').value='';
-    show('Миры объединены','Теперь Telegram и этот браузер управляют одним миром. Сохрани эту вкладку.');
+    show('Миры объединены','Твой гостевой мир и все его события сохранены. Теперь Telegram и этот браузер продолжают одну историю.');
     closeSheets();
-  }catch(error){show('Код не подошёл',error.message);}
+  }catch(error){show(error.status===409?'Два разных мира':'Код не подошёл',
+    error.message+(error.status===409?' Ни один мир не удалён; код не потрачен.':'') );}
   finally{setBusy(false);}
 };
 startWalkers($('people'));
 window.__chainReaction={
   build,getState:()=>({...snapshot.state}),getPlaced:()=>({...snapshot.placed}),
-  getHistory:()=>snapshot.history.map(e=>({...e})),submitIdea:text=>act('idea',{text}),
+  getHistory:()=>snapshot.history.map(e=>({...e})),
+  getStory:()=>structuredClone(snapshot.story),
+  getRevision:()=>snapshot.revision,
+  submitIdea:text=>act('idea',{text}),
   decide,advance:()=>act('next'),refresh:()=>refresh({notify:true})
 };
 render();
