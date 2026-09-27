@@ -46,7 +46,7 @@ function schedule(s,delay,type,data,parentId,causeId){
 export function createWorld(seed=270927){
   const n=Number.isSafeInteger(seed)?seed>>>0:270927;
   return {version:VERSION,seed:n,rng:n,turn:0,
-    stats:{population:32,power:12,water:50,food:50,eco:68,budget:100,happiness:50},
+    stats:{population:32,power:12,water:50,food:50,eco:38,budget:100,happiness:50},
     counts:{city:0,forest:0,energy:0,volcano:0,farm:0,factory:0},
     built:{city:0,forest:0,energy:0,volcano:0,farm:0,factory:0},
     projects:[],entities:[],lastEntity:null,queue:[],history:[],
@@ -227,6 +227,21 @@ export function restore(json){
       !Array.isArray(s.projects)||s.projects.length>130||
       !Array.isArray(s.entities)||s.entities.length>30)return null;
     for(const k of RESOURCES)if(!Number.isFinite(s.stats[k])||s.stats[k]<0||s.stats[k]>100)return null;
+    const buildingKeys=Object.keys(BUILDINGS).sort().join(",");
+    if(Object.keys(s.counts).sort().join(",")!==buildingKeys||
+      Object.keys(s.built).sort().join(",")!==buildingKeys)return null;
+    if(s.projects.some(p=>!p||!BUILDINGS[p.kind]||
+      !["active","building"].includes(p.status)||
+      typeof p.id!=="string"||!Number.isSafeInteger(p.readyTurn)))return null;
+    if(s.entities.some(e=>!e||e.kind!=="dragon"||typeof e.id!=="string"||
+      !Number.isSafeInteger(e.hp)||e.hp<0||e.hp>100))return null;
+    if(s.history.some(e=>!e||typeof e.id!=="string"||typeof e.source!=="string"||
+      typeof e.text!=="string"||e.text.length>500||
+      !e.delta||Object.entries(e.delta).some(([k,v])=>!RESOURCES.includes(k)||!Number.isFinite(v))))
+      return null;
+    if(s.queue.some(e=>!e||!e.data||typeof e.id!=="string"||
+      (e.type==="build-ready"&&typeof e.data.projectId!=="string")||
+      (e.type==="retaliation"&&typeof e.data.dragonId!=="string")))return null;
     for(const k of Object.keys(BUILDINGS))
       if(!Number.isSafeInteger(s.counts[k])||s.counts[k]<0||
         !Number.isSafeInteger(s.built[k])||s.built[k]<0||s.built[k]>s.counts[k])return null;
