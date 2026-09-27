@@ -83,6 +83,8 @@ function accept(next,{notify=true}={}){
       $('dragonArt')?.classList.add('dragon-hit');
     }
     if(next.notice)show(last?.title||'Мир изменился',next.notice);
+    else if(old>=0)show(last?.title||'Мир изменился в Telegram',
+      last?.description||next.history?.at(-1)?.text||'Другой экран изменил мир.');
     window.dispatchEvent(new CustomEvent('worldAction',{detail:{
       kind:last?.kind?.startsWith('dragon')?'dragon':
         last?.kind==='defense'?'combat':'tick'}}));
