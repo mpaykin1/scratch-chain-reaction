@@ -1,5 +1,5 @@
 // Portable saves remain local. No server or account is involved.
-export const MAX_SAVE_BYTES=120000;
+export const MAX_SAVE_BYTES=1000000;
 export function parsePortableSave(raw,restoreWorld){
   if(typeof raw!=='string'||new TextEncoder().encode(raw).length>MAX_SAVE_BYTES)
     return {world:null,error:'Файл сохранения слишком большой или повреждён.'};
