@@ -20,12 +20,12 @@ test('Genie picks the current weakest resource and supplies four different causa
   assert.ok(snapshots.every(snapshot=>restoreWorld(snapshot)));
 });
 test('Genie choices are replayable and advance time including queued effects',()=>{
-  const start=playBuild(createWorld(),'forest').world;
+  const start=advanceTick(playBuild(createWorld(),'forest').world).world;
   const before=getGenieChoices(start);
   const first=playDecision(start,before.choices[0].id);
   const second=playDecision(start,before.choices[0].id);
   assert.equal(serializeWorld(first.world),serializeWorld(second.world));
-  assert.equal(first.world.state.turn,2);
+  assert.equal(first.world.state.turn,3);
   assert.ok(first.events.some(event=>event.type==='delayed'),
     'the Genie must not bypass delayed effects from earlier structures');
   assert.ok(first.events.some(event=>event.type==='decision'));
