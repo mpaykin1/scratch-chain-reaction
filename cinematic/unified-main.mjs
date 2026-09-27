@@ -153,6 +153,7 @@ $('linkForm').onsubmit=async event=>{
   if(busy)return;
   setBusy(true);
   const code=$('linkCode').value.replace(/\s/g,'').toUpperCase();
+  if(!snapshot.linked&&snapshot.revision>0&&!confirm('На этом устройстве уже есть гостевой мир. Привязка откроет существующий мир Telegram вместо гостевого. Продолжить?')){setBusy(false);return;}
   try{
     const next=await request('/link','POST',{code});
     accept(next,{notify:false});$('linkCode').value='';
