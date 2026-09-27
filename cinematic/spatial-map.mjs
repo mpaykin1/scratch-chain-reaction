@@ -1,4 +1,5 @@
 // Cinematic spatial projection. Coordinates are in world CSS-pixel units, not DOM offsets.
+import {mountChunkTerrain,terrainSupports} from './terrain-chunks.mjs';
 export const SPATIAL_VERSION = 1;
 export const MAX_COORD = 2 ** 40;
 const ART = Object.freeze({city:'city',forest:'forest',energy:'energy',volcano:'volcano'});
@@ -51,7 +52,7 @@ function objectRect(object,camera,view){
   return {x:p.x-f.width/2,y:p.y-f.height,width:f.width,height:f.height};
 }
 // Exhaustively search visible rings, not the origin; reject UI and object occlusion.
-export function planVisiblePlacement(kinds,spatial,view,blocked=[]){
+export function planVisiblePlacement(kinds,spatial,view,blocked=[],suitable=()=>true){
   if(!Array.isArray(kinds)||!kinds.length)return {objects:[]};
   if(spatial.objects.length+kinds.length>5000)return {error:'Достигнут лимит построек этого локального сохранения.'};
   const planned=[],margin=10;
@@ -71,6 +72,8 @@ export function planVisiblePlacement(kinds,spatial,view,blocked=[]){
         if(rect.x<margin||rect.y<margin||rect.x+f.width>view.width-margin||
           rect.y+f.height>view.height-margin||blocked.some(b=>intersects(rect,b,8))||
           occupied.some(b=>intersects(rect,b,14)))continue;
+        const worldPoint=screenToWorld({x:px,y:py},spatial.camera,view);
+        if(!suitable(kind,worldPoint,f))continue;
         point={x:px,y:py};occupied.push(rect);break outer;
       }
     }
@@ -101,10 +104,12 @@ export function mountSpatialMap(host,getWorld,{onCameraChange=()=>{}}={}){
   host.insertBefore(surface,host.querySelector('.hud')||null);
   const nodes=new Map();let active=null,frame=0;
   const view=()=>({width:host.clientWidth,height:host.clientHeight});
+  const terrain=mountChunkTerrain(host,()=>getWorld().spatial,requestRender);
   function render(){
     const spatial=getWorld().spatial;if(!spatial)return;
     const size=view();if(!size.width||!size.height)return;
     ground.style.backgroundPosition=(-(spatial.camera.x%140))+'px '+(-(spatial.camera.y%120))+'px';
+    terrain.render();
     const visible=[];
     for(const obj of spatial.objects){
       const p=worldToScreen(obj,spatial.camera,size),f=footprint(obj.kind,size);
@@ -152,8 +157,10 @@ export function mountSpatialMap(host,getWorld,{onCameraChange=()=>{}}={}){
   surface.addEventListener('pointercancel',pointerEnd);
   window.addEventListener('resize',requestRender);
   return {
-    render,plan:kinds=>planVisiblePlacement(kinds,getWorld().spatial,view(),visibleBlockers(host)),
+    render,plan:kinds=>{const s=getWorld().spatial;return planVisiblePlacement(kinds,s,view(),
+      visibleBlockers(host),(kind,point,footprint)=>terrainSupports(kind,point,footprint,s.seed));},
+    getChunkStats:terrain.getStats,
     destroy(){if(frame)cancelAnimationFrame(frame);window.removeEventListener('resize',requestRender);
-      surface.remove();layer.remove();ground.remove();}
+      terrain.destroy();surface.remove();layer.remove();ground.remove();}
   };
 }
