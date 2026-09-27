@@ -54,3 +54,9 @@
 .reaction-fallback-pulse.active{animation:reaction-css 950ms ease-out forwards}
 @keyframes reaction-css{0%{opacity:0;transform:scale(.55)}25%{opacity:.55}100%{opacity:0;transform:scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.reaction-fallback-pulse{display:none}}
+
+/* Economic affordance without making recovery actions unreachable. */
+.stat.critical{border-color:#ff8e7f;box-shadow:0 0 0 2px #a9272160,inset 0 1px #fff3}
+.stat.critical .num{background:linear-gradient(100deg,#9c2828,#c25137)}
+.action-dock .option[data-unaffordable="true"]{opacity:.66;filter:grayscale(.45)}
+.action-dock .option[data-unaffordable="true"]:focus-visible{opacity:1;filter:none}

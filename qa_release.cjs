@@ -27,7 +27,23 @@ for(const v of views){
  await page.locator('#ideaText').fill('Посадить лес и поставить солнечные электростанции');
  await page.getByRole('button',{name:/Отправить идею/}).click();
  assert.ok((await page.evaluate(()=>__chainReaction.getPlaced())).energy>0,'idea created energy');
+ // Multi-object ideas now pay their full build costs. Recover naturally
+ // through idle turns instead of relying on free, out-of-budget construction.
+ async function waitForBudget(amount){
+   for(let step=0;step<35;step++){
+     const budget=await page.evaluate(()=>__chainReaction.getState().budget);
+     if(budget>=amount)return;
+     await page.getByRole('button',{name:'Следующий ход'}).click();
+   }
+   throw Error('Cannot recover enough budget for '+amount);
+ }
+ await waitForBudget(12);
  await page.getByRole('button',{name:'Город',exact:true}).click();
+ await page.evaluate(()=>{
+   const options=__chainReaction.getDecisionOptions();
+   __chainReaction.decide(options.findIndex(x=>x.role==='balanced'));
+ });
+ await waitForBudget(9);
  await page.getByRole('button',{name:'Вулкан',exact:true}).click();
  assert.ok(await page.locator('#scenery').evaluate(x=>x.classList.contains('developed')));
  await page.screenshot({path:shot+'/'+v.name+'-developed.png',fullPage:true});

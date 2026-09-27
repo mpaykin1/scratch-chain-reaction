@@ -28,6 +28,20 @@ const EXTRA=Object.freeze({
 const ACTION_LABEL={city:'Город',forest:'Лес',energy:'Энергия',volcano:'Вулкан',
   irrigation:'Орошение',recycling:'Очистка воды',farm:'Фермы'};
 const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
+export function quoteBuild(world,key){
+  if(!Object.hasOwn(BUILD_EFFECTS,key))return {allowed:false,cost:0,reason:'Неизвестный объект.'};
+  const cost=-BUILD_EFFECTS[key].budget,allowed=world.state.budget>=cost;
+  return {allowed,cost,reason:allowed?'':'Нужно '+cost+' бюджета; сейчас '+world.state.budget+
+    '. Пропусти ход, чтобы получить доход.'};
+}
+export function quoteIdea(world,input){
+  const parsed=interpretIdea(input);
+  if(!parsed.actions.length)return {allowed:false,cost:0,actions:[],reason:parsed.reason};
+  const cost=6+parsed.actions.reduce((sum,key)=>sum-(BUILD_EFFECTS[key]||EXTRA[key]).budget,0);
+  const allowed=world.state.budget>=cost;
+  return {allowed,cost,actions:parsed.actions,reason:allowed?'':'На исследование и строительство нужно '+
+    cost+' бюджета; сейчас '+world.state.budget+'. Пропусти ход или упрости проект.'};
+}
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
@@ -68,13 +82,18 @@ function cascade(world,events,parentId){
     const delta={food:-4};update(s,delta);
     events.push(record(world,'pollution','Экологический кризис: −4 еды.',parentId,delta));
   }
+  if(s.food<10){
+    const delta={population:-3};update(s,delta);
+    events.push(record(world,'hunger','Голод: −3 жителя.',parentId,delta));
+  }
 }
-function applyActions(world,actions,description,charge=0){
+function applyActions(world,actions,description,charge=0,eventType='action'){
   const next=copy(world),events=[];
   next.state.turn++;
   advanceQueue(next,events);
   if(charge)update(next.state,{budget:-charge});
-  const actionEvent=record(next,'action',description,null);
+  const actionEvent=record(next,eventType,description,null);
+  events.push(actionEvent);
   for(const key of actions){
     const delta=BUILD_EFFECTS[key]||EXTRA[key];
     update(next.state,delta);
@@ -143,9 +162,22 @@ export function getGenieChoices(world){
     return severity<best.severity?{resource,severity}:best;
   },{resource:'eco',severity:1});
   const crisis=key.severity<1?key.resource:'eco';
+  const choices=CHOICE_RULES[crisis].map(([label,delta],index)=>({
+    label,delta:{...delta},target:crisis,
+    role:index<2?'worsens':index===2?'shifts':'balanced'
+  }));
+  // Shuffle without RNG: the same world snapshot always produces the same
+  // sequence in the UI, simulator and after restoring a saved session.
+  let seed=(((world.state.turn+1)*2654435761)^(world.state.population*997)^
+    (world.state.budget*31))>>>0;
+  for(let i=choices.length-1;i>0;i--){
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    const j=seed%(i+1);[choices[i],choices[j]]=[choices[j],choices[i]];
+  }
   return {crisis,title:key.severity<1?CRISIS_TITLES[crisis]:'Баланс ресурсов',
-    choices:CHOICE_RULES[crisis].map(([label,delta],id)=>({id,label,delta:{...delta}}))};
+    choices:choices.map((choice,id)=>({...choice,id}))};
 }
+export function getDecisionOptions(world){return getGenieChoices(world).choices;}
 export function playDecision(world,index){
   if(!Number.isInteger(index)||index<0||index>=4)throw Error('Unknown decision');
   const choice=getGenieChoices(world).choices[index];
@@ -170,6 +202,14 @@ export function playIdea(world,input){
   if(!parsed.actions.length)return {world,events:[],actions:[],reason:parsed.reason,recognized:false};
   return {...applyActions(world,parsed.actions,'Идея: '+input.trim().slice(0,180),6),recognized:true,reason:''};
 }
+// Like the four built-in responses, the fifth user-authored choice consumes
+// one decision turn and closes the pending Genie dialogue.
+export function playCustomDecision(world,input){
+  const parsed=interpretIdea(input);
+  if(!parsed.actions.length)return {world,events:[],actions:[],reason:parsed.reason,recognized:false};
+  return {...applyActions(world,parsed.actions,'Своё решение: '+input.trim().slice(0,180),
+    6,'decision'),recognized:true,reason:''};
+}
 export function serializeWorld(world){return JSON.stringify({version:VERSION,...world});}
 export function restoreWorld(raw){
   try{
@@ -183,12 +223,28 @@ export function restoreWorld(raw){
   }catch{return null;}
 }
 
+// Sustained projects create production, consumption and a source-linked income
+// event on idle turns. The minimum income allows recovery after a catastrophe.
+function runEconomy(world,events){
+  const s=world.state,p=world.placed;
+  const delta={
+    budget:Math.max(2,Math.floor(s.population/8)+Math.floor(s.power/16)),
+    power:p.energy*7-p.city*3,
+    water:p.forest*3-p.city*2,
+    food:p.forest*3-Math.floor(s.population/32),
+    eco:p.forest*2-p.city-p.volcano*2
+  };
+  update(s,delta);
+  events.push(record(world,'economy',
+    'Постройки производят и потребляют ресурсы; жители приносят доход.',null,delta));
+}
 // Advance the deterministic world without forcing the user to build another object.
 // This is intentionally separate from playDecision, so the UI can offer a skip-turn.
 export function advanceTick(world){
   const next=copy(world),events=[];
   next.state.turn++;
   advanceQueue(next,events);
+  runEconomy(next,events);
   cascade(next,events,null);
   return {world:next,events,actions:[]};
 }
