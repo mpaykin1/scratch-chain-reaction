@@ -40,6 +40,7 @@ function build(kind,{fromIdea=false}={}){
   const quote=quoteBuild(world,kind);
   if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return;}
   const before={...state};
+  $('dialog').classList.add('hidden');
   const placement=spatialMap.plan([kind]);
   if(placement.error){panel('Нет места для постройки',placement.error);return;}
   checkpoint();const result=playBuild(world,kind);
@@ -72,6 +73,7 @@ function submitIdea(input){
     closeSheets();return;
   }
   const asDecision=pendingDecision,before={...state};
+  $('dialog').classList.add('hidden');
   const placement=spatialMap.plan(quote.actions);
   if(placement.error){panel('Нет места для постройки',placement.error);closeSheets();return;}
   const result=asDecision?playCustomDecision(world,input):playIdea(world,input);
@@ -132,4 +134,5 @@ startWalkers($('people'));
 window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getSpatial:()=>JSON.parse(JSON.stringify(world.spatial)),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
+if(saved)$('dialog').classList.add('hidden');
 })();
