@@ -103,3 +103,11 @@
 }
 
 @media(max-height:500px) and (orientation:landscape){#dialog.compact{top:54px;bottom:auto;left:auto;right:1%;width:35%;min-height:108px;max-height:108px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
+
+
+/* Visible procedural chunks live in camera space; the original painted sky remains distant. */
+#terrainChunks{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+#terrainChunks .terrain-chunk{position:absolute;display:block;width:385px;height:385px;
+  opacity:.67;mix-blend-mode:soft-light;pointer-events:none;image-rendering:auto;
+  filter:blur(.38px);contain:strict}
+@media(pointer:coarse){#terrainChunks .terrain-chunk{opacity:.53;filter:none}}
