@@ -48,7 +48,8 @@ jobs:
           cp node_modules/@turbowarp/scaffolding/LICENSE player/vendor/LICENSE
           test -s player/vendor/LICENSE
           test -s player/chain-reaction-portrait.sb3
-          du -h player/vendor/* player/chain-reaction-portrait.sb3
+          test -s player/chain-reaction-wide.sb3
+          du -h player/vendor/* player/chain-reaction-portrait.sb3 player/chain-reaction-wide.sb3
       - name: Browser install
         run: npx playwright install --with-deps chromium
       - name: Test original Scratch game on our runtime (no remote TurboWarp)
@@ -67,7 +68,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add player/vendor/scaffolding-with-music.js player/vendor/LICENSE player/chain-reaction-portrait.sb3
+          git add player/vendor/scaffolding-with-music.js player/vendor/LICENSE player/chain-reaction-portrait.sb3 player/chain-reaction-wide.sb3
           if ! git diff --cached --quiet; then
             git commit -m "build(player): publish verified self-hosted runtime and portrait Scratch bundle [skip ci]"
             git push origin HEAD:main
