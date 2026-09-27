@@ -1,5 +1,5 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
-const VERSION='chain-reaction-v5-causal-economy-20260927';
+const VERSION='chain-reaction-v6-world-server-shapes-20260927';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./cinematic/reactive.html',
   './cinematic/game-ui.mjs','./cinematic/world-engine.mjs','./manifest.webmanifest',
@@ -8,7 +8,11 @@ const CORE=['./','./index.html',
   './cinematic/idea-parser.mjs','./cinematic/style.css',
   './cinematic/chain-engine.mjs','./cinematic/quality.mjs',
   './cinematic/render-effects.mjs','./cinematic/adaptive-quality.mjs','./cinematic/ambient-audio.mjs',
-  './cinematic/enhancements.mjs','./app-icon-192.png',
+  './cinematic/enhancements.mjs',
+  './cinematic/world-server/world-server-graphics.mjs',
+  './cinematic/world-server/world-shape-library.mjs',
+  './cinematic/world-server/world-server-graphics.css',
+  './app-icon-192.png',
   './cinematic/assets/world_portrait.webp','./cinematic/assets/world_landscape.webp',
   './cinematic/assets/world_developed_portrait.webp','./cinematic/assets/world_developed_landscape.webp',
   './cinematic/assets/genie.webp','./cinematic/assets/city.webp',
