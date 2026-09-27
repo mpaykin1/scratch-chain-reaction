@@ -19,7 +19,9 @@ jobs:
           python-version: '3.11'
       - run: python test_native_scratch.py
       - name: Causal simulator regression tests
-        run: node --test test/scenario-engine.test.mjs
+        run: node --test test/scenario-engine.test.mjs test/chain-engine.test.mjs test/cinematic-extensions.test.mjs
+      - name: Check cinematic module syntax
+        run: node --check cinematic/game-ui.mjs && node --check cinematic/chain-engine.mjs
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
       - name: Serve game
