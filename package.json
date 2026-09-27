@@ -6,7 +6,9 @@
   "scripts": {
     "build:portrait": "python3 scripts/build_portrait_sb3.py",
     "test:player": "node test_selfhost_player.mjs",
-    "test:scenario": "node --test test/scenario-engine.test.mjs"
+    "test:scenario": "node --test test/scenario-engine.test.mjs",
+    "test:cinematic": "node --test test/chain-engine.test.mjs",
+    "test:cinematic:browser": "node qa_release.cjs && node test_cinematic_enhancements.cjs"
   },
   "dependencies": {
     "@turbowarp/scaffolding": "0.4.0"
