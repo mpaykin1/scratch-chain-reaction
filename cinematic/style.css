@@ -60,3 +60,46 @@
 .stat.critical .num{background:linear-gradient(100deg,#9c2828,#c25137)}
 .action-dock .option[data-unaffordable="true"]{opacity:.66;filter:grayscale(.45)}
 .action-dock .option[data-unaffordable="true"]:focus-visible{opacity:1;filter:none}
+
+
+/* Foreground map moves independently of the distant cinematic panorama. */
+.map-ground{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.36;
+  background-image:radial-gradient(ellipse at 16% 36%,#dbc18d55 0 2px,transparent 3px),
+  radial-gradient(ellipse at 74% 67%,#162f3260 0 4px,transparent 7px),
+  linear-gradient(120deg,transparent 49.6%,#422b2466 50%,transparent 50.4%);
+  background-size:140px 120px,93px 99px,140px 120px;mix-blend-mode:soft-light}
+#spatialObjects{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+#mapSurface{position:absolute;inset:0;z-index:9;cursor:grab;touch-action:none;user-select:none}
+#mapSurface:active{cursor:grabbing}
+.spatial-object{position:absolute;display:block;transform:translate(-50%,-100%);object-fit:contain;
+  pointer-events:none;user-select:none;filter:drop-shadow(3px 10px 6px #0008)}
+#cityArt,#forestArt,#energyArt,#volcanoArt{display:none!important}
+
+
+/* Gameplay messages stay readable without hiding most of the movable map.
+   Players can expand them explicitly; the next action collapses them again. */
+#dialog.compact{left:2%;right:auto;bottom:clamp(115px,16vh,160px);
+  width:min(670px,96%);min-height:96px;max-height:105px;overflow:hidden;
+  padding:10px 84px 9px 14px;border-radius:13px}
+#dialog.compact .genie,#dialog.compact #waterScenario,
+#dialog.compact .dialog-text{display:none}
+#dialog.compact .dialog-title{font-size:clamp(16px,2vw,20px);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+#dialog.compact .choice-trigger{margin:5px 0 0;padding:6px 10px;font-size:13px}
+#dialog .dialog-more{position:absolute;z-index:2;right:42px;top:12px;border:1px solid #b6ccdf98;
+  background:#22364d;color:#edf6ff;border-radius:8px;font-weight:700;font-size:12px;
+  padding:6px 5px}
+#dialog.compact .dialog-close{width:30px;height:30px;right:7px;top:8px;font-size:23px}
+#dialog.compact.expanded{max-height:min(65dvh,510px);overflow:auto;padding:20px 46px 16px 20px}
+#dialog.compact.expanded .dialog-text{display:block;font-size:clamp(14px,1.7vw,19px);line-height:1.34;margin-top:8px}
+#dialog.compact.expanded .dialog-title{white-space:normal;margin-right:42px}
+#dialog.compact.expanded .choice-trigger{margin-top:8px}
+@media (orientation:portrait){
+  #dialog.compact{left:2%;right:2%;width:96%;bottom:max(124px,calc(14vh + var(--safe-bottom)));
+    padding:9px 70px 7px 12px;min-height:80px;max-height:80px}
+  #dialog.compact .dialog-title{font-size:16px}
+  #dialog.compact .choice-trigger{padding:5px 7px;font-size:12px}
+  #dialog.compact.expanded{max-height:60dvh}
+}
+
+@media(max-height:500px) and (orientation:landscape){#dialog.compact{top:54px;bottom:auto;left:auto;right:1%;width:35%;min-height:108px;max-height:108px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
