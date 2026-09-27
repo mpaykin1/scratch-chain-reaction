@@ -52,38 +52,71 @@
 <div id="dialog" role="status" aria-live="polite"><img decoding="async" class="genie" src="assets/genie.webp" alt="Злой Джинн"><button class="dialog-close" id="closeDialog" aria-label="Закрыть сообщение">×</button><h1 class="dialog-title" id="dialogTitle">Злой Джинн:</h1><p class="dialog-text" id="dialogText">Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, и я покажу, что произойдёт… Или поделись своей идеей!</p><a id="waterScenario" href="./scenario.html" style="display:inline-block;color:#101b28;background:linear-gradient(110deg,#ffe0a4,#9de8c5);border-radius:9px;padding:9px 12px;font-weight:850;font-size:clamp(13px,1.15vw,17px);text-decoration:none;margin:10px 8px 0 0">🧪 Новый сценарий: водный кризис ↗</a><button id="choiceTrigger" class="choice-trigger" hidden>🧞 Четыре решения Джинна ↗</button></div>
 <nav class="action-dock" aria-label="Начать развитие мира"><button class="option" style="--accent:#69cfff;--glow:#298fff77" data-action="city" aria-label="Город"><img decoding="async" src="assets/card_city.webp?v=2" alt="Город"/><span class="accessible-title">Город</span></button><button class="option" style="--accent:#8bffa5;--glow:#26bc5977" data-action="forest" aria-label="Лес"><img decoding="async" src="assets/card_forest.webp?v=2" alt="Лес"/><span class="accessible-title">Лес</span></button><button class="option" style="--accent:#ffda82;--glow:#ffc25977" data-action="energy" aria-label="Энергия"><img decoding="async" src="assets/card_energy.webp?v=2" alt="Энергия"/><span class="accessible-title">Энергия</span></button><button class="option" style="--accent:#ff8070;--glow:#fa372477" data-action="volcano" aria-label="Вулкан"><img decoding="async" src="assets/card_volcano.webp?v=2" alt="Вулкан"/><span class="accessible-title">Вулкан</span></button><button class="option" style="--accent:#c17bff;--glow:#9945ff77" data-action="idea" aria-label="Поделись своей идеей"><img decoding="async" src="assets/card_idea.webp?v=2" alt="Поделись своей идеей"/><span class="accessible-title">Своя идея</span></button></nav>
 <div class="sheet" id="choiceBox" hidden role="dialog" aria-modal="true" aria-labelledby="choiceTitle"><button class="sheet-close" id="closeChoices" aria-label="Закрыть">×</button><h2 id="choiceTitle">Злой Джинн предлагает…</h2><p>У каждого решения есть цена. Что ты выбираешь?</p><div class="decisions"><button class="decision" data-decision="0">🔥 Сжечь лес ради энергии (энергия +13, экология −19)</button><button class="decision" data-decision="1">🏭 Мегазавод (энергия +19, экология −15)</button><button class="decision" data-decision="2">🚛 Импорт ресурсов (энергия +9, бюджет −18)</button><button class="decision" data-decision="3">🌱 Экологический компромисс (энергия +8, экология +8)</button><button class="decision" id="ideaFromChoices">✍️ Придумать собственное решение</button></div></div>
-<div class="sheet" id="ideaBox" hidden role="dialog" aria-modal="true" aria-labelledby="ideaTitle"><button class="sheet-close" id="closeIdea" aria-label="Закрыть">×</button><h2 id="ideaTitle">🧞 Поделись своей идеей</h2><p>Что добавить в мир? Напиши 1–2 предложения — Джинн попробует найти последствия твоего решения.</p><form id="ideaForm"><textarea class="idea-field" name="idea" id="ideaText" placeholder="Например: построить город на солнечной энергии и посадить вокруг лес…" required maxlength="800"></textarea><button class="send" type="submit">Отправить идею ↗</button></form><p style="font-size:13px;opacity:.8">В этой демоверсии распознаются лес, город, энергетика и вулкан. Полная обработка произвольных идей требует AI-сервера.</p></div>
+<div class="sheet" id="ideaBox" hidden role="dialog" aria-modal="true" aria-labelledby="ideaTitle"><button class="sheet-close" id="closeIdea" aria-label="Закрыть">×</button><h2 id="ideaTitle">🧞 Поделись своей идеей</h2><p>Что добавить в мир? Напиши 1–2 предложения — Джинн попробует найти последствия твоего решения.</p><form id="ideaForm"><textarea class="idea-field" name="idea" id="ideaText" placeholder="Например: построить город на солнечной энергии и посадить вокруг лес…" required maxlength="800"></textarea><button class="send" type="submit">Отправить идею ↗</button></form><p style="font-size:13px;opacity:.8">Идеи рассчитываются локально и воспроизводимо: лес, город, энергия, вулкан, фермы, насосы и очистка воды. Если идея не распознана, Джинн попросит уточнить её, а не придумает последствия.</p></div>
 <div class="sheet" id="menuBox" hidden role="dialog" aria-modal="true" aria-labelledby="menuTitle"><button class="sheet-close" id="closeMenu" aria-label="Закрыть">×</button><h2 id="menuTitle">Цепная реакция</h2><p>Демоверсия World Server. Браузерная игра и настоящий проект Scratch с анимированными спрайтами.</p><a href="./Chain_Reaction_Cinematic_Scratch.sb3" download style="color:#a4ecff;display:block;font-size:20px;margin:13px 0">⬇ Скачать настоящую игру Scratch (.sb3)</a><a id="scratchLaunch" href="#" target="_blank" rel="noopener" style="color:#a4ecff;display:block;font-size:20px;margin:13px 0">▶ Открыть версию Scratch в TurboWarp</a><button class="send" id="restart" type="button">Начать заново</button><button class="send" id="fullscreenBtn" type="button" style="margin-left:8px;background:linear-gradient(110deg,#267d83,#368c61)">⛶ Во весь экран</button><p id="fullscreenHint" hidden style="font-size:15px;color:#d9eaff">На iPhone открой игру в Safari, нажми «Поделиться» → «На экран Домой». Так игра запустится без адресной строки.</p></div>
-<script>
+<script type="module">
+import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea} from './chain-engine.mjs';
 (()=>{'use strict';
-const initial={turn:0,population:32,power:0,water:0,food:0,eco:0,budget:50};let state={...initial},placed={city:0,forest:0,energy:0,volcano:0},animations=[],choiceCount=0,reduced=false;
+const SAVE='chain-reaction-world-v1';
+let saved=null;try{saved=restoreWorld(localStorage.getItem(SAVE));}catch{}
+let world=saved||createWorld(),state=world.state,placed=world.placed,choiceCount=0;
+function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
+function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();}
 const $=id=>document.getElementById(id);const cap=$('caption');const art={city:$('cityArt'),forest:$('forestArt'),energy:$('energyArt'),volcano:$('volcanoArt')};
-const effects={city:{population:11,power:-9,water:-8,food:-5,eco:-5,budget:-12},forest:{eco:18,water:12,food:9,budget:-10},energy:{power:32,eco:-8,water:-5,budget:-16},volcano:{power:21,eco:-20,population:-3,water:-7,budget:-9}};
 const messages={city:['Город построен!','Жители получили дома, но теперь им нужны вода, пища и энергия.'],forest:['Мир меняется!','Лес вырос! Экология и запасы воды постепенно восстанавливаются.'],energy:['Мир меняется!','Электростанция заработала! Энергии стало больше, но бюджет и вода уменьшаются.'],volcano:['Осторожно!','Вулкан проснулся! Появилась геотермальная энергия — и опасная лава.']};
 function render(){for(const [k,v]of Object.entries(state))document.querySelectorAll(`[data-stat="${k}"]`).forEach(n=>{n.textContent=String(v);n.closest('.stat').setAttribute('aria-label',n.previousElementSibling?.textContent+' '+v)});
-for(const [k,v]of Object.entries(placed))art[k].classList.toggle('active',v>0);$('rotor').classList.toggle('on',placed.energy>0);$('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4)}
+for(const [k,v]of Object.entries(placed))art[k].classList.toggle('active',v>0);$('rotor').classList.toggle('on',placed.energy>0);$('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}))}
 function panel(title,body){$('dialogTitle').textContent=title;$('dialogText').textContent=body;$('dialog').classList.remove('hidden')}
 function caption(str){cap.textContent=str;cap.classList.remove('animate');void cap.offsetWidth;cap.classList.add('animate')}
-function apply(effect){for(const [k,d]of Object.entries(effect))state[k]=Math.max(0,Math.min(100,state[k]+d));}
-function crisis(){const result=[];if(state.power<10){state.population=Math.max(0,state.population-2);state.food=Math.max(0,state.food-6);result.push('Дефицит энергии: −2 жителя, −6 еды.')}if(state.water<10){state.food=Math.max(0,state.food-6);state.eco=Math.max(0,state.eco-4);result.push('Засуха: −6 еды, −4 экологии.')}if(state.eco<10){state.food=Math.max(0,state.food-4);result.push('Экологический кризис: −4 еды.')}return result.join(' ')}
 function embers(){for(let j=0;j<9;j++){const e=document.createElement('i');e.className='spark';e.style.right=(8+Math.random()*20)+'%';e.style.top=(24+Math.random()*14)+'%';e.style.setProperty('--wx',(Math.random()*130-60)+'px');e.style.animationDelay=(Math.random()*1.5)+'s';$('game').appendChild(e);e.addEventListener('animationend',()=>e.remove(),{once:true})}}
-function build(kind,{fromIdea=false}={}){if(!effects[kind])return;placed[kind]++;apply(effects[kind]);state.turn++;const extra=crisis();render();caption('+'+({city:' ГОРОД',forest:' ЛЕС',energy:' ЭНЕРГИЯ',volcano:' ВУЛКАН'}[kind]));if(kind==='volcano')embers();let [title,body]=messages[kind];if(extra)body+=' '+extra;panel(title,body);$('choiceTrigger').hidden=false;if(!fromIdea){choiceCount++;closeSheets();} }
+function build(kind,{fromIdea=false}={}){
+  if(!Object.hasOwn(BUILD_EFFECTS,kind))return;
+  const result=playBuild(world,kind);sync(result);
+  caption('+'+({city:' ГОРОД',forest:' ЛЕС',energy:' ЭНЕРГИЯ',volcano:' ВУЛКАН'}[kind]));
+  window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
+  if(kind==='volcano')embers();
+  let [title,body]=messages[kind];
+  const extra=result.events.filter(e=>['shortage','drought','pollution','delayed'].includes(e.type)).map(e=>e.text).join(' ');
+  if(extra)body+=' '+extra;
+  panel(title,body);$('choiceTrigger').hidden=false;
+  if(!fromIdea){choiceCount++;closeSheets();}
+}
 function closeSheets(){for(const id of ['choiceBox','ideaBox','menuBox'])$(id).hidden=true}
 function openSheet(id){closeSheets();$(id).hidden=false;if(id==='ideaBox')setTimeout(()=>$('ideaText').focus(),60)}
-function decide(id){const options=[{power:13,eco:-19,water:-6},{power:19,eco:-15,food:-7},{power:9,budget:-18,water:-4},{power:8,eco:8,budget:-10}];const msg=['Джинн смеётся: энергии прибавилось, но лес выжжен.','Мегазавод запущен: грязный воздух и угроза урожаю.','Импорт помог пережить кризис, но бюджет истощается.','Компромисс: модернизация и восстановление природы.'];apply(options[id]);render();panel('Последствия выбора',msg[id]);closeSheets();}
-function submitIdea(s){const t=s.toLowerCase();const found=[];if(/лес|дерев|растен/.test(t))found.push('forest');if(/город|дом|здан|поселен/.test(t))found.push('city');if(/энерг|солн|электр|ветр/.test(t))found.push('energy');if(/вулкан|лав|геотерм/.test(t))found.push('volcano');state.budget=Math.max(0,state.budget-6);if(found.length){found.forEach(k=>build(k,{fromIdea:true}));panel('Джинн услышал идею!','Ты предложил: '+s+'. Я вижу '+found.length+' новых направлений. Следи за ресурсами!')}else{state.eco=Math.min(100,state.eco+3);panel('Джинн услышал идею!','Твоя идея записана: '+s+'. Жители начали исследование. Пока бюджет −6, экология +3.')}render();closeSheets();}
+function decide(id){
+  const result=playDecision(world,id);sync(result);
+  panel('Последствия выбора',result.events[0].text);
+  window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind:'choice'}}));
+  closeSheets();
+}
+function submitIdea(input){
+  const result=playIdea(world,input);
+  if(!result.recognized){
+    panel('Нужно уточнить идею',result.reason);closeSheets();return;
+  }
+  sync(result);
+  const names={city:'город',forest:'лес',energy:'энергетика',volcano:'вулкан',irrigation:'орошение',recycling:'очистка воды',farm:'ферма'};
+  for(const kind of result.actions){
+    window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
+    if(kind==='volcano')embers();
+  }
+  caption('+'+result.actions.map(x=>names[x]).join(', '));
+  const effects=result.events.filter(e=>['shortage','drought','pollution','delayed'].includes(e.type)).map(e=>e.text).join(' ');
+  panel('Джинн рассчитал идею','Распознано: '+result.actions.map(x=>names[x]).join(', ')+'. Изменения показателей уже применены. '+effects);
+  $('choiceTrigger').hidden=false;closeSheets();
+}
 $('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
 document.querySelectorAll('.option').forEach(b=>b.addEventListener('click',()=>b.dataset.action==='idea'?openSheet('ideaBox'):build(b.dataset.action)));
 document.querySelectorAll('[data-decision]').forEach(b=>b.onclick=()=>decide(Number(b.dataset.decision)));
 $('ideaForm').onsubmit=e=>{e.preventDefault();const t=$('ideaText').value.trim();if(t)submitIdea(t)};
-$('restart').onclick=()=>{state={...initial};placed={city:0,forest:0,energy:0,volcano:0};choiceCount=0;$('choiceTrigger').hidden=true;render();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
+$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
 const walkers=[];const people=$('people');for(let i=0;i<(matchMedia('(pointer:coarse)').matches?7:12);i++){const e=document.createElement('div');e.className='person';e.innerHTML='<div class="head"></div><div class="coat"></div><div class="legs"></div>';people.appendChild(e);walkers.push({e,x:8+Math.random()*84,y:38+Math.random()*34,v:(.3+Math.random()*.6)*(Math.random()<.5?-1:1),seed:Math.random()*10})}
 let last=performance.now();const minStep=matchMedia('(pointer:coarse)').matches?42:30;function frame(now){if(document.hidden||now-last<minStep){requestAnimationFrame(frame);return;}let dt=Math.min(.06,(now-last)/1000);last=now;for(const w of walkers){w.x+=w.v*dt;if(w.x<7||w.x>95)w.v*=-1;w.e.style.left=w.x+'%';w.e.style.top=w.y+'%';w.e.style.transform=`scale(${.75+(w.y-30)/95}) translateY(${Math.sin(now/145+w.seed)*1.9}px)`;w.e.style.setProperty('--gait',Math.sin(now/150+w.seed)*30+'deg')}requestAnimationFrame(frame)}requestAnimationFrame(frame);
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),submitIdea,decide,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),submitIdea,decide,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();
 })();
-</script></div></body></html>
+</script><script type="module" src="./enhancements.mjs"></script></div></body></html>
