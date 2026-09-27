@@ -1,4 +1,5 @@
 import {parseIdeaActions,sanitizeIdea} from './idea-parser.mjs';
+import {createSpatial,validSpatial} from './spatial-map.mjs';
 // Pure, deterministic simulation for the cinematic mode. No DOM, network, time or RNG.
 export const VERSION=1;
 export const INITIAL=Object.freeze({turn:0,population:32,power:0,water:0,food:0,eco:0,budget:50});
@@ -31,7 +32,8 @@ const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
-  history:world.history.map(item=>({...item}))
+  history:world.history.map(item=>({...item})),
+  spatial:JSON.parse(JSON.stringify(world.spatial||createSpatial(world.placed)))
 });
 const update=(stats,delta)=>{for(const [key,value] of Object.entries(delta)){
   if(!Object.hasOwn(INITIAL,key)||key==='turn'||!Number.isFinite(value))throw Error('Invalid resource delta: '+key);
@@ -57,7 +59,7 @@ export function quoteIdea(world,input){
   return {allowed:true,reason:'',cost,actions};
 }
 export function createWorld(){
-  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[]};
+  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[],spatial:createSpatial()};
 }
 function advanceQueue(world,events){
   const due=world.queue.filter(item=>item.turn<=world.state.turn);
@@ -159,7 +161,9 @@ export function restoreWorld(raw){
     if(Object.keys(createWorld().placed).some(k=>!Number.isInteger(data.placed[k])||data.placed[k]<0||data.placed[k]>10000))return null;
     if(data.queue.length>400||data.history.length>150||data.queue.some(e=>!Number.isInteger(e.turn)||e.turn<0||e.turn>100000||
       !e.delta||Object.entries(e.delta).some(([k,v])=>!Object.hasOwn(INITIAL,k)||k==='turn'||!Number.isFinite(v))))return null;
-    return copy(data);
+    const spatial=data.spatial===undefined?createSpatial(data.placed):data.spatial;
+    if(!validSpatial(spatial))return null;
+    return copy({...data,spatial});
   }catch{return null;}
 }
 export function advanceTick(world){
