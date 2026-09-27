@@ -27,7 +27,7 @@ test('precaches all first-party scripts and CSS used by cinematic HTML',()=>{
   assets.forEach(visit);
   assert.ok(visited.size>=7,'should check nested imports and CSS');
 });
-test('new SW version replaces caches from prior monolithic release',()=>{
-  assert.match(sw,/chain-reaction-v3-module-bundle-20260927/);
+test('new SW version upgrades the reactive cache without losing offline assets',()=>{
+  assert.match(sw,/chain-reaction-v4-portable-reactive-20260927/);
   assert.match(sw,/caches\.delete\(key\)/);
 });
