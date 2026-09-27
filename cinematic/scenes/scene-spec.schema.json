@@ -1,0 +1,17 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://mpaykin1.github.io/scratch-chain-reaction/cinematic/scenes/scene-spec.schema.json",
+  "title":"Game Design Demo Lab SceneSpec",
+  "type":"object",
+  "required":["version","id","seed","title","consent","roles","beats"],
+  "properties":{
+    "version":{"const":1},"id":{"type":"string","pattern":"^[a-z0-9-]+$"},"seed":{"type":"integer"},
+    "title":{"type":"string","minLength":1},"contentWarning":{"type":"string"},
+    "consent":{"type":"object","required":["fictional","allowExit"],"properties":{"fictional":{"const":true},"allowExit":{"const":true}}},
+    "roles":{"type":"array","minItems":2,"items":{"type":"object","required":["id","name","goal","knowledge","beliefs","boundaries"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"goal":{"type":"string"},"knowledge":{"type":"array","items":{"type":"string"}},"beliefs":{"type":"array","items":{"type":"string"}},"boundaries":{"type":"array","items":{"type":"string"}}}}},
+    "props":{"type":"array","items":{"type":"object","required":["id","label"],"properties":{"id":{"type":"string"},"label":{"type":"string"},"location":{"type":"string"}}}},
+    "beats":{"type":"array","minItems":1,"items":{"type":"object","required":["id","speaker","text","choices"],"properties":{"id":{"type":"string"},"speaker":{"type":"string"},"text":{"type":"string"},"choices":{"type":"array","minItems":1,"items":{"type":"object","required":["id","text","effects"],"properties":{"id":{"type":"string"},"text":{"type":"string"},"effects":{"type":"object"},"next":{"type":["string","null"]}}}}}}},
+    "debrief":{"type":"array","items":{"type":"string"}}
+  },
+  "additionalProperties":false
+}
