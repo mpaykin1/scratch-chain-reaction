@@ -19,6 +19,47 @@ export const DECISION_MESSAGES=[
   'Импорт помог пережить кризис, но бюджет истощается.',
   'Модернизация и восстановление природы требуют вложений.'
 ];
+
+// Four choices per crisis: two risky shortcuts, a shifted tradeoff, and a balanced path.
+// Explanations describe modeled effects, not claims about arbitrary real-world outcomes.
+const CHOICE_BANK={
+  power:[
+    ['🔥 Сжечь лес ради энергии',{power:13,eco:-19,water:-6},'Энергия выросла, но лес и водный баланс пострадали.','risk'],
+    ['🏭 Запустить мегазавод',{power:19,eco:-15,food:-7},'Мегазавод увеличил мощность ценой загрязнения и урожая.','risk'],
+    ['🚛 Импортировать электричество',{power:9,budget:-18,water:-4},'Импорт закрыл часть дефицита ценой бюджета.','tradeoff'],
+    ['🌱 Модернизировать сеть',{power:8,eco:8,budget:-10},'Модернизация дала умеренный прирост энергии и улучшила экологию.','balanced']
+  ],
+  water:[
+    ['🏗 Перекрыть реку',{water:22,eco:-16,budget:-14},'Водохранилище наполнилось, но экосистема ниже плотины пострадала.','risk'],
+    ['⛏ Бурить глубокие скважины',{water:26,eco:-19,power:-4},'Добыча воды истощает подземные запасы и требует энергии.','risk'],
+    ['🚛 Закупить привозную воду',{water:18,budget:-20,food:-5},'Поставки спасли город ценой продовольственного бюджета.','tradeoff'],
+    ['🌳 Восстановить водосбор',{water:10,eco:9,budget:-10},'Ремонт труб и восстановление леса постепенно возвращают воду.','balanced']
+  ],
+  food:[
+    ['🪓 Расчистить лес под поля',{food:20,eco:-18,water:-8},'Площадь полей выросла, но почва теряет влагу.','risk'],
+    ['🧪 Усилить химизацию',{food:22,eco:-16,water:-10},'Урожай вырос ценой загрязнения и расхода воды.','risk'],
+    ['🚢 Ввозить продовольствие',{food:14,budget:-20,power:-4},'Импорт еды требует денег и энергии.','tradeoff'],
+    ['🌾 Восстановить плодородие',{food:8,water:5,eco:6,budget:-10},'Умеренный урожай с восстановлением почвы и воды.','balanced']
+  ],
+  eco:[
+    ['🚫 Закрыть все электростанции',{eco:18,power:-19,budget:-8},'Загрязнение снизилось, но энергетика ослабла.','risk'],
+    ['🌲 Посадить монокультуру',{eco:20,water:-14,food:-6},'Быстрое озеленение истощило воду и урожай.','risk'],
+    ['💰 Купить компенсации',{eco:8,budget:-20,food:-4},'Экологический эффект обошёлся дорого.','tradeoff'],
+    ['🌿 Восстановить экосистемы',{eco:9,water:6,food:4,budget:-10},'Водоёмы, леса и поля постепенно восстанавливаются вместе.','balanced']
+  ]
+};
+export function getGenieChoices(world){
+  const resource=['power','water','food','eco'].reduce((low,key)=>
+    world.state[key]<world.state[low]?key:low,'power');
+  const choices=CHOICE_BANK[resource].map(([label,effect,message,role],id)=>
+    ({id,label,effect:{...effect},message,role}));
+  let seed=(world.state.turn+world.state.budget*7+world.state.population*13+19)>>>0;
+  for(let i=choices.length-1;i>0;i--){
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    const j=seed%(i+1);[choices[i],choices[j]]=[choices[j],choices[i]];
+  }
+  return {resource,choices};
+}
 const EXTRA=Object.freeze({
   irrigation:{water:14,food:7,power:-3,budget:-9},
   recycling:{eco:11,water:4,budget:-8},
@@ -91,6 +132,9 @@ function applyActions(world,actions,description,charge=0){
     if(key==='forest')next.queue.push({turn:next.state.turn+2,delta:{eco:4,food:3},text:'Подросший лес восстанавливает почву и питание.',parentId:actionEvent.id});
     if(key==='city')next.queue.push({turn:next.state.turn+2,delta:{water:-3,power:-3},text:'Разросшемуся городу снова требуются вода и энергия.',parentId:actionEvent.id});
     if(key==='volcano')next.queue.push({turn:next.state.turn+1,delta:{eco:-4},text:'Пепел вулкана ухудшил состояние воздуха.',parentId:actionEvent.id});
+    if(key==='energy')next.queue.push({turn:next.state.turn+1,delta:{power:5,eco:-3},text:'Энергосеть вышла на мощность; загрязнение накопилось.',parentId:actionEvent.id});
+    if(key==='irrigation')next.queue.push({turn:next.state.turn+2,delta:{water:-5,food:5},text:'Орошение повысило урожай, но истощило запас воды.',parentId:actionEvent.id});
+    if(next.queue.length>200)next.queue=next.queue.slice(-200);
   }
   cascade(next,events,actionEvent.id);
   return {world:next,events,actions};
@@ -99,11 +143,25 @@ export function playBuild(world,key){
   if(!Object.hasOwn(BUILD_EFFECTS,key))throw Error('Unknown build action');
   return applyActions(world,[key],'Построено: '+ACTION_LABEL[key]);
 }
+export function advanceTick(world){
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  cascade(next,events,null);
+  return {world:next,events,actions:[]};
+}
 export function playDecision(world,index){
-  if(!Number.isInteger(index)||index<0||index>=DECISIONS.length)throw Error('Unknown decision');
-  const next=copy(world),event=record(next,'decision',DECISION_MESSAGES[index],null,DECISIONS[index]);
-  update(next.state,DECISIONS[index]);
-  return {world:next,events:[event],actions:[]};
+  const {resource,choices}=getGenieChoices(world);
+  const choice=choices.find(option=>option.id===index);
+  if(!choice)throw Error('Unknown decision');
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  update(next.state,choice.effect);
+  const event=record(next,'decision',choice.message,null,choice.effect);
+  events.push(event);
+  cascade(next,events,event.id);
+  return {world:next,events,actions:[],choice,resource};
 }
 export function interpretIdea(input){
   const text=typeof input==='string'?input.trim():'';
