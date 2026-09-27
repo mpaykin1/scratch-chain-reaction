@@ -1,3 +1,4 @@
+import {parseIdeaActions,sanitizeIdea} from './idea-parser.mjs';
 // Pure, deterministic simulation for the cinematic mode. No DOM, network, time or RNG.
 export const VERSION=1;
 export const INITIAL=Object.freeze({turn:0,population:32,power:0,water:0,food:0,eco:0,budget:50});
@@ -24,15 +25,6 @@ const EXTRA=Object.freeze({
   recycling:{eco:11,water:4,budget:-8},
   farm:{food:16,water:-5,budget:-9}
 });
-const KEYWORDS=[
-  ['irrigation',/орошени|полив|канал|водопровод|насос|скважин|irrigat/i],
-  ['recycling',/переработ|очистк|фильтр|recycl/i],
-  ['farm',/ферм|урожай|сельск|теплиц|farm/i],
-  ['forest',/лес|дерев|посадк|растени|forest/i],
-  ['city',/город|дом|здани|поселен|city/i],
-  ['energy',/энерг|солн|электр|ветр|турбин|energy|solar/i],
-  ['volcano',/вулкан|лав|геотерм|volcano/i]
-];
 const ACTION_LABEL={city:'Город',forest:'Лес',energy:'Энергия',volcano:'Вулкан',
   irrigation:'Орошение',recycling:'Очистка воды',farm:'Фермы'};
 const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
@@ -106,13 +98,11 @@ export function playDecision(world,index){
   return {world:next,events:[event],actions:[]};
 }
 export function interpretIdea(input){
-  const text=typeof input==='string'?input.trim():'';
-  if(!text||text.length>800)return {actions:[],reason:'Напиши идею длиной от 1 до 800 символов.'};
-  // Explicit negation is ambiguous without full language understanding: do not build what was forbidden.
-  const negated=/(?:^|[^\p{L}])не\s+(?:надо\s+|хочу\s+|нужно\s+)?(?:строить|создавать|сажать|делать)(?=$|[^\p{L}])/iu.test(text);
-  if(negated)return {actions:[],reason:'Я пока не умею надёжно разбирать отрицания. Сформулируй, что именно построить.'};
-  const actions=KEYWORDS.filter(([,pattern])=>pattern.test(text)).map(([name])=>name).slice(0,4);
-  return {actions,reason:actions.length?'':'Пока не могу рассчитать именно эту идею. Попробуй указать лес, город, энергию, вулкан, ферму, насос или очистку воды.'};
+  if(typeof input!=='string'||!input.trim()||input.trim().length>800)
+    return {actions:[],reason:'Напиши идею длиной от 1 до 800 символов.'};
+  const actions=parseIdeaActions(sanitizeIdea(input)).slice(0,4);
+  return {actions,reason:actions.length?'':
+    'Пока не могу рассчитать именно эту идею. Укажи, что построить: лес, город, энергию, вулкан, ферму, насос или очистку воды.'};
 }
 export function playIdea(world,input){
   const parsed=interpretIdea(input);
