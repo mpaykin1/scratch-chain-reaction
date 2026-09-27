@@ -8,7 +8,7 @@ import {CHUNK_PIXELS,WORLD_PIXEL_PER_VOXEL,chunkCoord,chunkKey,visibleChunks,
   terrainAt,terrainSupports,paintChunk} from '../cinematic/terrain-chunks.mjs';
 test('vendor matches pinned canonical World Server terrain blob',()=>{
   const file=readFileSync(new URL('../cinematic/ws-terrain-contract.mjs',import.meta.url));
-  const header=Buffer.from('blob '+file.byteLength+'\\0'.replace('\\0','\\u0000'));
+  const header=Buffer.concat([Buffer.from('blob '+file.byteLength+' '),Buffer.from([0])]);
   const sha=createHash('sha1').update(header).update(file).digest('hex');
   assert.equal(sha,'1bc09f0985bcccb84110e9b9e0be36f1c1cc03e3');
 });
