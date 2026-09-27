@@ -1,0 +1,16 @@
+/* Keep real World Server voxels OUTSIDE the narrative/dialog overlay.
+   Paint correctness is not enough if the player cannot actually see them. */
+.world-server-isometric{
+  position:absolute;z-index:4;right:2.5%;top:34%;left:auto;bottom:auto;
+  width:min(24vw,300px);height:min(15vw,188px);opacity:.96;
+  pointer-events:none;contain:layout paint;
+  filter:drop-shadow(0 4px 5px #13202a77)
+}
+@media(orientation:portrait){
+  .world-server-isometric{
+    left:3%;right:auto;top:18%;bottom:auto;
+    width:min(42vw,185px);height:min(24vw,120px)
+  }
+}
+@media(pointer:coarse){.world-server-isometric{filter:none}}
+.world-server-isometric[hidden]{display:none!important}

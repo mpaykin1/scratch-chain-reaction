@@ -1,0 +1,42 @@
+name: World Server graphics browser smoke
+on:
+  push:
+    branches: [ai/chatgpt/vertical-slice-world-shapes-20260927]
+  pull_request:
+    branches: [main]
+    paths:
+      - cinematic/world-server/**
+      - cinematic/enhancements.mjs
+      - cinematic/index.html
+      - test/world-server-graphics-browser.cjs
+      - .github/workflows/world-server-graphics-smoke.yml
+permissions:
+  contents: read
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - name: Serve cinematic
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/scratch-smoke.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:8765/cinematic/ >/dev/null && break; sleep 1; done
+      - name: Ported-shape deterministic and viewport tests
+        run: node --test test/world-server-graphics.test.mjs
+      - name: Real graphics render, mobile and desktop
+        run: node test/world-server-graphics-browser.cjs
+        env:
+          BASE_URL: http://127.0.0.1:8765
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: world-server-graphics-screenshots
+          path: qa-artifacts/world-server-graphics-*.png
+          if-no-files-found: warn
+          retention-days: 5

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import {posix} from 'node:path';
 const root=new URL('../',import.meta.url);
 const read=path=>readFileSync(new URL(path,root),'utf8');
 const sw=read('sw.js');
@@ -20,14 +21,17 @@ test('precaches all first-party scripts and CSS used by cinematic HTML',()=>{
     visited.add(asset);
     assert.ok(cached.has(toCore(asset)),'Missing offline core asset: '+asset);
     if(!asset.endsWith('.mjs'))return;
-    for(const match of read('cinematic/'+asset).matchAll(
+    const source=read('cinematic/'+asset);
+    for(const match of source.matchAll(
       /(?:import|export)\s+(?:[^'"]+?\s+from\s+)?['"]\.\/([^'"]+\.mjs)['"]/g
-    ))visit(match[1]);
+    ))visit(posix.normalize(posix.join(posix.dirname(asset),match[1])));
+    for(const match of source.matchAll(/new URL\(['"]\.\/([^'"]+\.css)['"],\s*import\.meta\.url\)/g))
+      visit(posix.normalize(posix.join(posix.dirname(asset),match[1])));
   }
   assets.forEach(visit);
   assert.ok(visited.size>=7,'should check nested imports and CSS');
 });
 test('new SW version upgrades the reactive cache without losing offline assets',()=>{
-  assert.match(sw,/chain-reaction-v5-causal-economy-20260927/);
+  assert.match(sw,/chain-reaction-v6-world-server-shapes-20260927/);
   assert.match(sw,/caches\.delete\(key\)/);
 });
