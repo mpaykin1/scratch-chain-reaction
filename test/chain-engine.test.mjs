@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createWorld,playBuild,playIdea,playDecision,serializeWorld,restoreWorld,interpretIdea} from '../cinematic/chain-engine.mjs';
+import {createWorld,playBuild,playIdea,playDecision,serializeWorld,restoreWorld,interpretIdea,getGenieChoices} from '../cinematic/chain-engine.mjs';
 import {fitCanvas} from '../cinematic/quality.mjs';
+import {createAdaptiveQuality} from '../cinematic/adaptive-quality.mjs';
 
 const run=steps=>steps.reduce((world,step)=>playBuild(world,step).world,createWorld());
 test('physical render buffer never exceeds 1080px on a 3x iPhone and desktop',()=>{
@@ -57,4 +58,40 @@ test('restore validates version, malformed JSON and resource bounds',()=>{
   assert.equal(restoreWorld(JSON.stringify(corrupted)),null);
   corrupted.state.eco=50;corrupted.version=100;
   assert.equal(restoreWorld(JSON.stringify(corrupted)),null);
+});
+
+test('Genie presents deterministic choices for the weakest current resource',()=>{
+  const energy=playBuild(createWorld(),'energy').world;
+  const one=getGenieChoices(energy),two=getGenieChoices(energy);
+  assert.deepEqual(one,two);
+  assert.equal(one.crisis,'water','power is adequate; missing water becomes the priority');
+  assert.equal(one.choices.length,4);
+  assert.ok(one.choices.every(option=>option.label.includes('вод')||option.label.includes('реки')||option.label.includes('водосбор')));
+  assert.equal(new Set(one.choices.map(option=>JSON.stringify(option.delta))).size,4);
+});
+test('Genie decisions advance ticks, run delayed effects and remain replayable',()=>{
+  const first=playBuild(createWorld(),'forest').world;
+  const decision=playDecision(first,0);
+  assert.equal(decision.world.state.turn,2);
+  assert.ok(decision.events.some(event=>event.type==='decision'));
+  assert.ok(decision.events.some(event=>event.parentId));
+  const followUp=playDecision(decision.world,0);
+  assert.equal(followUp.world.state.turn,3);
+  assert.ok(followUp.events.some(event=>event.type==='delayed'&&event.tick===3));
+  assert.equal(serializeWorld(followUp.world),serializeWorld(playDecision(playDecision(first,0).world,0).world));
+  assert.equal(serializeWorld(restoreWorld(serializeWorld(followUp.world))),serializeWorld(followUp.world));
+});
+test('physical DPR is at most 2 even on small high-density screens',()=>{
+  assert.deepEqual(fitCanvas(100,200,4),{width:200,height:400,scale:2});
+});
+test('adaptive GPU quality drops under sustained load and recovers when stable',()=>{
+  const budget=createAdaptiveQuality();
+  for(let i=0;i<18;i++)budget.observe(85);
+  assert.ok(budget.quality<1);
+  const lower=budget.quality;
+  for(let i=0;i<90;i++)budget.observe(23);
+  assert.ok(budget.quality>lower);
+  const before=budget.quality;
+  for(let i=0;i<200;i++)budget.observe(100,{visible:false});
+  assert.equal(budget.quality,before,'background tabs must not degrade quality');
 });
