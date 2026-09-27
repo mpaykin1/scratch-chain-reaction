@@ -37,6 +37,8 @@
 
 [hidden]{display:none!important}
 .modal-backdrop{position:absolute;inset:0;z-index:49;background:#030b16c9}
+.scenario-link{display:block;margin:12px 0 18px;padding:14px 16px;border-radius:12px;border:1px solid #b9f3d2;background:linear-gradient(110deg,#ffe0a4,#9de8c5);color:#101b28;font-size:18px;font-weight:850;text-decoration:none}
+.scenario-link:focus-visible{outline:3px solid #a4ecff;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.atmosphere,.genie,.rotor,.spark{animation:none!important}.world-object{transition:none}}
 
 #undo:disabled{opacity:.4;cursor:not-allowed}
