@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#091928"><link rel="icon" type="image/svg+xml" href="./favicon.svg"><title>Цепная реакция — Scratch / World Server</title>
+<meta name="theme-color" content="#091928"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Цепная реакция"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./favicon.svg"><title>Цепная реакция — Scratch / World Server</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#071824;color:#e9f6ef}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#264d5f 0,transparent 42%),linear-gradient(165deg,#071824,#10343a 78%,#071824)}
@@ -17,17 +17,26 @@ section.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr
 .info article{background:#102a34;border:1px solid #275b5c;padding:16px 18px;border-radius:16px}
 .info h2{font-size:1rem;color:#ffe7a9;margin:0 0 7px}.info p{font-size:.9rem;margin:0}
 footer{font-size:.76rem;color:#93b9b3;text-align:center;padding:8px 18px 25px}
-@media(max-width:600px){header{padding-top:20px}.panel{padding:5px;border-radius:13px}.frame{height:auto;aspect-ratio:4/3;border-radius:9px;max-height:none}}
+/* On narrow screens the game, not the landing page, occupies the entire browser viewport.
+   Scratch keeps its 4:3 stage so none of the five action cards are cropped. */
+@media(max-width:600px){
+  html,body{width:100%;height:100%;overflow:hidden}
+  header,.actions,section.info,footer{display:none}
+  main{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;margin:0}
+  .panel,.frame{position:absolute;inset:0;width:100%;height:100%;max-height:none;margin:0;
+    padding:0;border:0;border-radius:0;box-shadow:none;aspect-ratio:auto;background:#071824}
+  iframe{display:block;position:absolute;inset:0;width:100%;height:100%;color-scheme:dark}
+}
 </style></head><body>
 <header><div class="eyebrow">World Server · Fully Animated Scratch Game</div>
 <h1>🌍 Цепная реакция</h1>
 <p>Начни с безжизненной пустоши. Выбери город, лес, энергию, вулкан или собственную идею. Анимированный мир изменяется после каждого решения.</p>
 <span class="badge">Работает в браузере · Scratch 3 / TurboWarp</span></header>
 <main><div class="panel"><div class="frame"><div class="fallback">Игра загружается…</div>
-<iframe title="Цепная реакция — игровое поле Scratch" allow="autoplay; fullscreen" allowfullscreen loading="eager" src="https://turbowarp.org/embed?project_url=https%3A%2F%2Fmpaykin1.github.io%2Fscratch-chain-reaction%2Fchain-reaction.sb3&autoplay"></iframe>
+<iframe title="Цепная реакция — игровое поле Scratch" style="color-scheme:dark" allow="autoplay; fullscreen" allowfullscreen loading="eager" src="https://turbowarp.org/embed?project_url=https%3A%2F%2Fmpaykin1.github.io%2Fscratch-chain-reaction%2Fchain-reaction.sb3&autoplay&fullscreen-background=%23071824"></iframe>
 </div></div>
 <div class="actions">
-<a class="button" href="https://turbowarp.org/embed?project_url=https%3A%2F%2Fmpaykin1.github.io%2Fscratch-chain-reaction%2Fchain-reaction.sb3&autoplay" target="_blank" rel="noopener">▶ Играть на весь экран</a>
+<a class="button" href="./play.html">▶ Открыть полноэкранную страницу игры</a>
 <a class="button secondary" href="./chain-reaction.sb3" download="Chain-Reaction.sb3">⬇ Скачать анимированную игру Scratch .sb3</a>
 </div>
 <section class="info">
