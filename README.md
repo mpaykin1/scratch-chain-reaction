@@ -2,6 +2,42 @@
 
 Полностью самостоятельный проект Scratch 3 с реальными PNG/SVG-костюмами, **не картинка и не HTML-имитация**. Запускается в официальном Scratch через импорт `.sb3`, а на GitHub Pages через совместимый проигрыватель TurboWarp.
 
+## Собственный проигрыватель TurboWarp (без внешнего iframe)
+
+В `player/` находится наш HTML/JS-интерфейс на основе открытого
+[TurboWarp Scaffolding](https://github.com/TurboWarp/scaffolding) 0.4.0,
+лицензия MPL-2.0. Это самостоятельный *проигрыватель*, не полная копия редактора
+TurboWarp или TurboWarp Packager.
+
+- `player/index.html` — собственный игровой экран с PWA, зелёным флажком при
+  старте, перезапуском, полноэкранной кнопкой и подсказкой для iPhone.
+- `player/player.js` — загружает `chain-reaction-animated.sb3` непосредственно
+  с наших GitHub Pages. На телефоне подгружается отдельная
+  `player/chain-reaction-portrait.sb3` с исходными скриптами и адаптированными
+  координатами пяти Scratch-кнопок.
+- `scripts/build_portrait_sb3.py` — автоматически создаёт портретную сцену
+  из оригинального Scratch-архива и нашего `world_portrait.webp`.
+- `.github/workflows/self-host-player.yml` — скачивает строго закреплённую версию
+  движка из npm, кладёт JS и лицензию MPL-2.0 в `player/vendor/`, тестирует
+  сам игровой canvas на iPhone, в горизонтальном режиме и на десктопе.
+  Только после прохождения тестов на main публикует собранный движок и .sb3.
+- `test_selfhost_player.mjs` — проверяет запуск реального Scratch,
+  отсутствие запросов к turbowarp.org/CDN, пять видимых кнопок, ход игры
+  после нажатия и минимум 85% занимаемой игровой сценой площади iPhone.
+
+Для локальной сборки: `npm install`,
+`python -m pip install Pillow==11.3.0`,
+`python scripts/build_portrait_sb3.py`, затем скопировать
+`node_modules/@turbowarp/scaffolding/dist/scaffolding-with-music.js` и
+`node_modules/@turbowarp/scaffolding/LICENSE` в `player/vendor/`.
+Для локального теста: `python -m http.server 4173` и
+`npx playwright install chromium && npm run test:player`.
+
+Важно: сам браузер Safari не разрешает скрыть свою оболочку из обычной
+вкладки. Для этого установи веб-приложение через «На экран Домой».
+Программа `player/` не предоставляет 3D-рендерер сама по себе:
+3D-модели/GLB потребуют отдельного рендерера либо совместимых Scratch-расширений.
+
 ## Играть
 
 - [Игра в браузере](https://mpaykin1.github.io/scratch-chain-reaction/)
