@@ -87,7 +87,7 @@ export function commitPlacement(spatial,plan){
 }
 function visibleBlockers(host){
   const base=host.getBoundingClientRect();
-  return [...host.querySelectorAll('.hud,.action-dock,#dialog:not(.hidden),.sheet:not([hidden])')]
+  return [...host.querySelectorAll('.hud,.action-dock,#dialog:not(.hidden)')]
     .filter(el=>el.getClientRects().length&&getComputedStyle(el).visibility!=='hidden')
     .map(el=>{const r=el.getBoundingClientRect();return {x:r.left-base.left,y:r.top-base.top,width:r.width,height:r.height};});
 }
