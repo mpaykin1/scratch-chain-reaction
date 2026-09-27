@@ -6,6 +6,7 @@ import {createView} from './render-ui.mjs';
 const API='https://world-server.mmmpaykin.workers.dev/api/chain';
 const TOKEN='chain-world-browser-token-v1';
 const $=id=>document.getElementById(id);
+$('game').dataset.unified='true';
 const sheets=createSheets(document);
 const {openSheet,closeSheets}=sheets;
 const renderView=createView(()=>({state:snapshot.state,placed:snapshot.placed,
