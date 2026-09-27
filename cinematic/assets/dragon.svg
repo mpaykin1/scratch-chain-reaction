@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 350" role="img" aria-label="Летящий дракон">
+<defs>
+  <linearGradient id="wing" x2=".85" y2="1"><stop stop-color="#8b648c"/><stop offset=".52" stop-color="#513d76"/><stop offset="1" stop-color="#263a60"/></linearGradient>
+  <linearGradient id="body" x2="0" y2="1"><stop stop-color="#c3a16c"/><stop offset=".4" stop-color="#7c6484"/><stop offset="1" stop-color="#354565"/></linearGradient>
+  <filter id="glow" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
+</defs>
+<g stroke="#283148" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M352 172C260 134 178 57 55 22l31 86-67 33 72 9-43 68 96-33 60 37 103-24Z" fill="url(#wing)"/>
+  <path d="M337 177C403 103 495 48 616 28l-42 67 49 37-89 13 45 79-107-36-71 25Z" fill="url(#wing)"/>
+  <path d="M393 192Q467 230 518 243Q579 258 615 306Q556 270 499 283Q444 290 385 250Z" fill="#4f4c74"/>
+  <path d="M222 186Q285 168 352 171Q410 170 447 211L423 237Q373 229 348 225L289 226Z" fill="url(#body)"/>
+  <path d="M218 181Q198 146 165 152L129 140 144 164 112 175 156 189Q190 221 242 213Z" fill="url(#body)"/>
+  <path d="M157 153L143 117 168 137 185 121 187 154" fill="#ba916d"/>
+  <path d="M223 221L204 269 178 284 222 282 251 245M352 223l16 45 37 17-52 0-27-38" fill="#414761"/>
+  <path d="M261 174l-24-43 40 28 6-44 31 44 27-43 5 48" fill="#8e7186"/>
+</g>
+<path d="M153 165Q163 159 173 167L158 174Z" fill="#ffe88c"/>
+<path d="M135 185Q100 190 90 206Q116 194 145 200" fill="#ffcb79" stroke="#e99d58" stroke-width="4"/>
+<circle cx="163" cy="169" r="3" fill="#171c30"/>
+<g opacity=".7" filter="url(#glow)"><path d="M90 206Q63 205 23 226" stroke="#fca365" stroke-width="9"/></g>
+<path d="M90 203Q66 213 38 222L53 204 23 197 76 195" fill="#ffc66b" stroke="#f49a49" stroke-width="3"/>
+</svg>

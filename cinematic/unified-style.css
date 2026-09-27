@@ -1,0 +1,37 @@
+/* Cinematic art is shared by browser and Telegram WebApp, with remote D1 state. */
+#nextDay,#linkForm,#linkState,#dragonArt,#shootDragon,#defendCity{display:none}
+#game[data-unified="true"] #nextDay,
+#game[data-unified="true"] #shootDragon:not([hidden]),
+#game[data-unified="true"] #defendCity:not([hidden]){display:inline-flex}
+#game[data-unified="true"] #linkForm{display:flex;flex-direction:column;gap:10px;margin:15px 0}
+#game[data-unified="true"] #linkState{display:block;font-size:14px;color:#b6ecd9}
+#linkForm label{font-weight:750}
+#linkCode{width:100%;padding:12px;border:2px solid #91caca;background:#101a2b;color:white;
+  font:700 19px/1.25 ui-monospace,monospace;letter-spacing:.13em;border-radius:10px;text-transform:uppercase}
+#linkCode:focus-visible{outline:3px solid #ffdf9a;outline-offset:2px}
+#game[data-unified="true"] .flying-dragon:not([hidden]){
+  display:block;position:absolute;z-index:8;top:9%;left:42%;width:42%;max-width:590px;
+  transform-origin:50% 70%;filter:drop-shadow(0 14px 15px #14172f91);
+  pointer-events:none;animation:dragon-flight 7s ease-in-out infinite}
+#game .flying-dragon.dragon-hit{animation:dragon-hit 800ms ease-out,dragon-flight 7s 800ms ease-in-out infinite;
+  filter:drop-shadow(0 0 18px #ff885c)}
+@keyframes dragon-flight{
+  0%,100%{transform:translate(-10%,-3%) rotate(-4deg) scale(.92)}
+  48%{transform:translate(10%,4%) rotate(3deg) scale(1.05)}
+}
+@keyframes dragon-hit{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  20%{transform:translate(2%,-4%) rotate(-7deg)}
+  40%{transform:translate(-6%,4%) rotate(9deg)}
+  65%{transform:translate(3%,-4%) rotate(-4deg)}
+}
+@media (orientation:portrait){
+  #game[data-unified="true"] .flying-dragon:not([hidden]){
+    width:63%;top:21%;left:34%;
+  }
+  #game[data-unified="true"] .controls{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){
+  #game[data-unified="true"] .flying-dragon:not([hidden]),
+  #game .flying-dragon.dragon-hit{animation:none}
+}
