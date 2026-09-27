@@ -1,5 +1,5 @@
 <!doctype html><html lang="ru"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"><meta name="theme-color" content="#101825">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#101825">
 <title>Цепная реакция — Злой Джинн | Scratch</title>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../app-icon-192.png">
@@ -94,8 +94,13 @@ function build(kind,{fromIdea=false}={}){
   panel(title,body);$('choiceTrigger').hidden=false;
   if(!fromIdea){choiceCount++;closeSheets();}
 }
-function closeSheets(){for(const id of ['choiceBox','ideaBox','menuBox'])$(id).hidden=true}
-function openSheet(id){closeSheets();if(id==='choiceBox')refreshChoices();$(id).hidden=false;if(id==='ideaBox')setTimeout(()=>$('ideaText').focus(),60)}
+let focusBeforeSheet=null;
+function closeSheets({restore=true}={}){for(const id of ['choiceBox','ideaBox','menuBox'])$(id).hidden=true;
+  if(restore){if(focusBeforeSheet?.isConnected)focusBeforeSheet.focus();focusBeforeSheet=null;}}
+function openSheet(id){if(!focusBeforeSheet)focusBeforeSheet=document.activeElement;closeSheets({restore:false});
+  if(id==='choiceBox')refreshChoices();$(id).hidden=false;
+  if(id==='ideaBox')$('ideaText').focus();else $(id).querySelector('.sheet-close')?.focus();}
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&['choiceBox','ideaBox','menuBox'].some(id=>!$(id).hidden))closeSheets();});
 function decide(id){
   const result=playDecision(world,id);sync(result);
   const decision=result.events.find(e=>e.type==='decision');const consequences=result.events.filter(e=>e.type!=='decision').map(e=>e.text).join(' ');
