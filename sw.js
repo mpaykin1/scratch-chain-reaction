@@ -1,11 +1,12 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
 const VERSION='chain-reaction-v2-20260927';
-const CORE=[
+const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./manifest.webmanifest',
   './cinematic/chain-engine.mjs','./cinematic/quality.mjs',
   './cinematic/render-effects.mjs','./cinematic/ambient-audio.mjs',
   './cinematic/enhancements.mjs','./app-icon-192.png',
   './cinematic/assets/world_portrait.webp','./cinematic/assets/world_landscape.webp',
+  './cinematic/assets/world_developed_portrait.webp','./cinematic/assets/world_developed_landscape.webp',
   './cinematic/assets/genie.webp','./cinematic/assets/city.webp',
   './cinematic/assets/forest.webp','./cinematic/assets/energy.webp',
   './cinematic/assets/volcano.webp','./cinematic/assets/card_city.webp',
@@ -17,7 +18,7 @@ const local=url=>url.origin===scope.origin&&url.pathname.startsWith(scope.pathna
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(VERSION);
-    const saved=await Promise.allSettled(CORE.map(path=>cache.add(new URL(path,scope))));
+    const saved=await Promise.allSettled(CORE.map(path=>cache.add(new URL(path,scope).href)));
     if(saved.some(item=>item.status==='rejected'))console.warn('Some offline resources could not be cached');
     await self.skipWaiting();
   })());
@@ -36,7 +37,7 @@ self.addEventListener('fetch',event=>{
       try{const response=await fetch(request);
         if(response.ok){const cache=await caches.open(VERSION);cache.put(request,response.clone()).catch(()=>{});}
         return response;
-      }catch{return await caches.match(request)||await caches.match(new URL('./cinematic/',scope))||Response.error();}
+      }catch{return await caches.match(request)||await caches.match(new URL('./cinematic/',scope).href)||Response.error();}
     })());return;
   }
   event.respondWith((async()=>{
