@@ -1,0 +1,75 @@
+name: Self-hosted TurboWarp player
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "player/**"
+      - "scripts/build_portrait_sb3.py"
+      - "test_selfhost_player.mjs"
+      - "package.json"
+      - ".github/workflows/self-host-player.yml"
+  push:
+    branches: [main]
+    paths:
+      - "player/index.html"
+      - "player/player.js"
+      - "scripts/build_portrait_sb3.py"
+      - "test_selfhost_player.mjs"
+      - "package.json"
+      - ".github/workflows/self-host-player.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  test-and-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Pin dependencies and prepare graphics
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          npm install --ignore-scripts --no-audit --no-fund
+          npm ls @turbowarp/scaffolding
+      - name: Generate portrait Scratch project
+        run: python scripts/build_portrait_sb3.py
+      - name: Vendor upstream runtime and preserve MPL license
+        run: |
+          mkdir -p player/vendor
+          test -s node_modules/@turbowarp/scaffolding/dist/scaffolding-with-music.js
+          cp node_modules/@turbowarp/scaffolding/dist/scaffolding-with-music.js player/vendor/
+          cp node_modules/@turbowarp/scaffolding/LICENSE player/vendor/LICENSE
+          test -s player/vendor/LICENSE
+          test -s player/chain-reaction-portrait.sb3
+          test -s player/chain-reaction-wide.sb3
+          du -h player/vendor/* player/chain-reaction-portrait.sb3 player/chain-reaction-wide.sb3
+      - name: Browser install
+        run: npx playwright install --with-deps chromium
+      - name: Test original Scratch game on our runtime (no remote TurboWarp)
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 >/tmp/player-server.log 2>&1 &
+          npm run test:player
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfhost-player-proof
+          path: player/screenshots/
+          if-no-files-found: warn
+      - name: Publish compiled first-party runtime on main only after tests
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add player/vendor/scaffolding-with-music.js player/vendor/LICENSE player/chain-reaction-portrait.sb3 player/chain-reaction-wide.sb3
+          if ! git diff --cached --quiet; then
+            git commit -m "build(player): publish verified self-hosted runtime and portrait Scratch bundle [skip ci]"
+            git push origin HEAD:main
+          fi

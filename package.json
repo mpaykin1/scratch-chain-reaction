@@ -1,0 +1,16 @@
+{
+  "name": "world-server-self-hosted-player",
+  "private": true,
+  "description": "First-party TurboWarp Scaffolding Scratch runner and browser QA",
+  "version": "1.0.0",
+  "scripts": {
+    "build:portrait": "python3 scripts/build_portrait_sb3.py",
+    "test:player": "node test_selfhost_player.mjs"
+  },
+  "dependencies": {
+    "@turbowarp/scaffolding": "0.4.0"
+  },
+  "devDependencies": {
+    "playwright": "1.55.0"
+  }
+}
