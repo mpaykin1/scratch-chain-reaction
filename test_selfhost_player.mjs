@@ -34,6 +34,7 @@ try {
         {timeout:75000});
       const errorText = await page.locator('#loading.error #message').allTextContents();
       if (errorText.length) throw Error('RUNNER_START_FAIL '+errorText.join(' '));
+      await page.waitForTimeout(180); // allow native scene layout after green flag
       const canvases = await page.locator('#stage canvas').evaluateAll(nodes =>
         nodes.map(n => {
           const r=n.getBoundingClientRect();
@@ -54,14 +55,17 @@ try {
           width:obj.player?.vm?.runtime?.stageWidth,
           height:obj.player?.vm?.runtime?.stageHeight,
           choiceTargets:t.filter(t=>t.getName?.().startsWith('Выбор ')).map(t=>({
-            name:t.getName(),x:t.x,y:t.y,visible:t.visible})),
+            name:t.getName(),x:t.x,y:t.y,size:t.size,visible:t.visible})),
           variables:Object.fromEntries(Object.entries(counters).map(([id,v])=>[v.name,v.value]))};
       });
-      const minCoverage=profile==='iphone-portrait'?.85:.55;
+      const minCoverage=.85;
       if (coverage<minCoverage) throw Error('STAGE_COVERAGE_FAIL '+coverage+' < '+minCoverage);
       if (runtime.choiceTargets.length!==5) throw Error('CHOICE_COUNT_FAIL '+runtime.choiceTargets.length);
       if (runtime.choiceTargets.some(t=>!t.visible)) throw Error('INVISIBLE_CHOICE');
+      if (runtime.choiceTargets.some(t=>Math.abs(t.x)+88*t.size/200 > (runtime.width||480)/2+2))
+        throw Error('CLIPPED_NATIVE_CHOICES '+JSON.stringify(runtime.choiceTargets));
       if (forbidden.length) throw Error('REMOTE_PLAYER_USED '+forbidden.join(','));
+      if (errors.length) throw Error('BROWSER_ERRORS '+errors.join('; '));
       await page.screenshot({path:'player/screenshots/'+profile+'.png',fullPage:true});
       if (profile==='iphone-portrait') {
         const city=runtime.choiceTargets.find(t=>t.name==='Выбор Город');
