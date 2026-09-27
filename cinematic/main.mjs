@@ -40,7 +40,8 @@ function build(kind,{fromIdea=false}={}){
   const quote=quoteBuild(world,kind);
   if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return;}
   const before={...state};
-  $('dialog').classList.add('hidden');
+  $('dialog').classList.remove('hidden','expanded');
+  $('dialog').classList.add('compact');
   const placement=spatialMap.plan([kind]);
   if(placement.error){panel('Нет места для постройки',placement.error);return;}
   checkpoint();const result=playBuild(world,kind);
@@ -73,7 +74,8 @@ function submitIdea(input){
     closeSheets();return;
   }
   const asDecision=pendingDecision,before={...state};
-  $('dialog').classList.add('hidden');
+  $('dialog').classList.remove('hidden','expanded');
+  $('dialog').classList.add('compact');
   const placement=spatialMap.plan(quote.actions);
   if(placement.error){panel('Нет места для постройки',placement.error);closeSheets();return;}
   const result=asDecision?playCustomDecision(world,input):playIdea(world,input);
