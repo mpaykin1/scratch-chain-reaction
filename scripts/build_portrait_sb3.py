@@ -75,5 +75,39 @@ def main():
     print("PORTRAIT_PASS", str(OUT), OUT.stat().st_size,
           "targets", len(targets), "choices", len(cards), "stage", "480x1300")
 
+    # Dynamic resize on landscape phones and desktop needs a true wide stage,
+    # not a 480x360 image surrounded by empty renderer background.
+    with zipfile.ZipFile(SRC) as source:
+        wide_project = json.loads(source.read("project.json"))
+        wide_assets = {n: source.read(n) for n in source.namelist() if n != "project.json"}
+    wide_image = ROOT / "cinematic/assets/world_landscape.webp"
+    if not wide_image.is_file():
+        raise FileNotFoundError(str(wide_image))
+    with Image.open(wide_image) as original:
+        wide = ImageOps.fit(original.convert("RGB"), (1920, 1080),
+                            method=Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    wide.save(buffer, "PNG", optimize=True)
+    wide_blob = buffer.getvalue()
+    wide_hash = hashlib.md5(wide_blob).hexdigest()
+    wide_name = wide_hash + ".png"
+    wide_assets[wide_name] = wide_blob
+    wide_stage = next(t for t in wide_project["targets"] if t["isStage"])
+    wide_stage["costumes"][0] = dict(assetId=wide_hash, name="Широкая пустошь",
+        md5ext=wide_name, dataFormat="png", bitmapResolution=1,
+        rotationCenterX=960, rotationCenterY=540)
+    wide_project["meta"]["wideSource"] = "world-server-self-hosted-player"
+    wide_out = ROOT / "player/chain-reaction-wide.sb3"
+    with zipfile.ZipFile(wide_out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as dst:
+        dst.writestr("project.json", json.dumps(wide_project, ensure_ascii=False, separators=(",",":")))
+        for name, content in wide_assets.items():
+            dst.writestr(name, content)
+    with zipfile.ZipFile(wide_out) as check:
+        assert check.testzip() is None
+        assert wide_name in check.namelist()
+        assert len(json.loads(check.read("project.json"))["targets"]) == len(targets)
+    print("WIDE_PASS", str(wide_out), wide_out.stat().st_size,
+          "targets", len(targets), "stage", "1920x1080")
+
 if __name__ == "__main__":
     main()
