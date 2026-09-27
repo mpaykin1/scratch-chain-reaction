@@ -1,8 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+
 import {hash32,sampleTerrain} from '../cinematic/ws-terrain-contract.mjs';
 import {CHUNK_PIXELS,WORLD_PIXEL_PER_VOXEL,chunkCoord,chunkKey,visibleChunks,
   terrainAt,terrainSupports,paintChunk} from '../cinematic/terrain-chunks.mjs';
+test('vendor matches pinned canonical World Server terrain blob',()=>{
+  const file=readFileSync(new URL('../cinematic/ws-terrain-contract.mjs',import.meta.url));
+  const header=Buffer.from('blob '+file.byteLength+'\\0'.replace('\\0','\\u0000'));
+  const sha=createHash('sha1').update(header).update(file).digest('hex');
+  assert.equal(sha,'1bc09f0985bcccb84110e9b9e0be36f1c1cc03e3');
+});
 test('vendored World Server terrain is deterministic for negative and distant coordinates',()=>{
   const coordinates=[[-1,-1],[-1000,500],[0,0],[10000,-123000],[-2**30,2**30]];
   for(const [x,y] of coordinates){
