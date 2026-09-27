@@ -28,6 +28,14 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       await page.locator('#ideaText').fill('Неизвестный механизм для дракона');
       await page.getByRole('button',{name:/Отправить идею/}).click();
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),1,'unknown ideas must not invent results');
+      assert.ok(['critical','stressed','stable'].includes(
+        await page.locator('#game').getAttribute('data-climate')),'world must react visually to environmental state');
+      await page.locator('#choiceTrigger').click();
+      assert.match(await page.locator('#choiceTitle').innerText(),/энергии/);
+      await page.locator('[data-decision="0"]').click();
+      assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),2,
+        'Genie choice must advance the world, not change resources outside time');
+      assert.ok((await page.evaluate(()=>window.__chainReaction.getHistory())).some(e=>e.type==='decision'));
       assert.equal(errors.length,0,JSON.stringify(errors));
       console.log('ENHANCEMENT_PASS',view.name,initial);
       await ctx.close();
