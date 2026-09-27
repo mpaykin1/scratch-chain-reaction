@@ -60,3 +60,7 @@
 .stat.critical .num{background:linear-gradient(100deg,#9c2828,#c25137)}
 .action-dock .option[data-unaffordable="true"]{opacity:.66;filter:grayscale(.45)}
 .action-dock .option[data-unaffordable="true"]:focus-visible{opacity:1;filter:none}
+
+/* Modal shade: the backdrop must sit above the HUD but below every sheet. */
+#modalBackdrop{position:absolute;inset:0;z-index:45;background:rgba(2,9,17,.68)}
+#modalBackdrop[hidden]{display:none!important}
