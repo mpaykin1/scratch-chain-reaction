@@ -121,3 +121,13 @@ export function restoreWorld(raw){
     return copy(data);
   }catch{return null;}
 }
+
+// Advance the deterministic world without forcing the user to build another object.
+// This is intentionally separate from playDecision, so the UI can offer a skip-turn.
+export function advanceTick(world){
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  cascade(next,events,null);
+  return {world:next,events,actions:[]};
+}
