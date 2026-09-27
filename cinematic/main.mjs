@@ -1,6 +1,7 @@
 import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
+import {mountSpatialMap,commitPlacement} from './spatial-map.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
@@ -21,7 +22,9 @@ function undo(){const prior=undoStack.pop();if(!prior)return false;const restore
 function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
 function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();refreshChoices();}
 const $=id=>document.getElementById(id);
-const {render,panel,caption,embers}=createView(()=>({state,placed,history:world.history}));
+const {render:renderView,panel,caption,embers}=createView(()=>({state,placed,history:world.history}));
+const spatialMap=mountSpatialMap($('game'),()=>world,{onCameraChange:persist});
+function render(){renderView();spatialMap.render();}
 const RESOURCE_NAMES={population:'Люди',power:'Энергия',water:'Вода',food:'Еда',eco:'Экология',budget:'Бюджет'};
 function deltaSummary(before,after){
   const changed=Object.keys(RESOURCE_NAMES).filter(key=>before[key]!==after[key])
@@ -37,7 +40,10 @@ function build(kind,{fromIdea=false}={}){
   const quote=quoteBuild(world,kind);
   if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return;}
   const before={...state};
-  checkpoint();const result=playBuild(world,kind);sync(result);pendingDecision=true;
+  const placement=spatialMap.plan([kind]);
+  if(placement.error){panel('Нет места для постройки',placement.error);return;}
+  checkpoint();const result=playBuild(world,kind);
+  commitPlacement(result.world.spatial,placement);sync(result);pendingDecision=true;
   caption('+'+({city:' ГОРОД',forest:' ЛЕС',energy:' ЭНЕРГИЯ',volcano:' ВУЛКАН'}[kind]));
   window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
   if(kind==='volcano')embers();
@@ -66,11 +72,17 @@ function submitIdea(input){
     closeSheets();return;
   }
   const asDecision=pendingDecision,before={...state};
+  const placement=spatialMap.plan(quote.actions);
+  if(placement.error){panel('Нет места для постройки',placement.error);closeSheets();return;}
   const result=asDecision?playCustomDecision(world,input):playIdea(world,input);
   if(!result.recognized){
     panel('Нужно уточнить идею',result.reason);closeSheets();return;
   }
-  checkpoint();sync(result);pendingDecision=!asDecision;
+  checkpoint();commitPlacement(result.world.spatial,placement);
+  if(asDecision)for(const kind of result.actions){
+    if(Object.hasOwn(result.world.placed,kind))result.world.placed[kind]++;
+  }
+  sync(result);pendingDecision=!asDecision;
   const names={city:'город',forest:'лес',energy:'энергетика',volcano:'вулкан',irrigation:'орошение',recycling:'очистка воды',farm:'ферма'};
   for(const kind of result.actions){
     window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
@@ -117,7 +129,7 @@ installPortableControls(document,{
 });
 startWalkers($('people'));
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getSpatial:()=>JSON.parse(JSON.stringify(world.spatial)),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
 })();
