@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101825">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Цепная реакция">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<title>Цепная реакция — наш проигрыватель Scratch</title>
+<style>
+:root{font:16px system-ui,-apple-system,sans-serif;color:#f9e8bb;background:#101825}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+#app{position:fixed;inset:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#171f2e}
+#stage{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;touch-action:manipulation}
+#stage canvas{display:block}
+#toolbar{position:absolute;top:calc(8px + env(safe-area-inset-top));right:calc(7px + env(safe-area-inset-right));z-index:20;display:flex;gap:7px}
+#toolbar button{font-size:18px;width:38px;height:38px;background:#101e33e8;color:#fff;border:1px solid #f4d39f;border-radius:9px;box-shadow:0 2px 9px #0009}
+#toolbar button:focus-visible,.sheet button:focus-visible{outline:3px solid white}
+#loading{position:absolute;inset:0;z-index:12;display:grid;place-content:center;text-align:center;background:#0c1b27e9;padding:22px}
+#loading[hidden]{display:none}
+#loading p{max-width:340px;font-size:17px;line-height:1.5;color:#f9e8bb}
+#loading.error{background:#211623}
+#retry{border:1px solid #e3b85a;border-radius:10px;background:#d89b50;color:#152838;font-weight:800;padding:12px;margin:auto}
+#retry[hidden]{display:none}
+#info{position:absolute;inset:0;z-index:40;display:none;place-content:center;background:#07111de8;padding:16px}
+#info.open{display:grid}
+.sheet{position:relative;max-width:440px;width:100%;max-height:90dvh;overflow:auto;background:#112a38;border:1px solid #f2cd83;border-radius:18px;padding:20px;box-shadow:0 10px 42px #000b}
+.sheet h1{font-size:1.2rem;margin:0 35px 12px 0}.sheet p{line-height:1.5;font-size:1rem}
+.sheet button{background:#ffd58c;color:#1c3042;border:0;border-radius:10px;font-weight:800;padding:12px 20px}
+.sheet a{color:#a9e7ff}
+#viewport-marker{position:absolute;right:0;bottom:0;width:1px;height:1px;pointer-events:none}
+@media(orientation:portrait){#stage{background:url('../cinematic/assets/world_portrait.webp') center/cover no-repeat}}
+</style>
+</head><body>
+<main id="app">
+  <div id="stage" role="application" aria-label="Игровая сцена Scratch"></div>
+  <div id="loading" role="status" aria-live="polite"><p id="message">Загружаем собственный проигрыватель и игру…</p><button id="retry" hidden>Повторить</button></div>
+  <nav id="toolbar" aria-label="Управление игрой">
+    <button id="fullscreen" title="На весь экран" aria-label="Полный экран">⛶</button>
+    <button id="restart" title="Начать заново" aria-label="Перезапустить игру">↻</button>
+    <button id="help" title="Помощь" aria-label="Как играть">?</button>
+  </nav>
+  <section id="info" aria-label="Справка" aria-modal="true" role="dialog">
+    <div class="sheet">
+      <h1>Цепная реакция · собственный проигрыватель</h1>
+      <p>Это оригинальный Scratch-проект с собственным локально размещённым движком TurboWarp Scaffolding. Скрипты, анимация и пять вариантов выбора работают внутри Scratch.</p>
+      <p>На iPhone для запуска без адресной строки: открой страницу в Safari → Поделиться → На экран Домой.</p>
+      <p>Если хочется оригинальную кинематографическую компоновку, <a href="../cinematic/">открой экран HTML-игры</a>.</p>
+      <p><small>Движок: TurboWarp Scaffolding, MPL‑2.0. <a href="https://github.com/TurboWarp/scaffolding">Исходный код движка</a>. Наши доработки: <a href="https://github.com/mpaykin1/scratch-chain-reaction/tree/main/player">GitHub проекта</a>.</small></p>
+      <button id="close-info" type="button">Играть</button>
+    </div>
+  </section>
+  <div id="viewport-marker" aria-hidden="true"></div>
+</main>
+<!-- Bundled during GitHub Actions build; never loaded from turbowarp.org or CDN. -->
+<script src="./vendor/scaffolding-with-music.js" defer></script>
+<script src="./player.js" defer></script>
+</body></html>
