@@ -109,7 +109,7 @@ export function interpretIdea(input){
   const text=typeof input==='string'?input.trim():'';
   if(!text||text.length>800)return {actions:[],reason:'Напиши идею длиной от 1 до 800 символов.'};
   // Explicit negation is ambiguous without full language understanding: do not build what was forbidden.
-  const negated=/\bне\s+(?:надо\s+|хочу\s+|нужно\s+)?(?:строить|создавать|сажать|делать)\b/i.test(text);
+  const negated=/(?:^|[^\p{L}])не\s+(?:надо\s+|хочу\s+|нужно\s+)?(?:строить|создавать|сажать|делать)(?=$|[^\p{L}])/iu.test(text);
   if(negated)return {actions:[],reason:'Я пока не умею надёжно разбирать отрицания. Сформулируй, что именно построить.'};
   const actions=KEYWORDS.filter(([,pattern])=>pattern.test(text)).map(([name])=>name).slice(0,4);
   return {actions,reason:actions.length?'':'Пока не могу рассчитать именно эту идею. Попробуй указать лес, город, энергию, вулкан, ферму, насос или очистку воды.'};
