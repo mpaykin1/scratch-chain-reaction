@@ -5,6 +5,9 @@ import {chromium, devices} from 'playwright';
 import fs from 'node:fs/promises';
 
 const base = process.env.GAME_URL || 'http://127.0.0.1:4173';
+const MIN_COVERAGE = 0.85;
+const START_TIMEOUT = 75_000;
+const STATE_TIMEOUT = 15_000;
 await fs.mkdir('player/screenshots', {recursive: true});
 const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
 const profiles = [
@@ -31,10 +34,18 @@ try {
       await page.waitForFunction(() =>
         Boolean(window.__ownTurboWarp?.diagnostics.started) ||
         document.getElementById('loading').classList.contains('error'), null,
-        {timeout:75000});
+        {timeout:START_TIMEOUT});
       const errorText = await page.locator('#loading.error #message').allTextContents();
       if (errorText.length) throw Error('RUNNER_START_FAIL '+errorText.join(' '));
-      await page.waitForTimeout(180); // allow native scene layout after green flag
+      await page.waitForFunction(() => {
+        const own = window.__ownTurboWarp;
+        if (!own?.diagnostics.started) return false;
+        const cards = own.player?.vm?.runtime?.targets?.filter(t =>
+          t.getName?.().startsWith('Выбор ')) || [];
+        return cards.length === 5 && cards.every(t => t.visible &&
+          (own.diagnostics.portrait ? t.size > 0 && t.size <= 87
+            : t.size >= 170 && t.size <= 183));
+      }, null, {timeout: STATE_TIMEOUT});
       const canvases = await page.locator('#stage canvas').evaluateAll(nodes =>
         nodes.map(n => {
           const r=n.getBoundingClientRect();
@@ -58,17 +69,15 @@ try {
             name:t.getName(),x:t.x,y:t.y,size:t.size,visible:t.visible})),
           variables:Object.fromEntries(Object.entries(counters).map(([id,v])=>[v.name,v.value]))};
       });
-      const minCoverage=.85;
-      if (coverage<minCoverage) throw Error('STAGE_COVERAGE_FAIL '+coverage+' < '+minCoverage);
+      if (coverage<MIN_COVERAGE) throw Error('STAGE_COVERAGE_FAIL '+coverage+' < '+MIN_COVERAGE);
       if (runtime.choiceTargets.length!==5) throw Error('CHOICE_COUNT_FAIL '+runtime.choiceTargets.length);
       if (runtime.choiceTargets.some(t=>!t.visible)) throw Error('INVISIBLE_CHOICE');
       if (runtime.choiceTargets.some(t=>Math.abs(t.x)+88*t.size/200 > (runtime.width||480)/2+2))
         throw Error('CLIPPED_NATIVE_CHOICES '+JSON.stringify(runtime.choiceTargets));
       if (forbidden.length) throw Error('REMOTE_PLAYER_USED '+forbidden.join(','));
       if (errors.length) throw Error('BROWSER_ERRORS '+errors.join('; '));
-      // Verify the native Scratch forever-loop does not restore 100% size
-      // after our one-time responsive JS layout and hide/shrink five cards.
-      await page.waitForTimeout(1150);
+      // The previous condition observes Scratch's own live pulse size
+      // instead of sleeping and guessing how fast CI's VM will run.
       const lateCards=await page.evaluate(() =>
         window.__ownTurboWarp.player.vm.runtime.targets
           .filter(t=>t.getName?.().startsWith('Выбор '))
@@ -85,8 +94,13 @@ try {
         const sw=runtime.width||480,sh=runtime.height||960;
         const px=canvas.x+canvas.width*(city.x+sw/2)/sw;
         const py=canvas.y+canvas.height*(sh/2-city.y)/sh;
-        await page.mouse.click(px,py);
-        await page.waitForTimeout(1400);
+        if (options.hasTouch) await page.touchscreen.tap(px, py);
+        else await page.mouse.click(px, py);
+        await page.waitForFunction(before => {
+          const vars=window.__ownTurboWarp?.player?.vm?.runtime?.getTargetForStage?.()?.variables;
+          const turn=Object.values(vars || {}).find(v=>v.name==='Ход');
+          return Number(turn?.value) > Number(before);
+        }, runtime.variables['Ход'], {timeout: STATE_TIMEOUT});
         const after=await page.evaluate(() => {
           const v=window.__ownTurboWarp.player.vm.runtime.getTargetForStage().variables;
           return Object.fromEntries(Object.values(v).map(a=>[a.name,a.value]));
@@ -94,6 +108,30 @@ try {
         if (!(after['Ход']>=1 && after['Население']>=30))
           throw Error('SCRATCH_CLICK_FAILED '+JSON.stringify({before:runtime.variables,after,px,py}));
         console.log('GAMEPLAY_PASS',JSON.stringify({choice:'Город',step:after['Ход'],population:after['Население']}));
+        // An orientation change must load the wide native project while keeping
+        // resources/turn and producing one canvas (not leaking old WebGL canvases).
+        await page.setViewportSize({width:844, height:390});
+        await page.waitForFunction(before => {
+          const own=window.__ownTurboWarp;
+          const vars=own?.player?.vm?.runtime?.getTargetForStage?.()?.variables || {};
+          const turn=Object.values(vars).find(v=>v.name==='Ход');
+          return own?.diagnostics.started &&
+            own.diagnostics.source.endsWith('chain-reaction-wide.sb3') &&
+            Number(turn?.value) >= Number(before);
+        }, after['Ход'], {timeout:START_TIMEOUT});
+        const afterRotate=await page.evaluate(() => {
+          const own=window.__ownTurboWarp, rect=document.querySelector('#stage canvas')?.getBoundingClientRect();
+          return {canvasCount:document.querySelectorAll('#stage canvas').length,
+            source:own.diagnostics.source,turn:Object.values(own.player.vm.runtime.getTargetForStage().variables)
+              .find(v=>v.name==='Ход')?.value,
+            coverage:rect ? Math.max(0,Math.min(innerWidth,rect.right)-Math.max(0,rect.left)) *
+              Math.max(0,Math.min(innerHeight,rect.bottom)-Math.max(0,rect.top)) /
+              (innerWidth*innerHeight) : 0};
+        });
+        if (afterRotate.canvasCount !== 1 || afterRotate.coverage < MIN_COVERAGE ||
+            Number(afterRotate.turn) < Number(after['Ход']))
+          throw Error('ORIENTATION_STATE_OR_COVERAGE_FAIL '+JSON.stringify(afterRotate));
+        console.log('ORIENTATION_PASS',JSON.stringify(afterRotate));
       }
       console.log('PLAYER_PASS',JSON.stringify({profile,coveragePercent:Math.round(1000*coverage)/10,
         stageSize:[runtime.width,runtime.height],choices:runtime.choiceTargets.length,
