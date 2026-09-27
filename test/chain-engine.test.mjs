@@ -8,7 +8,7 @@ test('physical render buffer never exceeds 1080px on a 3x iPhone and desktop',()
   const phone=fitCanvas(390,844,3),landscape=fitCanvas(844,390,3),desktop=fitCanvas(2560,1440,1);
   for(const shape of [phone,landscape,desktop])assert.ok(Math.max(shape.width,shape.height)<=1080);
   assert.ok(Math.abs(phone.width/phone.height-390/844)<.005);
-  assert.equal(fitCanvas(390,844,3,1080,.6).height,Math.floor(844*1.8));
+  assert.equal(fitCanvas(390,844,3,1080,.6).height,648);
 });
 test('same actions produce identical states, event history and delayed effects',()=>{
   const a=run(['forest','city','energy','volcano']);
