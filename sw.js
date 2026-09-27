@@ -1,5 +1,5 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
-const VERSION='chain-reaction-v4-portable-reactive-20260927-adaptive';
+const VERSION='chain-reaction-v5-causal-economy-20260927';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./cinematic/reactive.html',
   './cinematic/game-ui.mjs','./cinematic/world-engine.mjs','./manifest.webmanifest',
