@@ -8,6 +8,7 @@ const shapeStyle=document.createElement('link');
 shapeStyle.rel='stylesheet';
 shapeStyle.href=new URL('./world-server/world-server-graphics.css',import.meta.url).href;
 document.head.appendChild(shapeStyle);
+shapeStyle.addEventListener('load',()=>worldServerGraphics.repaint(),{once:true});
 const audio=createAmbientAudio();
 const controls=document.querySelector('.controls');
 if(controls){
