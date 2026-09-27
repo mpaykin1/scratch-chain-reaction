@@ -17,17 +17,31 @@ function polygon(ctx,points,color){
   for(const point of points.slice(1))ctx.lineTo(...point);
   ctx.closePath();ctx.fillStyle=color;ctx.fill();
 }
+// Lightweight presentation terrain; the actual house/tree meshes above are
+// still taken untouched from World_server/shared/world-shape-library.mjs.
+function groundPad(cx,cz,radius,top=4){
+  const rows=[];
+  for(let z=-radius;z<=radius;z++)for(let x=-radius;x<=radius;x++){
+    rows.push({x:cx+x,y:-1,z:cz+z,blockType:top});
+    if(Math.abs(x)===radius||Math.abs(z)===radius)
+      rows.push({x:cx+x,y:-2,z:cz+z,blockType:2});
+  }
+  return rows;
+}
 export function sceneBlocks(placed,{coarse=false}={}){
   const voxels=[],maxBlocks=coarse?450:900;
   if(Number(placed?.city)>0){
+    voxels.push(...groundPad(-8,0,6));
     voxels.push(...buildWorldShape({type:'house',scale:.48},
       {origin:{x:-8,y:0,z:0},maxBlocks}));
   }
   if(Number(placed?.forest)>0){
     const trees=coarse?1:2;
-    for(let i=0;i<trees;i++)voxels.push(...buildWorldShape({
-      type:'tree',scale:.45,seed:13+i*17},
-      {origin:{x:5+i*8,y:0,z:i*3},maxBlocks}));
+    for(let i=0;i<trees;i++){
+      voxels.push(...groundPad(5+i*8,i*3,3,1));
+      voxels.push(...buildWorldShape({type:'tree',scale:.45,seed:13+i*17},
+        {origin:{x:5+i*8,y:0,z:i*3},maxBlocks}));
+    }
   }
   return voxels.filter(v=>v.blockType!==0);
 }
