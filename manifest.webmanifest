@@ -1,0 +1,25 @@
+{
+  "name": "Цепная реакция — Злой Джинн",
+  "short_name": "Цепная реакция",
+  "description": "Полноэкранная стратегия с Злым Джинном",
+  "start_url": "/scratch-chain-reaction/cinematic/",
+  "scope": "/scratch-chain-reaction/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c1b27",
+  "theme_color": "#0c1b27",
+  "icons": [
+    {
+      "src": "./app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
