@@ -60,3 +60,17 @@
 .stat.critical .num{background:linear-gradient(100deg,#9c2828,#c25137)}
 .action-dock .option[data-unaffordable="true"]{opacity:.66;filter:grayscale(.45)}
 .action-dock .option[data-unaffordable="true"]:focus-visible{opacity:1;filter:none}
+
+
+/* Foreground map moves independently of the distant cinematic panorama. */
+.map-ground{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.36;
+  background-image:radial-gradient(ellipse at 16% 36%,#dbc18d55 0 2px,transparent 3px),
+  radial-gradient(ellipse at 74% 67%,#162f3260 0 4px,transparent 7px),
+  linear-gradient(120deg,transparent 49.6%,#422b2466 50%,transparent 50.4%);
+  background-size:140px 120px,93px 99px,140px 120px;mix-blend-mode:soft-light}
+#spatialObjects{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+#mapSurface{position:absolute;inset:0;z-index:9;cursor:grab;touch-action:none;user-select:none}
+#mapSurface:active{cursor:grabbing}
+.spatial-object{position:absolute;display:block;transform:translate(-50%,-100%);object-fit:contain;
+  pointer-events:none;user-select:none;filter:drop-shadow(3px 10px 6px #0008)}
+#cityArt,#forestArt,#energyArt,#volcanoArt{display:none!important}
