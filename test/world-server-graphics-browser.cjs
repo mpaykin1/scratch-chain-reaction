@@ -39,17 +39,32 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765';
           const w=Math.max(0,Math.min(innerWidth,rect.right)-Math.max(0,rect.left));
           const h=Math.max(0,Math.min(innerHeight,rect.bottom)-Math.max(0,rect.top));
           const canvas=document.querySelector('.world-server-isometric');
-          return{coverage:(w*h)/(innerWidth*innerHeight),canvasPixels:[canvas.width,canvas.height],
-            source:canvas.dataset.source};
+          const shape=canvas.getBoundingClientRect();
+          const shapeArea=shape.width*shape.height;
+          const overlap=selector=>{
+            const el=document.querySelector(selector);
+            if(!el||el.hidden||getComputedStyle(el).display==='none')return 0;
+            const box=el.getBoundingClientRect();
+            return Math.max(0,Math.min(shape.right,box.right)-Math.max(shape.left,box.left))*
+              Math.max(0,Math.min(shape.bottom,box.bottom)-Math.max(shape.top,box.top));
+          };
+          const hiddenArea=['#dialog','.hud','.action-dock'].reduce((sum,selector)=>
+            sum+overlap(selector),0);
+          return{coverage:(w*h)/(innerWidth*innerHeight),
+            graphicVisibility:Math.max(0,1-hiddenArea/shapeArea),
+            canvasPixels:[canvas.width,canvas.height],source:canvas.dataset.source};
         });
-        assert(viewport.coverage>=.85,spec.name+' screen visibility <85%');
+        assert(viewport.coverage>=.85,spec.name+' screen coverage <85%');
+        assert(viewport.graphicVisibility>=.85,spec.name+' real World Server graphics are hidden by UI: '+
+          Math.round(viewport.graphicVisibility*100)+'% visible');
         assert.match(viewport.source,/World_server\/shared\/world-shape-library\.mjs/);
         assert.equal(await page.locator('#cityArt').evaluate(el=>el.classList.contains('active')),true);
         assert.deepEqual(errors,[],'JS errors: '+errors.join(', '));
         fs.mkdirSync('qa-artifacts',{recursive:true});
         await page.screenshot({path:'qa-artifacts/world-server-graphics-'+spec.name+'.png'});
         console.log('PASS '+spec.name+': '+Math.round(viewport.coverage*100)+
-          '% viewport; real World Server voxels painted '+viewport.canvasPixels.join('x'));
+          '% viewport, '+Math.round(viewport.graphicVisibility*100)+
+          '% original voxels unobstructed; pixels '+viewport.canvasPixels.join('x'));
       }catch(error){
         failures.push(spec.name+': '+error.stack);
       }finally{await context.close();}
