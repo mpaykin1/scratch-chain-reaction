@@ -31,10 +31,20 @@ export function createView(getWorld,doc=document){
     const log=$('historyLog');if(log){log.replaceChildren();for(const event of history.slice(-8).reverse()){const li=doc.createElement('li');li.textContent=event.text;log.appendChild(li);}}
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
+  const details=doc.createElement('button');
+  details.id='expandDialog';details.className='dialog-more';details.type='button';
+  details.textContent='Подробнее';details.setAttribute('aria-label','Подробнее о последствиях');
+  $('dialogTitle').after(details);
+  details.addEventListener('click',()=>{
+    const expanded=$('dialog').classList.toggle('expanded');
+    details.textContent=expanded?'Свернуть':'Подробнее';
+  });
   function panel(title,body){
     $('dialogTitle').textContent=title;
     $('dialogText').textContent=body;
-    $('dialog').classList.remove('hidden');
+    const dialog=$('dialog');dialog.classList.remove('hidden','expanded');
+    dialog.classList.toggle('compact',getWorld().state.turn>0);
+    details.textContent='Подробнее';details.hidden=!dialog.classList.contains('compact');
   }
   function caption(value){
     cap.textContent=value;
