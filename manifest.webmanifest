@@ -1,0 +1,19 @@
+{
+  "name": "Цепная реакция — Злой Джинн",
+  "short_name": "Цепная реакция",
+  "description": "Анимированная игра World Server на Scratch",
+  "start_url": "./play.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071824",
+  "theme_color": "#071824",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
