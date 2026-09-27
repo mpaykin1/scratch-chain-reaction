@@ -7,8 +7,8 @@
     "build:portrait": "python3 scripts/build_portrait_sb3.py",
     "test:player": "node test_selfhost_player.mjs",
     "test:scenario": "node --test test/scenario-engine.test.mjs",
-    "test:cinematic": "node --test test/chain-engine.test.mjs test/idea-parser.test.mjs test/cinematic-architecture.test.mjs test/offline-core.test.mjs",
-    "test:cinematic:browser": "node qa_release.cjs && node test_cinematic_enhancements.cjs",
+    "test:cinematic": "node --test test/chain-engine.test.mjs test/idea-parser.test.mjs test/cinematic-architecture.test.mjs test/offline-core.test.mjs test/cinematic-portability.test.mjs",
+    "test:cinematic:browser": "node qa_release.cjs && node test_cinematic_enhancements.cjs && node test/portable-ui.cjs",
     "test:world": "node --test test/world-engine.test.mjs",
     "test:world-ui": "node test/world-ui.cjs"
   },

@@ -1,13 +1,19 @@
 import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
+import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
 
-import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,getGenieChoices} from './chain-engine.mjs';
+import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
 const SAVE='chain-reaction-world-v1';
 let saved=null;try{saved=restoreWorld(localStorage.getItem(SAVE));}catch{}
 let world=saved||createWorld(),state=world.state,placed=world.placed,choiceCount=0;
-let pendingDecision=world.state.turn>0 && !world.history.some(event=>event.type==='decision' && event.tick===world.state.turn);
+function hasPendingChoice(saved){
+  return saved.state.turn>0 &&
+    saved.history.some(event=>event.type==='action'&&event.tick===saved.state.turn) &&
+    !saved.history.some(event=>event.type==='decision'&&event.tick===saved.state.turn);
+}
+let pendingDecision=hasPendingChoice(world);
 const undoStack=[];
 function checkpoint(){undoStack.push({world:serializeWorld(world),pendingDecision});if(undoStack.length>20)undoStack.shift();$('undo').disabled=false;}
 function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;persist();render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
@@ -65,9 +71,34 @@ $('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.pla
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
+// A build does not have to be followed by another build: time can advance independently.
+function nextTurn(){
+  checkpoint();
+  const result=advanceTick(world);sync(result);
+  pendingDecision=false;$('choiceTrigger').hidden=true;
+  const messages=result.events.map(event=>event.text).join(' ')||'Мир прожил ещё один ход.';
+  panel('Ход '+state.turn,messages+' Вода: '+state.water+', еда: '+state.food+'.');
+  caption('ХОД '+state.turn);
+  window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind:'tick'}}));
+}
+function importSave(raw){
+  const parsed=parsePortableSave(raw,restoreWorld);
+  if(!parsed.world){panel('Импорт не выполнен',parsed.error);return false;}
+  checkpoint();world=parsed.world;state=world.state;placed=world.placed;
+  pendingDecision=hasPendingChoice(world);
+  persist();render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
+  closeSheets();panel('Мир восстановлен','Сохранение загружено. Ход '+state.turn+'. Можно продолжать игру.');
+  return true;
+}
+installPortableControls(document,{
+  onTick:nextTurn,
+  onExport:()=>downloadPortableSave(document,serializeWorld(world)),
+  onImport:importSave,
+  onError:message=>panel('Импорт не выполнен',message)
+});
 startWalkers($('people'));
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),submitIdea,decide,undo,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
 })();
