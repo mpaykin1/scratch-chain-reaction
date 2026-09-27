@@ -1,0 +1,67 @@
+name: Agent board synchronization
+on:
+  push:
+    branches: ['ai/**']
+    paths:
+      - 'AGENTS.md'
+      - 'TASKS.md'
+      - 'DECISIONS.md'
+      - 'CONTEXT.md'
+      - 'scripts/sync-agent-context.mjs'
+      - 'cinematic/genie-narratives.mjs'
+      - 'test/agent-protocol.test.mjs'
+      - 'test/genie-narratives.test.mjs'
+      - '.github/workflows/agent-coordinator.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'AGENTS.md'
+      - 'TASKS.md'
+      - 'DECISIONS.md'
+      - 'CONTEXT.md'
+      - 'scripts/sync-agent-context.mjs'
+      - 'cinematic/genie-narratives.mjs'
+      - 'test/agent-protocol.test.mjs'
+      - 'test/genie-narratives.test.mjs'
+      - '.github/workflows/agent-coordinator.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: agent-board-${${ github.ref }}
+  cancel-in-progress: false
+jobs:
+  synchronize-working-branch:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Update the deterministic task summary
+        run: node scripts/sync-agent-context.mjs
+      - name: Commit only changed context (never main)
+        run: |
+          if git diff --quiet -- CONTEXT.md; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CONTEXT.md
+          git commit -m 'docs(agents): synchronize task context [skip ci]'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+  validate:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check board and narrative tests
+        run: node --test test/agent-protocol.test.mjs test/genie-narratives.test.mjs
+      - name: Ensure context matches task and decisions
+        run: node scripts/sync-agent-context.mjs --check
