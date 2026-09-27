@@ -1,0 +1,4 @@
+.world-server-isometric{position:absolute;z-index:4;left:15%;bottom:30%;width:min(27vw,330px);height:min(17vw,200px);opacity:.9;pointer-events:none;contain:layout paint;filter:drop-shadow(0 4px 5px #13202a77)}
+@media(orientation:portrait){.world-server-isometric{left:2%;bottom:39%;width:min(42vw,260px);height:min(28vw,180px)}}
+@media(pointer:coarse){.world-server-isometric{filter:none}}
+.world-server-isometric[hidden]{display:none!important}
