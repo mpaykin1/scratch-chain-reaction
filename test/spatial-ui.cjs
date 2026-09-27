@@ -101,11 +101,15 @@ async function swipeTouch(page,x,y,dx,dy){
       assert.deepEqual(JSON.parse(raw).spatial,resumed);
       // Typed ideas use exactly the same viewport-only placement rule.
       await page.evaluate(()=>__chainReaction.decide(0));
+      await page.getByRole('button',{name:'Закрыть сообщение'}).click();
+      // Short landscape screens may be full: pan into empty territory first.
+      for(let i=0;i<3;i++)await pan(page,device.width*.5,device.height*.46,-device.width*.35,0);
       await page.getByRole('button',{name:'Поделись своей идеей'}).click();
       await page.locator('#ideaText').fill('Посади лес');
       await page.getByRole('button',{name:/Отправить идею/}).click();
       const typed=await stats(page);
-      assert.equal(typed.objects.length,4,'typed idea builds a fourth object');
+      const outcome=await page.locator('#dialogTitle').textContent();
+      assert.equal(typed.objects.length,4,'typed idea builds a fourth object; '+outcome);
       assert.ok((await visibleRatio(page,typed.objects[3].id))>=.86,
         'typed idea must be >85% user-visible');
       assert.deepEqual(errors,[],'no browser JS exceptions');
