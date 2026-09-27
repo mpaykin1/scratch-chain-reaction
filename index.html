@@ -16,12 +16,16 @@ a.button.secondary{background:#2d595c;color:#e8f2e5;border:1px solid #63a498}
 section.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px;margin:20px 0 38px}
 .info article{background:#102a34;border:1px solid #275b5c;padding:16px 18px;border-radius:16px}
 .info h2{font-size:1rem;color:#ffe7a9;margin:0 0 7px}.info p{font-size:.9rem;margin:0}
+.mobile-player{display:none}
 footer{font-size:.76rem;color:#93b9b3;text-align:center;padding:8px 18px 25px}
 /* On narrow screens the game, not the landing page, occupies the entire browser viewport.
    Scratch keeps its 4:3 stage so none of the five action cards are cropped. */
 @media(max-width:600px){
   html,body{width:100%;height:100%;overflow:hidden}
   header,.actions,section.info,footer{display:none}
+  .mobile-player{position:fixed;z-index:5;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);
+    display:grid;place-items:center;width:42px;height:42px;border:1px solid #facb7c;border-radius:12px;
+    color:white;text-decoration:none;font-size:23px;background:#102d3ce8;box-shadow:0 2px 8px #0009}
   main{position:fixed;inset:0;width:100%;height:100%;height:100dvh;max-width:none;margin:0}
   .panel,.frame{position:absolute;inset:0;width:100%;height:100%;max-height:none;margin:0;
     padding:0;border:0;border-radius:0;box-shadow:none;aspect-ratio:auto;background:#071824}
@@ -43,6 +47,6 @@ footer{font-size:.76rem;color:#93b9b3;text-align:center;padding:8px 18px 25px}
 <article><h2>🏙️ Строй</h2><p>Нажимай на пять карточек внизу игрового поля: город, лес, энергия, вулкан и своя идея. Объекты оживают на карте.</p></article>
 <article><h2>🧞 Выбирай</h2><p>После каждого хода Злой Джинн предлагает четыре решения или свою идею. В демо свободный текст распознаёт лес, город, солнечную энергию и вулкан.</p></article>
 <article><h2>⚡ Наблюдай</h2><p>Смотри, как ходят люди, движется дым и вращаются ветряки. Следи за ресурсами: кризисы возникают при их нехватке.</p></article>
-</section></main><footer>Анимированная игра World Server. Scratch — проект Scratch Foundation; TurboWarp — отдельный совместимый проигрыватель.</footer>
+</section></main><a class="mobile-player" href="./play.html" title="Открыть игру без лишних панелей" aria-label="Открыть игру во весь экран">⛶</a><footer>Анимированная игра World Server. Scratch — проект Scratch Foundation; TurboWarp — отдельный совместимый проигрыватель.</footer>
 </body></html>
 
