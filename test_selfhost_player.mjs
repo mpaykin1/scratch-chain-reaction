@@ -128,7 +128,7 @@ try {
               Math.max(0,Math.min(innerHeight,rect.bottom)-Math.max(0,rect.top)) /
               (innerWidth*innerHeight) : 0};
         });
-        if (afterRotate.canvasCount !== 1 || afterRotate.coverage < MIN_COVERAGE ||
+        if (afterRotate.canvasCount !== canvases.length || afterRotate.coverage < MIN_COVERAGE ||
             Number(afterRotate.turn) < Number(after['Ход']))
           throw Error('ORIENTATION_STATE_OR_COVERAGE_FAIL '+JSON.stringify(afterRotate));
         console.log('ORIENTATION_PASS',JSON.stringify(afterRotate));
