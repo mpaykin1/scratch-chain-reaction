@@ -1,7 +1,10 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
-const VERSION='chain-reaction-v2-20260927';
+const VERSION='chain-reaction-v3-module-bundle-20260927';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./manifest.webmanifest',
+  './cinematic/main.mjs','./cinematic/ui.mjs',
+  './cinematic/walkers.mjs','./cinematic/render-ui.mjs',
+  './cinematic/idea-parser.mjs','./cinematic/style.css',
   './cinematic/chain-engine.mjs','./cinematic/quality.mjs',
   './cinematic/render-effects.mjs','./cinematic/ambient-audio.mjs',
   './cinematic/enhancements.mjs','./app-icon-192.png',
