@@ -66,7 +66,7 @@ test('Genie presents deterministic choices for the weakest current resource',()=
   assert.deepEqual(one,two);
   assert.equal(one.crisis,'water','power is adequate; missing water becomes the priority');
   assert.equal(one.choices.length,4);
-  assert.ok(one.choices.every(option=>option.label.includes('вод')||option.label.includes('реки')||option.label.includes('водосбор')));
+  assert.ok(one.choices.every(option=>option.label.includes('вод')||option.label.includes('рек')||option.label.includes('водосбор')));
   assert.equal(new Set(one.choices.map(option=>JSON.stringify(option.delta))).size,4);
 });
 test('Genie decisions advance ticks, run delayed effects and remain replayable',()=>{
