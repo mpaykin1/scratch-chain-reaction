@@ -99,11 +99,73 @@ export function playBuild(world,key){
   if(!Object.hasOwn(BUILD_EFFECTS,key))throw Error('Unknown build action');
   return applyActions(world,[key],'Построено: '+ACTION_LABEL[key]);
 }
+
+// The Genie reacts to the weakest *current* system, not just the last button.
+// Each crisis offers two quick fixes with local externalities, one imported
+// workaround that exports the cost, and one slower resource-conscious response.
+// Ordered rules are intentional: same state + same choice => identical replay.
+const CHOICE_RULES=Object.freeze({
+  power:[
+    ['🔥 Сжечь лес ради энергии: +13 энергии, −19 экологии',{power:13,eco:-19,water:-6}],
+    ['🏭 Мегазавод: +19 энергии, −15 экологии, −7 еды',{power:19,eco:-15,food:-7}],
+    ['🚛 Импорт топлива: +9 энергии, −18 бюджета',{power:9,budget:-18,water:-4}],
+    ['🌱 Модернизировать сеть: +8 энергии, +8 экологии, −10 бюджета',{power:8,eco:8,budget:-10}]
+  ],
+  water:[
+    ['⛏️ Выкачать подземные воды: +16 воды, −14 экологии',{water:16,eco:-14,food:-5}],
+    ['🏗️ Перегородить реку: +20 воды, −12 экологии',{water:20,eco:-12,food:-7}],
+    ['🚛 Привезти воду: +12 воды, −20 бюджета',{water:12,budget:-20,power:-3}],
+    ['🌳 Восстановить водосбор: +12 воды, +7 экологии',{water:12,eco:7,budget:-12,power:-3}]
+  ],
+  food:[
+    ['🚜 Распахать заповедник: +19 еды, −14 экологии',{food:19,eco:-14,water:-8}],
+    ['🧪 Интенсивные удобрения: +23 еды, −12 экологии',{food:23,eco:-12,water:-9}],
+    ['🚛 Импортировать продовольствие: +15 еды, −20 бюджета',{food:15,budget:-20,power:-3}],
+    ['🌱 Вырастить устойчивые культуры: +12 еды, +6 экологии',{food:12,eco:6,water:-3,budget:-12}]
+  ],
+  eco:[
+    ['🪓 Срубить лес ради рабочих мест: +12 бюджета, −18 экологии',{budget:12,eco:-18,food:-4}],
+    ['🔥 Сжечь отходы ради энергии: +17 энергии, −16 экологии',{power:17,eco:-16,water:-5}],
+    ['🚛 Купить чистую воду: +13 воды, −19 бюджета',{water:13,budget:-19,food:-3}],
+    ['🌲 Восстановить лес и очистить стоки: +17 экологии',{eco:17,water:9,budget:-13,power:-3}]
+  ],
+  budget:[
+    ['🪓 Продать древесину: +18 бюджета, −17 экологии',{budget:18,eco:-17,food:-5}],
+    ['⛏️ Ускорить добычу: +23 бюджета, −19 экологии',{budget:23,eco:-19,water:-8}],
+    ['🚛 Занять деньги и купить ресурсы: +20 бюджета, −8 еды',{budget:20,food:-8,power:-4}],
+    ['♻️ Эффективное производство: +11 бюджета, +5 экологии',{budget:11,eco:5,power:-5}]
+  ],
+  population:[
+    ['🏢 Заселить без инфраструктуры: +12 жителей, −11 воды',{population:12,water:-11,food:-9}],
+    ['🏭 Привезти рабочих: +15 жителей, −12 экологии',{population:15,eco:-12,food:-8}],
+    ['🚛 Временные лагеря: +9 жителей, −16 бюджета',{population:9,budget:-16,water:-6}],
+    ['🏘️ Устойчивое жильё: +7 жителей, +5 экологии',{population:7,eco:5,budget:-13,food:-4}]
+  ]
+});
+const CRISIS_LIMITS=Object.freeze({power:18,water:18,food:18,eco:24,budget:18,population:16});
+const CRISIS_TITLES=Object.freeze({power:'Дефицит энергии',water:'Водный кризис',food:'Нехватка продовольствия',
+  eco:'Экологический кризис',budget:'Дефицит бюджета',population:'Отток населения'});
+export function getGenieChoices(world){
+  const entries=Object.entries(CRISIS_LIMITS);
+  const key=entries.reduce((best,[resource,limit])=>{
+    const severity=world.state[resource]/limit;
+    return severity<best.severity?{resource,severity}:best;
+  },{resource:'eco',severity:1});
+  const crisis=key.severity<1?key.resource:'eco';
+  return {crisis,title:key.severity<1?CRISIS_TITLES[crisis]:'Баланс ресурсов',
+    choices:CHOICE_RULES[crisis].map(([label,delta],id)=>({id,label,delta:{...delta}}))};
+}
 export function playDecision(world,index){
-  if(!Number.isInteger(index)||index<0||index>=DECISIONS.length)throw Error('Unknown decision');
-  const next=copy(world),event=record(next,'decision',DECISION_MESSAGES[index],null,DECISIONS[index]);
-  update(next.state,DECISIONS[index]);
-  return {world:next,events:[event],actions:[]};
+  if(!Number.isInteger(index)||index<0||index>=4)throw Error('Unknown decision');
+  const choice=getGenieChoices(world).choices[index];
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  const event=record(next,'decision',choice.label,null,choice.delta);
+  update(next.state,choice.delta);
+  events.push(event);
+  cascade(next,events,event.id);
+  return {world:next,events,actions:[]};
 }
 export function interpretIdea(input){
   const text=typeof input==='string'?input.trim():'';
