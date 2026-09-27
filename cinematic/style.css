@@ -102,4 +102,4 @@
   #dialog.compact.expanded{max-height:60dvh}
 }
 
-@media(max-height:500px) and (orientation:landscape){#dialog.compact{top:50px;bottom:auto;left:8%;width:min(440px,55%);max-height:75px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
+@media(max-height:500px) and (orientation:landscape){#dialog.compact{top:54px;bottom:auto;left:auto;right:1%;width:35%;max-height:108px;padding:7px 80px 7px 10px}#dialog.compact .dialog-title{font-size:15px}#dialog.compact.expanded{max-height:65dvh}}
