@@ -119,7 +119,7 @@ export function mountSpatialMap(host,getWorld,{onCameraChange=()=>{}}={}){
       if(!node){
         if(ART[obj.kind]){node=document.createElement('img');node.src=new URL('./assets/'+ART[obj.kind]+'.webp',import.meta.url).href;node.alt='';node.decoding='async';}
         else{node=document.createElement('span');node.textContent=ICONS[obj.kind]||'✦';}
-        node.className='spatial-object';node.setAttribute('aria-hidden','true');nodes.set(obj.id,node);
+        node.className='spatial-object';node.dataset.worldObjectId=obj.id;node.setAttribute('aria-hidden','true');nodes.set(obj.id,node);
       }
       node.style.left=p.x+'px';node.style.top=p.y+'px';node.style.width=f.width+'px';node.style.height=f.height+'px';
       layer.appendChild(node);
