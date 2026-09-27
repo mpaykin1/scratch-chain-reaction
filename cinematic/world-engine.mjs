@@ -88,7 +88,7 @@ function attack(s){
     target.status="defeated";
     emit(s,"Жители","Дракон повержен. Угроза миновала.",
       change(s,{happiness:6}),target.id,"combat",shot.id);
-  }else schedule(s,1,"retaliation",{dragonId:target.id},target.id,shot.id);
+  }else schedule(s,2,"retaliation",{dragonId:target.id},target.id,shot.id);
 }
 function due(s){
   const ready=s.queue.filter(e=>e.due<=s.turn);
@@ -118,7 +118,9 @@ function crises(s){
     if(active&&(!enabled||value>=c.off)){
       s.crises[key]=false;emit(s,c.title,"Кризис преодолён.",{},null,"crisis-end");
     }else if(!active&&enabled&&value<c.on){
-      s.crises[key]=true;emit(s,c.title,"Возник кризис. Смотри на цепочку последствий.",{},null,"crisis-start");
+      const cause=[...s.history].reverse().find(e=>(e.delta?.[c.metric]||0)<0);
+      s.crises[key]=true;emit(s,c.title,"Возник кризис. Смотри на цепочку последствий.",
+        {},cause?.parentId||null,"crisis-start",cause?.id||null);
     }
     if(s.crises[key]){
       const actual=change(s,c.damage);
@@ -150,7 +152,10 @@ export function dispatch(previous,command){
   for(const item of steps){
     if(item?.type==="build"&&BUILDINGS[item.kind]){
       for(const [k,v] of Object.entries(BUILDINGS[item.kind].cost))costs[k]=(costs[k]||0)+v;
-    }else if(item?.type==="policy"&&POLICIES.some(p=>p.id===item.id)){}
+    }else if(item?.type==="policy"&&POLICIES.some(p=>p.id===item.id)){
+      const p=POLICIES.find(p=>p.id===item.id);
+      for(const [k,v] of Object.entries(p.effect))if(v<0)costs[k]=(costs[k]||0)+v;
+    }
     else if(!["dragon","attack"].includes(item?.type))throw Error("Неподдерживаемое действие");
   }
   const missing=Object.entries(costs).find(([k,v])=>previous.stats[k]+v<0);
