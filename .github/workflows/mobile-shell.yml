@@ -6,6 +6,7 @@ on:
       - 'play.html'
       - 'manifest.webmanifest'
       - 'test_mobile_shell.py'
+      - 'test_mobile_viewport.mjs'
       - '.github/workflows/mobile-shell.yml'
   push:
     branches: [main]
@@ -25,3 +26,25 @@ jobs:
           python-version: '3.12'
       - name: Validate HTML shell, PWA manifest and project URL
         run: python -m unittest -v test_mobile_shell.py
+  browser-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install headless Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Capture mobile and desktop game frames
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 &
+          node test_mobile_viewport.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scratch-viewport-screenshots
+          path: mobile-artifacts/
+          if-no-files-found: warn
