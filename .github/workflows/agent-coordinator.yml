@@ -28,7 +28,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: agent-board-${${ github.ref }}
+  group: agent-board-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   synchronize-working-branch:
