@@ -43,6 +43,18 @@
 #game .option .accessible-title{position:absolute;left:0;right:0;bottom:0;height:27%;display:flex;align-items:center;justify-content:center;padding:2px 3px;font-weight:850;font-size:clamp(12px,1.55vw,19px);line-height:1.05;white-space:normal;color:#fff;text-align:center;text-shadow:0 1px 6px #000;background:linear-gradient(#1b2b3deb,#071524)}
 @media(orientation:portrait){#game .option .accessible-title{font-size:clamp(11px,2.85vw,13px)}}
 @media(max-height:500px) and (orientation:landscape){#game .dialog-text{font-size:16px;line-height:1.2}#game .dialog-title{font-size:23px}#game .option .accessible-title{font-size:clamp(12px,1.6vw,15px)}}
+
+/* Causal climate response supplements art instead of replacing it with a flat shader. */
+#game[data-climate="critical"] .scenery{filter:sepia(.38) saturate(.68) contrast(1.08)}
+#game[data-climate="stressed"] .scenery{filter:sepia(.15) saturate(.9)}
+#game[data-climate="stable"] .scenery{filter:saturate(1.06)}
+#game[data-climate="critical"] .atmosphere{opacity:.36}
+#game[data-climate="stable"] .atmosphere{opacity:.54}
+.reaction-fallback-pulse{position:absolute;z-index:4;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at var(--pulse-x,50%) var(--pulse-y,50%),transparent 3%,#ffaf5452 5%,transparent 17%)}
+.reaction-fallback-pulse.active{animation:reaction-css 950ms ease-out forwards}
+@keyframes reaction-css{0%{opacity:0;transform:scale(.55)}25%{opacity:.55}100%{opacity:0;transform:scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.reaction-fallback-pulse{display:none}}
 </style></head><body><div id="game">
 <div class="scenery" id="scenery" aria-label="Безжизненная земля, сухая долина и горы"></div><div class="atmosphere"></div><div class="atmosphere two"></div><div id="people" aria-hidden="true"></div>
 <img loading="lazy" decoding="async" class="world-object city" id="cityArt" src="assets/city.webp" alt=""><img loading="lazy" decoding="async" class="world-object forest" id="forestArt" src="assets/forest.webp" alt=""><img loading="lazy" decoding="async" class="world-object energy" id="energyArt" src="assets/energy.webp" alt=""><img loading="lazy" decoding="async" class="world-object volcano" id="volcanoArt" src="assets/volcano.webp" alt="">
@@ -55,7 +67,7 @@
 <div class="sheet" id="ideaBox" hidden role="dialog" aria-modal="true" aria-labelledby="ideaTitle"><button class="sheet-close" id="closeIdea" aria-label="Закрыть">×</button><h2 id="ideaTitle">🧞 Поделись своей идеей</h2><p>Что добавить в мир? Напиши 1–2 предложения — Джинн попробует найти последствия твоего решения.</p><form id="ideaForm"><textarea class="idea-field" name="idea" id="ideaText" placeholder="Например: построить город на солнечной энергии и посадить вокруг лес…" required maxlength="800"></textarea><button class="send" type="submit">Отправить идею ↗</button></form><p style="font-size:13px;opacity:.8">Идеи рассчитываются локально и воспроизводимо: лес, город, энергия, вулкан, фермы, насосы и очистка воды. Если идея не распознана, Джинн попросит уточнить её, а не придумает последствия.</p></div>
 <div class="sheet" id="menuBox" hidden role="dialog" aria-modal="true" aria-labelledby="menuTitle"><button class="sheet-close" id="closeMenu" aria-label="Закрыть">×</button><h2 id="menuTitle">Цепная реакция</h2><p>Демоверсия World Server. Браузерная игра и настоящий проект Scratch с анимированными спрайтами.</p><a href="./Chain_Reaction_Cinematic_Scratch.sb3" download style="color:#a4ecff;display:block;font-size:20px;margin:13px 0">⬇ Скачать настоящую игру Scratch (.sb3)</a><a id="scratchLaunch" href="#" target="_blank" rel="noopener" style="color:#a4ecff;display:block;font-size:20px;margin:13px 0">▶ Открыть версию Scratch в TurboWarp</a><button class="send" id="restart" type="button">Начать заново</button><button class="send" id="fullscreenBtn" type="button" style="margin-left:8px;background:linear-gradient(110deg,#267d83,#368c61)">⛶ Во весь экран</button><p id="fullscreenHint" hidden style="font-size:15px;color:#d9eaff">На iPhone открой игру в Safari, нажми «Поделиться» → «На экран Домой». Так игра запустится без адресной строки.</p></div>
 <script type="module">
-import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea} from './chain-engine.mjs';
+import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
 const SAVE='chain-reaction-world-v1';
 let saved=null;try{saved=restoreWorld(localStorage.getItem(SAVE));}catch{}
@@ -65,7 +77,8 @@ function sync(result){world=result.world;state=world.state;placed=world.placed;p
 const $=id=>document.getElementById(id);const cap=$('caption');const art={city:$('cityArt'),forest:$('forestArt'),energy:$('energyArt'),volcano:$('volcanoArt')};
 const messages={city:['Город построен!','Жители получили дома, но теперь им нужны вода, пища и энергия.'],forest:['Мир меняется!','Лес вырос! Экология и запасы воды постепенно восстанавливаются.'],energy:['Мир меняется!','Электростанция заработала! Энергии стало больше, но бюджет и вода уменьшаются.'],volcano:['Осторожно!','Вулкан проснулся! Появилась геотермальная энергия — и опасная лава.']};
 function render(){for(const [k,v]of Object.entries(state))document.querySelectorAll(`[data-stat="${k}"]`).forEach(n=>{n.textContent=String(v);n.closest('.stat').setAttribute('aria-label',n.previousElementSibling?.textContent+' '+v)});
-for(const [k,v]of Object.entries(placed))art[k].classList.toggle('active',v>0);$('rotor').classList.toggle('on',placed.energy>0);$('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}))}
+for(const [k,v]of Object.entries(placed))art[k].classList.toggle('active',v>0);$('rotor').classList.toggle('on',placed.energy>0);$('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);refreshChoices();window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}))}
+function refreshChoices(){const crisis=getGenieChoices(world);$('choiceTitle').textContent='Злой Джинн: '+crisis.title;document.querySelectorAll('[data-decision]').forEach(b=>{b.textContent=crisis.choices[Number(b.dataset.decision)].label})}
 function panel(title,body){$('dialogTitle').textContent=title;$('dialogText').textContent=body;$('dialog').classList.remove('hidden')}
 function caption(str){cap.textContent=str;cap.classList.remove('animate');void cap.offsetWidth;cap.classList.add('animate')}
 function embers(){for(let j=0;j<9;j++){const e=document.createElement('i');e.className='spark';e.style.right=(8+Math.random()*20)+'%';e.style.top=(24+Math.random()*14)+'%';e.style.setProperty('--wx',(Math.random()*130-60)+'px');e.style.animationDelay=(Math.random()*1.5)+'s';$('game').appendChild(e);e.addEventListener('animationend',()=>e.remove(),{once:true})}}
@@ -82,10 +95,11 @@ function build(kind,{fromIdea=false}={}){
   if(!fromIdea){choiceCount++;closeSheets();}
 }
 function closeSheets(){for(const id of ['choiceBox','ideaBox','menuBox'])$(id).hidden=true}
-function openSheet(id){closeSheets();$(id).hidden=false;if(id==='ideaBox')setTimeout(()=>$('ideaText').focus(),60)}
+function openSheet(id){closeSheets();if(id==='choiceBox')refreshChoices();$(id).hidden=false;if(id==='ideaBox')setTimeout(()=>$('ideaText').focus(),60)}
 function decide(id){
   const result=playDecision(world,id);sync(result);
-  panel('Последствия выбора',result.events[0].text);
+  const decision=result.events.find(e=>e.type==='decision');const consequences=result.events.filter(e=>e.type!=='decision').map(e=>e.text).join(' ');
+  panel('Последствия выбора',(decision?.text||'Решение принято.')+(consequences?' '+consequences:''));
   window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind:'choice'}}));
   closeSheets();
 }
