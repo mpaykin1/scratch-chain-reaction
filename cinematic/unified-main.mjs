@@ -52,6 +52,8 @@ function showDragon(){
   dragon.hidden=!snapshot.placed.dragon;
   dragon.dataset.hp=String(scene.dragon?.hp??100);
   dragon.classList.toggle('dragon-hit',scene.last?.kind==='defense');
+  $('shootDragon').hidden=!snapshot.actions?.shoot;
+  $('defendCity').hidden=!snapshot.actions?.defend;
 }
 function render(){
   renderView.render();
