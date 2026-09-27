@@ -156,6 +156,7 @@
     const snapshot = preserveState && ready ? snapshotState() : null;
     const run = ++generation;
     diagnostics.error = null;
+    diagnostics.started = false;
     portrait = orientation.matches;
     diagnostics.portrait = portrait;
     retry.hidden = true;
