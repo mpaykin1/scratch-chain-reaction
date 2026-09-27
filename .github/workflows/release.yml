@@ -30,6 +30,11 @@ jobs:
         run: |
           python -m http.server 8765 --bind 127.0.0.1 > /tmp/scratch-server.log 2>&1 &
           for i in {1..30}; do curl -fsS http://127.0.0.1:8765/ > /dev/null && break; sleep 1; done
+      - name: Shared Telegram WebApp and browser; >=85 percent coverage
+        run: node test/unified-ui.cjs
+        env:
+          BASE_URL: http://127.0.0.1:8765
+          CI: 'true'
       - name: Desktop, portrait, landscape and gameplay
         run: node qa_release.cjs
         env:
