@@ -58,7 +58,7 @@ jobs:
           LIVE_BASE: https://mpaykin1.github.io/scratch-chain-reaction
         run: |
           set -e
-          files="cinematic/index.html cinematic/main.mjs cinematic/portable-save.mjs cinematic/chain-engine.mjs cinematic/render-effects.mjs cinematic/enhancements.mjs sw.js"
+          files="cinematic/index.html cinematic/main.mjs cinematic/portable-save.mjs cinematic/ui.mjs cinematic/render-ui.mjs cinematic/walkers.mjs cinematic/idea-parser.mjs cinematic/style.css cinematic/chain-engine.mjs cinematic/render-effects.mjs cinematic/adaptive-quality.mjs cinematic/quality.mjs cinematic/ambient-audio.mjs cinematic/enhancements.mjs sw.js"
           for attempt in $(seq 1 24); do
             ok=1
             for f in $files; do

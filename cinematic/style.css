@@ -42,3 +42,15 @@
 #undo:disabled{opacity:.4;cursor:not-allowed}
 .history{max-height:145px;overflow:auto;margin-top:14px;font-size:13px;color:#d7ebfd}
 .history li{margin:4px 0}
+
+/* Causal climate response supplements art instead of replacing it with a flat shader. */
+#game[data-climate="critical"] .scenery{filter:sepia(.38) saturate(.68) contrast(1.08)}
+#game[data-climate="stressed"] .scenery{filter:sepia(.15) saturate(.9)}
+#game[data-climate="stable"] .scenery{filter:saturate(1.06)}
+#game[data-climate="critical"] .atmosphere{opacity:.36}
+#game[data-climate="stable"] .atmosphere{opacity:.54}
+.reaction-fallback-pulse{position:absolute;z-index:4;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at var(--pulse-x,50%) var(--pulse-y,50%),transparent 3%,#ffaf5452 5%,transparent 17%)}
+.reaction-fallback-pulse.active{animation:reaction-css 950ms ease-out forwards}
+@keyframes reaction-css{0%{opacity:0;transform:scale(.55)}25%{opacity:.55}100%{opacity:0;transform:scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.reaction-fallback-pulse{display:none}}
