@@ -1,0 +1,25 @@
+{
+  "name": "Цепная реакция — Водный кризис",
+  "short_name": "Водный кризис",
+  "description": "Причинно-следственная игра со Злым Джинном",
+  "start_url": "./scenario.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101b29",
+  "theme_color": "#101b29",
+  "icons": [
+    {
+      "src": "../app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "../app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

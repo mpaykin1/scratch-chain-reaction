@@ -26,6 +26,13 @@ const cases=[
     page.on("response",r=>{if(r.status()>=400)errors.push(String(r.status())+" "+r.url());});
     const response=await page.goto(target,{waitUntil:"domcontentloaded",timeout:25000});
     assert.equal(response.status(),200);
+    const manifest=await page.evaluate(async()=>{
+      const response=await fetch(document.querySelector('link[rel="manifest"]').href);
+      if(!response.ok)throw Error("PWA manifest unavailable");
+      return response.json();
+    });
+    assert.equal(manifest.display,"standalone");
+    assert.equal(manifest.start_url,"./scenario.html");
     await page.waitForFunction(()=>window.__scenarioQA && document.querySelector("#cityArt").complete,{timeout:10000});
     await page.waitForFunction(()=>[...document.images].every(i=>i.complete && i.naturalWidth>0),{timeout:15000});
     const bounds=await page.evaluate(()=>{
