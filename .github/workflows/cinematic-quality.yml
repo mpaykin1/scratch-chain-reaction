@@ -1,0 +1,42 @@
+name: Cinematic engine and mobile quality
+on:
+  pull_request:
+    branches: [main]
+    paths: ["cinematic/**", "sw.js", "test/chain-engine.test.mjs", "test_cinematic_enhancements.cjs", "package.json", ".github/workflows/cinematic-quality.yml"]
+  push:
+    branches: ["ai/**", main]
+    paths: ["cinematic/**", "sw.js", "test/chain-engine.test.mjs", "test_cinematic_enhancements.cjs", "package.json", ".github/workflows/cinematic-quality.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deterministic-and-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install browser testing dependencies
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --no-package-lock
+          npx playwright install --with-deps chromium
+      - name: Pure deterministic engine and render sizing
+        run: npm run test:cinematic
+      - name: Local full-screen, WebGL, idea, audio and offline QA
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/chain-http.log 2>&1 &
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:8765/cinematic/ -o /dev/null; then break; fi
+            sleep 1
+          done
+          CI=1 npm run test:cinematic:browser
+      - name: Upload viewport screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-mobile-proof
+          path: qa-artifacts/
+          if-no-files-found: warn
