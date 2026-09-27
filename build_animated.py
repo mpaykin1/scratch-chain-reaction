@@ -236,8 +236,10 @@ def main() -> None:
     monitors=[]
     project={'targets':targets,'monitors':monitors,'extensions':[],'meta':{'semver':'3.0.0','vm':'11.3.0','agent':'World Server · animated Scratch native sb3'}}
     with zipfile.ZipFile(OUT,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
-     z.writestr('project.json',json.dumps(project,ensure_ascii=False,separators=(',',':')))
-     for fn,blob in ASSETS.items():z.writestr(fn,blob)
+     payloads={'project.json':json.dumps(project,ensure_ascii=False,separators=(',',':')).encode('utf-8'),**ASSETS}
+     for fn,blob in sorted(payloads.items()):
+      entry=zipfile.ZipInfo(fn,date_time=(1980,1,1,0,0,0))
+      z.writestr(entry,blob,compress_type=zipfile.ZIP_DEFLATED,compresslevel=8)
     print('OUTPUT',OUT,'bytes',OUT.stat().st_size,'targets',len(targets),'blocks',sum(len(t['blocks']) for t in targets),'costumes',sum(len(t['costumes']) for t in targets),'unique_assets',len(ASSETS))
 
 if __name__ == '__main__':
