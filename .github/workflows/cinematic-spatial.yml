@@ -1,0 +1,35 @@
+name: Cinematic spatial map
+on:
+  pull_request:
+    paths:
+      - 'cinematic/**'
+      - 'test/spatial-*'
+      - 'package.json'
+      - '.github/workflows/cinematic-spatial.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  spatial-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Pure engine regressions
+        run: node --test test/chain-engine.test.mjs test/spatial-map.test.mjs test/idea-parser.test.mjs
+      - name: Real desktop and touch pointer interactions
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/cinematic-server.log 2>&1 &
+          sleep 2
+          node test/spatial-ui.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spatial-map-screenshots
+          path: qa-artifacts/spatial-*.png
+          if-no-files-found: ignore
