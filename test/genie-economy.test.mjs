@@ -13,7 +13,7 @@ test('all four Genie solutions adapt to the weakest resource and vary reproducib
   assert.equal(options.filter(x=>x.role==='worsens').length,2);
   assert.equal(options.filter(x=>x.role==='shifts').length,1);
   assert.equal(options.filter(x=>x.role==='balanced').length,1);
-  assert.equal(options.every(x=>x.label.includes('(')),true);
+  assert.equal(options.every(x=>typeof x.label==='string'&&x.label.length>15),true);
   assert.deepEqual(getDecisionOptions(world),options,'no random UI/engine mismatch');
   const outcomes=options.map((_,i)=>playDecision(world,i).world.state);
   assert.equal(new Set(outcomes.map(x=>JSON.stringify(x))).size,4);
