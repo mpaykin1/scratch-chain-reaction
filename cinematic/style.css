@@ -38,3 +38,7 @@
 [hidden]{display:none!important}
 .modal-backdrop{position:absolute;inset:0;z-index:49;background:#030b16c9}
 @media(prefers-reduced-motion:reduce){.atmosphere,.genie,.rotor,.spark{animation:none!important}.world-object{transition:none}}
+
+#undo:disabled{opacity:.4;cursor:not-allowed}
+.history{max-height:145px;overflow:auto;margin-top:14px;font-size:13px;color:#d7ebfd}
+.history li{margin:4px 0}

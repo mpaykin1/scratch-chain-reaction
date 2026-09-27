@@ -33,6 +33,6 @@ test('mixed ideas are one transaction; user text remains inert data',()=>{
   assert.equal(sanitizeIdea('a\u0000b'),'ab');
 });
 test('overlong input cannot be turned into a silently truncated building',()=>{
-  const idea='Построить город'+' '.repeat(801);
+  const idea='Построить город'+'x'.repeat(801);
   assert.equal(interpretIdea(idea).actions.length,0);
 });

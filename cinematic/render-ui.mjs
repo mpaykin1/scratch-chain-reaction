@@ -5,7 +5,7 @@ export function createView(getWorld,doc=document){
   const art=Object.fromEntries(['city','forest','energy','volcano'].map(kind=>[kind,$(kind+'Art')]));
   const cap=$('caption');
   function render(){
-    const {state,placed}=getWorld();
+    const {state,placed,history=[]}=getWorld();
     for(const node of stats){
       const key=node.dataset.stat,value=state[key];
       if(node.textContent!==String(value))node.textContent=String(value);
@@ -15,6 +15,7 @@ export function createView(getWorld,doc=document){
     for(const [kind,count]of Object.entries(placed))art[kind]?.classList.toggle('active',count>0);
     $('rotor').classList.toggle('on',placed.energy>0);
     $('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);
+    const log=$('historyLog');if(log){log.replaceChildren();for(const event of history.slice(-8).reverse()){const li=doc.createElement('li');li.textContent=event.text;log.appendChild(li);}}
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
   function panel(title,body){
