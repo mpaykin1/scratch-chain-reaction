@@ -58,6 +58,9 @@ function render(previous=null){
   $("dragonArt").setAttribute("aria-label",liveDragon?
     "Дракон летает над миром, здоровье "+
       world.entities.filter(e=>e.kind==="dragon"&&e.hp>0).at(-1).hp:"Дракон отсутствует");
+  window.dispatchEvent(new CustomEvent("worldStateUpdate",{
+    detail:{...world.stats,placed:{...world.counts}}
+  }));
 }
 function notify(previous,title,description){
   const ids=new Set(previous.history.map(e=>e.id));
@@ -70,13 +73,20 @@ function notify(previous,title,description){
   panel(title,description+(consequences?" "+consequences:"")+
     (rateInfo?" Изменения: "+rateInfo+".":""));
   caption(important.at(-1)?.source||title);
-  $("choiceTrigger").hidden=false;save();
+  const latestChoice=world.history.filter(e=>e.type==="policy").at(-1);
+  const latestAction=world.history.filter(e=>["build-start","creature","combat"].includes(e.type)).at(-1);
+  $("choiceTrigger").hidden=Boolean(latestChoice&&(!latestAction||latestChoice.turn>=latestAction.turn));
+  save();
   if(world.history.some(e=>!ids.has(e.id)&&e.type==="retaliation"))flashDragon();
 }
 function perform(command,title,description=""){
   try{
     const previous=world;
     world=dispatch(world,command);
+    const actions=command?.type==="batch"?command.steps:[command];
+    for(const action of actions)window.dispatchEvent(new CustomEvent("worldAction",{
+      detail:{kind:action.type==="build"?action.kind:action.type==="dragon"?"volcano":"choice"}
+    }));
     render(previous);notify(previous,title,description);
     closeSheets();
     return true;
@@ -90,6 +100,7 @@ function build(kind){
   if(success&&kind==="volcano")embers();
 }
 function decide(index){
+  if($("choiceTrigger").hidden)return false;
   const policy=POLICIES[index];
   if(policy)perform({type:"policy",id:policy.id},
     "Последствия решения",policy.title+".");
@@ -146,14 +157,36 @@ function flashDragon(){
   const dragon=$("dragonArt");dragon.classList.remove("struck");
   void dragon.offsetWidth;dragon.classList.add("struck");
 }
-function closeSheets(){
+let activeSheet=null,sheetOpener=null;
+function closeSheets({restoreFocus=true}={}){
   for(const id of ["choiceBox","ideaBox","menuBox","historyBox"])$(id).hidden=true;
+  activeSheet=null;
+  if(restoreFocus&&sheetOpener?.isConnected)sheetOpener.focus();
+  if(restoreFocus)sheetOpener=null;
 }
 function openSheet(id){
-  closeSheets();$(id).hidden=false;
-  if(id==="ideaBox")setTimeout(()=>$("ideaText").focus(),60);
+  if(!activeSheet)sheetOpener=document.activeElement;
+  closeSheets({restoreFocus:false});activeSheet=$(id);activeSheet.hidden=false;
+  const first=id==="ideaBox"?$("ideaText"):
+    activeSheet.querySelector("button:not(:disabled),a[href],textarea");
+  first?.focus();
   if(id==="historyBox")renderHistory();
 }
+document.addEventListener("keydown",event=>{
+  if(!activeSheet)return;
+  if(event.key==="Escape"){event.preventDefault();closeSheets();return;}
+  if(event.key!=="Tab")return;
+  const focusable=[...activeSheet.querySelectorAll(
+    "button:not(:disabled),a[href],textarea:not(:disabled)")]
+    .filter(node=>node.getClientRects().length);
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable.at(-1);
+  if(event.shiftKey&&document.activeElement===first){
+    event.preventDefault();last.focus();
+  }else if(!event.shiftKey&&document.activeElement===last){
+    event.preventDefault();first.focus();
+  }
+});
 function renderHistory(){
   const list=$("historyList");list.replaceChildren();
   const byId=new Map(world.history.map(e=>[e.id,e]));

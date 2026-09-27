@@ -20,7 +20,7 @@ jobs:
       - run: python test_native_scratch.py
       - name: Causal simulator regression tests
         run: node --test test/scenario-engine.test.mjs
-      - name: Reactive engine deterministic and safety regression tests
+      - name: Reactive world engine regression tests
         run: node --test test/world-engine.test.mjs
       - run: npm install --no-save playwright@1.63.0
       - run: npx playwright install --with-deps chromium
@@ -32,7 +32,7 @@ jobs:
         run: node qa_release.cjs
         env:
           CI: 'true'
-      - name: Follow-up actions, causal timeline and 85% viewport on phone and desktop
+      - name: Reactive follow-up events and 85% screen visibility
         run: node test/world-ui.cjs
         env:
           CI: 'true'

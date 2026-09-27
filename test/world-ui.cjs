@@ -11,8 +11,8 @@ const base=process.env.BASE_URL||"http://127.0.0.1:8765/";
   for(const view of [{name:"phone",width:390,height:844},{name:"desktop",width:1440,height:900}]){
    const page=await browser.newPage({viewport:{width:view.width,height:view.height}});
    const errors=[];page.on("pageerror",error=>errors.push(error.message));
-   await page.goto(base,{waitUntil:"domcontentloaded",timeout:25000});
-   await page.waitForURL("**/cinematic/");
+   await page.goto(new URL("cinematic/reactive.html",base).href,{waitUntil:"domcontentloaded",timeout:25000});
+   await page.waitForURL("**/cinematic/reactive.html");
    await page.waitForFunction(()=>Boolean(window.__chainReaction),{timeout:12000});
    const bounds=await page.locator("#game").boundingBox();
    assert.ok(bounds.width*bounds.height/(view.width*view.height)>.85,
