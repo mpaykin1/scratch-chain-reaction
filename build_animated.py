@@ -186,7 +186,8 @@ def main() -> None:
     def hud_svg(name,num,label=None):
         color=COLORS[name];p=min(100,max(0,num));width=51*p/100
         # escaped XML: hidden Unicode symbol font renders in Scratch SVG canvas.
-        return f'<rect x="1" y="1" width="73" height="32" rx="7" fill="#111e2c" stroke="#697989" stroke-width="1"/><text x="7" y="13" font-family="Arial, sans-serif" font-size="8" fill="#fff6e0">{html.escape(name)}</text><rect x="17" y="17" width="52" height="13" rx="4" fill="#304354"/><rect x="17" y="17" width="{width:.1f}" height="13" rx="4" fill="{color}" opacity=".74"/><text x="45" y="27" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">{label if label is not None else num}</text>'
+        display=label if label is not None else (num if name=='Ход' else f'≈{num}')
+        return f'<rect x="1" y="1" width="73" height="32" rx="7" fill="#111e2c" stroke="#697989" stroke-width="1"/><text x="7" y="13" font-family="Arial, sans-serif" font-size="8" fill="#fff6e0">{html.escape(name)}</text><rect x="17" y="17" width="52" height="13" rx="4" fill="#304354"/><rect x="17" y="17" width="{width:.1f}" height="13" rx="4" fill="{color}" opacity=".74"/><text x="45" y="27" font-size="11" fill="#ffffff" text-anchor="middle" font-weight="bold" font-family="Arial, sans-serif">{html.escape(str(display))}</text>'
     HUD_STEP=model['hudStep']
     if not isinstance(HUD_STEP,int) or HUD_STEP<1 or 100%HUD_STEP:
         raise ValueError('hudStep must be a positive divisor of 100')
