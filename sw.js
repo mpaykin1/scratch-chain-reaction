@@ -3,7 +3,7 @@ const VERSION='chain-reaction-v6-unified-world-20260927';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./cinematic/reactive.html',
   './cinematic/game-ui.mjs','./cinematic/world-engine.mjs','./manifest.webmanifest',
-  './cinematic/main.mjs','./cinematic/unified-main.mjs',
+  './cinematic/entry.mjs','./cinematic/main.mjs','./cinematic/unified-main.mjs',
   './cinematic/unified-style.css','./cinematic/assets/dragon.svg',
   './cinematic/portable-save.mjs','./cinematic/ui.mjs',
   './cinematic/walkers.mjs','./cinematic/render-ui.mjs',
