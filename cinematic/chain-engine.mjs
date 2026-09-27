@@ -93,6 +93,7 @@ function applyActions(world,actions,description,charge=0,eventType='action'){
   advanceQueue(next,events);
   if(charge)update(next.state,{budget:-charge});
   const actionEvent=record(next,eventType,description,null);
+  events.push(actionEvent);
   for(const key of actions){
     const delta=BUILD_EFFECTS[key]||EXTRA[key];
     update(next.state,delta);
