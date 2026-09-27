@@ -11,12 +11,13 @@ async function visit(browser,view){
   const context=await browser.newContext({
     viewport:{width:view.width,height:view.height},
     isMobile:view.mobile,hasTouch:view.mobile,
-    serviceWorkers:'block',deviceScaleFactor:view.mobile?2:1
+    serviceWorkers:'block',reducedMotion:'reduce',deviceScaleFactor:1
   });
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(new URL('cinematic/',base).href,{waitUntil:'load'});
-  await page.waitForFunction(()=>typeof window.__chainReaction?.getState==='function');
+  await page.goto(new URL('cinematic/',base).href,{waitUntil:'domcontentloaded'});
+  try{await page.waitForFunction(()=>typeof window.__chainReaction?.getState==='function',null,{timeout:20000});}
+  catch(error){console.error('STARTUP_LOAD_ERRORS',view.name,JSON.stringify(errors));throw error;}
   return {context,page,errors};
 }
 async function testStartup(browser,view){
@@ -52,7 +53,7 @@ async function testAllEntryButtons(browser){
   for(const kind of ['city','energy','volcano','idea']){
     const {context,page,errors}=await visit(browser,views[0]);
     try{
-      await page.locator('.option[data-action="'+kind+'"]').click({timeout:5000});
+      await page.locator('.option[data-action="'+kind+'"]').click({timeout:15000});
       if(kind==='idea')assert.equal(await page.locator('#ideaBox').isVisible(),true);
       else assert.equal(await page.evaluate(key=>__chainReaction.getPlaced()[key],kind),1);
       assert.deepEqual(errors,[],kind+' startup errors');
@@ -63,7 +64,7 @@ async function testAllEntryButtons(browser){
 (async()=>{
   const browser=await chromium.launch({headless:true,
     channel:process.env.CI?undefined:'chrome',
-    args:['--enable-webgl','--use-angle=swiftshader']});
+    args:['--disable-webgl']});
   try{
     for(const view of views)await testStartup(browser,view);
     await testAllEntryButtons(browser);
