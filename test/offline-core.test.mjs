@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import {posix} from 'node:path';
 const root=new URL('../',import.meta.url);
 const read=path=>readFileSync(new URL(path,root),'utf8');
 const sw=read('sw.js');
@@ -20,16 +21,22 @@ test('precaches all first-party scripts and CSS used by cinematic HTML',()=>{
     visited.add(asset);
     assert.ok(cached.has(toCore(asset)),'Missing offline core asset: '+asset);
     if(!asset.endsWith('.mjs'))return;
-    for(const match of read('cinematic/'+asset).matchAll(
+    const source=read('cinematic/'+asset);
+    for(const match of source.matchAll(
       /(?:import|export)\s+(?:[^'"]+?\s+from\s+)?['"]\.\/([^'"]+\.mjs)['"]/g
-    ))visit(match[1]);
+    ))visit(posix.normalize(posix.join(posix.dirname(asset),match[1])));
+    for(const match of source.matchAll(/new URL\(['"]\.\/([^'"]+\.css)['"],\s*import\.meta\.url\)/g))
+      visit(posix.normalize(posix.join(posix.dirname(asset),match[1])));
   }
   assets.forEach(visit);
   assert.ok(cached.has('./cinematic/unified-main.mjs'));
   assert.ok(cached.has('./cinematic/assets/dragon.svg'));
+  assert.ok(cached.has('./cinematic/world-server/world-shape-library.mjs'));
+  assert.ok(cached.has('./cinematic/unified-story-effects.mjs'));
+  assert.ok(cached.has('./cinematic/world-server/world-server-graphics.css'));
   assert.ok(visited.size>=7,'should check nested imports and CSS');
 });
 test('new SW version upgrades the reactive cache without losing offline assets',()=>{
-  assert.match(sw,/chain-reaction-v6-unified-world-20260927/);
+  assert.match(sw,/chain-reaction-v7-unified-world-shapes-20260927/);
   assert.match(sw,/caches\.delete\(key\)/);
 });
