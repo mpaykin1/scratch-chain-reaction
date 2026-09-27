@@ -9,8 +9,21 @@ export function createView(getWorld,doc=document){
     for(const node of stats){
       const key=node.dataset.stat,value=state[key];
       if(node.textContent!==String(value))node.textContent=String(value);
+      const critical=['power','water','food','eco'].includes(key)&&value<10;
+      node.closest('.stat')?.classList.toggle('critical',critical);
       node.closest('.stat')?.setAttribute('aria-label',
-        (node.previousElementSibling?.textContent||key)+' '+value);
+        (node.previousElementSibling?.textContent||key)+' '+value+
+        (critical?', критический дефицит':''));
+
+    }
+    const costs={city:12,forest:10,energy:16,volcano:9,idea:6};
+    for(const button of doc.querySelectorAll('.action-dock .option')){
+      const cost=costs[button.dataset.action]||0,poor=state.budget<cost;
+      button.dataset.unaffordable=String(poor);
+      button.title=poor?'Не хватает бюджета: требуется минимум '+cost:
+        button.dataset.action==='idea'?'Своя идея: исследование 6 + стоимость всех построек':
+        'Построить: '+(button.getAttribute('aria-label')||button.dataset.action);
+      button.setAttribute('aria-description',button.title);
     }
     for(const [kind,count]of Object.entries(placed))art[kind]?.classList.toggle('active',count>0);
     $('rotor').classList.toggle('on',placed.energy>0);
