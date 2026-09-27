@@ -1,5 +1,5 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
-const VERSION='chain-reaction-v5-causal-economy-20260927';
+const VERSION='chain-reaction-v6-cinematic-controls-20260927';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./cinematic/reactive.html',
   './cinematic/game-ui.mjs','./cinematic/world-engine.mjs','./manifest.webmanifest',
@@ -38,10 +38,22 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET'||!local(url))return;
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
-      try{const response=await fetch(request);
+      try{const response=await fetch(request,{cache:'no-cache'});
         if(response.ok){const cache=await caches.open(VERSION);cache.put(request,response.clone()).catch(()=>{});}
         return response;
       }catch{return await caches.match(request)||await caches.match(new URL('./cinematic/',scope).href)||Response.error();}
+    })());return;
+  }
+  // JavaScript and CSS update independently of cached images; never pin broken code.
+  if(request.destination==='script'||request.destination==='style'){
+    event.respondWith((async()=>{
+      try{
+        const response=await fetch(request,{cache:'no-cache'});
+        if(!response.ok)throw new Error('HTTP '+response.status);
+        const cache=await caches.open(VERSION);
+        cache.put(request,response.clone()).catch(()=>{});
+        return response;
+      }catch{return await caches.match(request)||Response.error();}
     })());return;
   }
   event.respondWith((async()=>{

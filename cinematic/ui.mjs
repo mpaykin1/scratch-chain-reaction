@@ -1,6 +1,12 @@
 const SHEETS=['choiceBox','ideaBox','menuBox'];
 export function createSheets(doc=document) {
-  const backdrop=doc.getElementById('modalBackdrop');
+  let backdrop=doc.getElementById('modalBackdrop');
+  if (!backdrop) {
+    backdrop=doc.createElement('div');
+    backdrop.id='modalBackdrop';
+    backdrop.hidden=true;
+    (doc.getElementById('game')||doc.body).appendChild(backdrop);
+  }
   const background=['.hud','.action-dock','#dialog'].map(selector=>doc.querySelector(selector)).filter(Boolean);
   let active=null,opener=null;
   function closeSheets({restoreFocus=true,keepOpener=false}={}) {
