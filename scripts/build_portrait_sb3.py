@@ -16,6 +16,32 @@ SRC = ROOT / "chain-reaction-animated.sb3"
 PORTRAIT_IMAGE = ROOT / "cinematic/assets/world_portrait.webp"
 OUT = ROOT / "player/chain-reaction-portrait.sb3"
 
+def resize_native_card_animation(project, base, pulse):
+    """Keep Scratch's own size pulse within the responsive card spacing.
+
+    Runtime-side setSize alone would be overwritten by the original native
+    Scratch 'set size to 100/104' animation loop every 0.96 seconds.
+    """
+    changed = 0
+    for t in project["targets"]:
+        if not t["name"].startswith("Выбор "):
+            continue
+        t["size"] = base
+        for block in t["blocks"].values():
+            if block["opcode"] != "looks_setsizeto":
+                continue
+            size = block["inputs"].get("SIZE")
+            if not (isinstance(size, list) and len(size) > 1 and
+                    isinstance(size[1], list) and len(size[1]) > 1):
+                continue
+            number = str(size[1][1])
+            if number in ("100", "104"):
+                size[1][1] = str(base if number == "100" else pulse)
+                changed += 1
+    if changed < 15:
+        raise ValueError("Native Scratch choice animation could not be resized: " + str(changed))
+    print("NATIVE_CARD_ANIM_PASS", base, pulse, "size blocks", changed)
+
 def main():
     if not SRC.is_file() or not PORTRAIT_IMAGE.is_file():
         raise FileNotFoundError("Animated .sb3 or portrait world artwork missing")
@@ -60,6 +86,7 @@ def main():
     byname["Начать заново"].update(x=-166, y=350, size=125)
     # Leave world objects around the center so forest, city, power and volcano
     # actually appear on the rebuilt 1300px high landscape after each action.
+    resize_native_card_animation(project, 82, 86)
     project["meta"]["portraitSource"] = "world-server-self-hosted-player"
     OUT.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(OUT, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as dst:
@@ -96,6 +123,7 @@ def main():
     wide_stage["costumes"][0] = dict(assetId=wide_hash, name="Широкая пустошь",
         md5ext=wide_name, dataFormat="png", bitmapResolution=1,
         rotationCenterX=960, rotationCenterY=540)
+    resize_native_card_animation(wide_project, 175, 181)
     wide_project["meta"]["wideSource"] = "world-server-self-hosted-player"
     wide_out = ROOT / "player/chain-reaction-wide.sb3"
     with zipfile.ZipFile(wide_out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as dst:

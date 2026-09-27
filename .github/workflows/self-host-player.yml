@@ -24,7 +24,7 @@ permissions:
 jobs:
   test-and-bundle:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -73,3 +73,37 @@ jobs:
             git commit -m "build(player): publish verified self-hosted runtime and portrait Scratch bundle [skip ci]"
             git push origin HEAD:main
           fi
+      - name: Verify GitHub Pages serves exact compiled bytes and run real browser QA
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          LIVE_BASE: https://mpaykin1.github.io/scratch-chain-reaction
+        run: |
+          success=0
+          for attempt in $(seq 1 24); do
+            if curl -fLsS --max-time 20 "$LIVE_BASE/player/player.js?build=$GITHUB_SHA" -o /tmp/live-player.js &&
+               grep -Fq "Native '?' and reset sprites" /tmp/live-player.js &&
+               curl -fLsS --max-time 30 "$LIVE_BASE/player/vendor/scaffolding-with-music.js?build=$GITHUB_SHA" -o /tmp/live-runtime.js &&
+               curl -fLsS --max-time 30 "$LIVE_BASE/player/chain-reaction-portrait.sb3?build=$GITHUB_SHA" -o /tmp/live-portrait.sb3 &&
+               curl -fLsS --max-time 30 "$LIVE_BASE/player/chain-reaction-wide.sb3?build=$GITHUB_SHA" -o /tmp/live-wide.sb3 &&
+               cmp -s /tmp/live-runtime.js player/vendor/scaffolding-with-music.js &&
+               cmp -s /tmp/live-portrait.sb3 player/chain-reaction-portrait.sb3 &&
+               cmp -s /tmp/live-wide.sb3 player/chain-reaction-wide.sb3; then
+              echo "LIVE_EXACT_BYTES_PASS main=$GITHUB_SHA attempt=$attempt"
+              success=1
+              break
+            fi
+            echo "Pages not at latest artifacts yet; waiting (attempt $attempt)"
+            sleep 15
+          done
+          if [ "$success" -ne 1 ]; then
+            echo "::error::PUBLICATION_BLOCKED GitHub Pages does not serve exact player assets"
+            exit 1
+          fi
+          GAME_URL="$LIVE_BASE" npm run test:player
+      - name: Upload live production screenshots
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-selfhost-player-proof
+          path: player/screenshots/
+          if-no-files-found: warn

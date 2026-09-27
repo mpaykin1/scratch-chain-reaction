@@ -66,6 +66,18 @@ try {
         throw Error('CLIPPED_NATIVE_CHOICES '+JSON.stringify(runtime.choiceTargets));
       if (forbidden.length) throw Error('REMOTE_PLAYER_USED '+forbidden.join(','));
       if (errors.length) throw Error('BROWSER_ERRORS '+errors.join('; '));
+      // Verify the native Scratch forever-loop does not restore 100% size
+      // after our one-time responsive JS layout and hide/shrink five cards.
+      await page.waitForTimeout(1150);
+      const lateCards=await page.evaluate(() =>
+        window.__ownTurboWarp.player.vm.runtime.targets
+          .filter(t=>t.getName?.().startsWith('Выбор '))
+          .map(t=>({name:t.getName(),size:t.size,x:t.x})));
+      if (profile==='iphone-portrait') {
+        if (lateCards.some(c=>c.size>87)) throw Error('PORTRAIT_CARD_PULSE_CLIPS '+JSON.stringify(lateCards));
+      } else if (lateCards.some(c=>c.size<170||c.size>183)) {
+        throw Error('LANDSCAPE_CARDS_UNREADABLE '+JSON.stringify(lateCards));
+      }
       await page.screenshot({path:'player/screenshots/'+profile+'.png',fullPage:true});
       if (profile==='iphone-portrait') {
         const city=runtime.choiceTargets.find(t=>t.name==='Выбор Город');

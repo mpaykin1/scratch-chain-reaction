@@ -69,7 +69,7 @@
       const panelSize = Math.min(100, (w - 18) / 348 * 100);
       const panelY = cardY + 67 * cardSize / 200 + 111 * panelSize / 200 + 13;
       relocate('Диалог Джинна', 0, panelY, panelSize);
-      relocate('Злой Джинн', -w / 2 + 55, panelY - 11, Math.min(90, panelSize));
+      relocate('Злой Джинн', -w / 2 + 36, panelY - 11, Math.min(90, panelSize));
     } else {
       // Landscape iPhone + widescreen desktop both get full-size true native
       // Scratch scenes with 1920x1080 approved original background artwork.
@@ -94,11 +94,15 @@
       relocate('Начать заново', -w / 2 + 71, top - 65, 110);
       const panelSize = h < 450 ? 135 : 155;
       const panelY = cardY + 67 * cardSize / 200 + 111 * panelSize / 200 + 16;
-      const panelX = -Math.min(w / 4, 280);
+      const panelX = -Math.min(w / 8, 160);
       relocate('Диалог Джинна', panelX, panelY, panelSize);
-      relocate('Злой Джинн', panelX - 348 * panelSize / 200 - 30,
+      relocate('Злой Джинн', -w / 2 + 90,
         panelY - 13, 145);
     }
+    // Native '?' and reset sprites duplicate the accessible HTML toolbar.
+    // Keep their Scratch scripts/assets, hide only their drawings.
+    target('Помощь')?.setVisible?.(false);
+    target('Начать заново')?.setVisible?.(false);
   }
   async function start() {
     if (busy) return;
