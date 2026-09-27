@@ -32,7 +32,7 @@ export function createView(getWorld,doc=document){
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
   const details=doc.createElement('button');
-  details.id='expandDialog';details.className='dialog-more';details.type='button';
+  details.id='expandDialog';details.className='dialog-more';details.type='button';details.hidden=true;
   details.textContent='Подробнее';details.setAttribute('aria-label','Подробнее о последствиях');
   $('dialogTitle').after(details);
   details.addEventListener('click',()=>{
