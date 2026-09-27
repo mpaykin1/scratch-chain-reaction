@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101b29">
+<meta name="description" content="Цепная реакция: сценарий водного кризиса со Злым Джинном, четырьмя проектами и последствиями через поколения.">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../app-icon-192.png">
+<link rel="preload" href="./assets/world_portrait.webp" as="image" media="(orientation:portrait)">
+<link rel="preload" href="./assets/world_landscape.webp" as="image" media="(orientation:landscape)">
+<link rel="stylesheet" href="./scenario.css">
+<title>Цепная реакция — Водный кризис</title>
+</head>
+<body>
+<main id="stage" class="drought">
+  <div id="land" role="img" aria-label="Иссушенная долина и поселение людей"></div>
+  <div class="mist" aria-hidden="true"></div>
+  <div id="walkers" aria-hidden="true"></div>
+  <img id="cityArt" class="world-object city visible" src="./assets/city.webp" alt="">
+  <img id="forestArt" class="world-object forest" src="./assets/forest.webp" alt="">
+  <img id="powerArt" class="world-object power" src="./assets/energy.webp" alt="">
+  <img id="volcanoArt" class="world-object volcano" src="./assets/volcano.webp" alt="">
+  <svg class="rotor" id="rotor" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M50 50L42 2 50 0 55 10ZM50 50L97 60 100 67 88 63ZM50 50L19 90 6 88 18 76Z" fill="#d9f7ff" stroke="#8adbea" stroke-width="2"/><circle cx="50" cy="50" r="6" fill="#eaffff"/>
+  </svg>
+  <div class="hud">
+    <div class="stats" aria-label="Ресурсы мира">
+      <div class="stat" data-key="population"><span class="emoji">👥</span><div class="stat-values"><div class="label">Жители</div><div class="value" id="stat-population">48</div></div></div>
+      <div class="stat" data-key="power"><span class="emoji">⚡</span><div class="stat-values"><div class="label">Энергия</div><div class="value" id="stat-power">42</div></div></div>
+      <div class="stat" data-key="water"><span class="emoji">💧</span><div class="stat-values"><div class="label">Вода</div><div class="value" id="stat-water">23</div></div></div>
+      <div class="stat" data-key="food"><span class="emoji">🍃</span><div class="stat-values"><div class="label">Еда</div><div class="value" id="stat-food">46</div></div></div>
+      <div class="stat" data-key="eco"><span class="emoji">🌱</span><div class="stat-values"><div class="label">Экология</div><div class="value" id="stat-eco">33</div></div></div>
+      <div class="stat" data-key="budget"><span class="emoji">🪙</span><div class="stat-values"><div class="label">Бюджет</div><div class="value" id="stat-budget">76</div></div></div>
+      <div class="stat" data-key="happiness"><span class="emoji">🙂</span><div class="stat-values"><div class="label">Довольство</div><div class="value" id="stat-happiness">38</div></div></div>
+      <div class="stat" data-key="turn"><span class="emoji">⌛</span><div class="stat-values"><div class="label">Ход</div><div class="value" id="stat-turn">0</div></div></div>
+    </div>
+    <div class="hud-buttons">
+      <button id="helpBtn" class="square" title="Как играть" aria-label="Как играть">?</button>
+      <button id="historyBtn" class="square" title="Причинно-следственная история" aria-label="История мира">📜</button>
+      <button id="fullscreenBtn" class="square" title="Весь экран" aria-label="Весь экран">⛶</button>
+      <button id="resetBtn" class="square" title="Новый мир" aria-label="Новый мир">↻</button>
+    </div>
+  </div>
+  <div class="status-chip" id="phaseLabel">🌊 Город переживает засуху</div>
+  <div id="banner" aria-live="polite"></div>
+  <aside id="talk" role="status" aria-live="polite">
+    <img src="./assets/genie.webp" alt="Злой Джинн">
+    <button class="close" id="closeTalk" aria-label="Закрыть сообщение">×</button>
+    <h1 id="talkTitle">Злой Джинн:</h1>
+    <p id="talkText">Город построен, но вода заканчивается. Выбери структуру и объясни, как она спасёт людей. Я покажу последствия через несколько поколений!</p>
+  </aside>
+  <button id="next" type="button" hidden>▶ Следующий ход</button>
+  <nav id="choices" aria-label="Четыре проекта или своя идея">
+    <button class="plan" style="--accent:#74cafa;--glow:#2590dd77" data-plan="dam" aria-label="Огромная плотина"><img src="./assets/card_dam.webp" alt=""><span>🌊 Плотина</span></button>
+    <button class="plan" style="--accent:#ffc779;--glow:#e2a54377" data-plan="desal" aria-label="Опреснительный завод"><img src="./assets/card_energy.webp?v=2" alt=""><span>🏭 Опреснение</span></button>
+    <button class="plan" style="--accent:#8cd9ae;--glow:#29b77477" data-plan="imports" aria-label="Импорт воды"><img src="./assets/card_import.webp" alt=""><span>🚚 Импорт</span></button>
+    <button class="plan" style="--accent:#96f5a2;--glow:#5bc87977" data-plan="watershed" aria-label="Восстановить водосбор"><img src="./assets/card_forest.webp?v=2" alt=""><span>🌱 Водосбор</span></button>
+    <button class="plan" style="--accent:#c48bff;--glow:#a051ec77" data-plan="own" aria-label="Своя идея"><img src="./assets/card_idea.webp?v=2" alt=""><span>✍ Своя идея</span></button>
+  </nav>
+  <section class="sheet" id="projectSheet" role="dialog" aria-modal="true" aria-labelledby="projectTitle" hidden>
+    <button class="close" id="projectClose" aria-label="Закрыть">×</button>
+    <h2 id="projectTitle">Выбери решение</h2>
+    <p id="projectDescription"></p>
+    <form id="projectForm">
+      <label for="reason">Как именно твоя идея решит проблему? Объясни в 1–3 предложениях.</label>
+      <textarea id="reason" required minlength="12" maxlength="500" placeholder="Например: восстановлю водосбор, посажу лес и соберу дождевую воду, выделив бюджет на ремонт труб."></textarea>
+      <p id="projectError" class="error" role="alert" hidden></p>
+      <div id="preview" hidden>
+        <strong>🧞 Предварительная проверка Джинна — 3 хода</strong>
+        <div id="forecast" class="forecast" aria-label="Прогноз изменения показателей"></div>
+        <div id="warnings" aria-live="polite"></div>
+        <p class="tip">Это проверяемая детерминированная модель, а не подключённая языковая модель. Другие причины могут остаться неизвестными.</p>
+      </div>
+      <div class="toolbar">
+        <button class="cta" id="checkBtn" type="button">🔎 Проверить последствия</button>
+        <button class="cta" id="commitBtn" type="submit" hidden>🏗 Запустить проект</button>
+        <button class="cta secondary" id="cancelBtn" type="button">Назад</button>
+      </div>
+    </form>
+  </section>
+  <section class="sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historyTitle" hidden>
+    <button class="close" id="historyClose" aria-label="Закрыть">×</button>
+    <h2 id="historyTitle">🌍 Цепная реакция мира</h2>
+    <p>События связаны с проектами. Последствия могут проявляться через несколько ходов и накладываться друг на друга.</p>
+    <ol class="history" id="historyList"></ol>
+    <div class="toolbar"><button id="exportBtn" class="cta secondary">⬇ Экспорт истории</button><button id="historyDone" class="cta">Вернуться к игре</button></div>
+  </section>
+  <section class="sheet" id="helpSheet" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+    <button class="close" id="helpClose" aria-label="Закрыть">×</button>
+    <h2 id="helpTitle">Как играть</h2>
+    <p>Город расходует воду. Выбери одну из четырёх структур или придумай свою. Объясни механизм, укажи ресурсы и подумай о побочных эффектах. Джинн проверит допущения и рассчитает три следующих хода.</p>
+    <p>После постройки нажимай «Следующий ход». Смотри на миграцию, урожай, энергию и экологию. Даже после катастрофы ты можешь начать новое восстановление.</p>
+    <p>🌱 Сценарий работает без токенов и серверов. Свободные идеи разбираются по известным механизмам, неизвестные помечаются как непроверенные. Результаты автоматически сохраняются в этом браузере.</p>
+    <a class="cta" href="./" style="display:inline-block;text-decoration:none;margin-bottom:12px">↩ Обычная игра</a><br>
+    <button id="helpDone" class="cta secondary" type="button">Продолжить</button>
+  </section>
+</main>
+<script type="module" src="./scenario-ui.mjs"></script>
+</body>
+</html>
+

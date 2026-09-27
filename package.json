@@ -5,7 +5,8 @@
   "version": "1.0.0",
   "scripts": {
     "build:portrait": "python3 scripts/build_portrait_sb3.py",
-    "test:player": "node test_selfhost_player.mjs"
+    "test:player": "node test_selfhost_player.mjs",
+    "test:scenario": "node --test test/scenario-engine.test.mjs"
   },
   "dependencies": {
     "@turbowarp/scaffolding": "0.4.0"
