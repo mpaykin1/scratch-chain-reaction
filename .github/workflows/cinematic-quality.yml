@@ -33,12 +33,16 @@ jobs:
             sleep 1
           done
           CI=1 npm run test:cinematic:browser
+      - name: Living Actions full city-dome-dragon Chrome and mobile-emulation gate
+        run: CI=1 npm run test:living:browser
       - name: Upload viewport screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cinematic-mobile-proof
-          path: qa-artifacts/
+          path: |
+            qa-artifacts/
+            work/living-browser/
           if-no-files-found: warn
   verify-published:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
