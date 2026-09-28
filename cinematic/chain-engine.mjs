@@ -58,7 +58,7 @@ export function quoteIdea(world,input){
   return {allowed:true,reason:'',cost,actions};
 }
 export function createWorld(){
-  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[]};
+  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[],forge:createForge()};
 }
 function advanceQueue(world,events){
   const due=world.queue.filter(item=>item.turn<=world.state.turn);
