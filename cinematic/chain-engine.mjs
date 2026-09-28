@@ -201,7 +201,8 @@ const FEATURE_COST=Object.freeze({
   dome:9,'summon-dragon':0,archers:0,negotiate:12,evacuate:2,repair:10,
   'expand-city':12,wildlife:4,'expand-forest':10,'guide-lava':3,
   'connect-grid':7,battery:6,'reinforce-dome':8,
-  geothermal:12,island:10,'expand-grid':12,'stabilize-grid':8
+  geothermal:12,island:10,'expand-grid':12,'stabilize-grid':8,
+  'volcano-research':5,'upgrade-grid':7
 });
 export function quoteFeature(world,id,targetId){
   if(!Object.hasOwn(FEATURE_COST,id))return {allowed:false,cost:0,reason:'Неизвестное действие'};
@@ -227,13 +228,16 @@ export function quoteFeature(world,id,targetId){
     !target.lavaGuided||target.geothermal))reason='Сначала направь лаву вулкана.';
   else if(id==='island'&&(!target||target.kind!=='volcano'||!target.geothermal||
     target.island))reason='Нужен геотермальный вулкан без нового острова.';
-  else if(['connect-grid','battery','expand-grid','stabilize-grid'].includes(id)&&
+  else if(id==='volcano-research'&&(!target||target.kind!=='volcano'||!target.island))
+    reason='Сначала создай остров.';
+  else if(['connect-grid','battery','expand-grid','stabilize-grid','upgrade-grid'].includes(id)&&
     target?.kind!=='energy')reason='Нужна электростанция.';
   else if(id==='battery'&&target.battery)reason='Накопитель уже создан.';
   else if(id==='expand-grid'&&(!target.battery||target.gridExpanded))
     reason='Сначала построй накопитель.';
   else if(id==='stabilize-grid'&&(!target.gridExpanded||target.gridStable))
     reason='Сначала расширь сеть.';
+  else if(id==='upgrade-grid'&&!target.gridStable)reason='Сначала стабилизируй сеть.';
   else if(id==='connect-grid'&&!objects.some(o=>o.kind==='city'&&!o.gridConnected))
     reason='Все города уже подключены.';
   else if(world.state.budget<cost)reason='Недостаточно бюджета: нужно '+cost+'.';
@@ -294,6 +298,9 @@ export function playFeature(world,id,targetId,{requestId}={}){
     mark('construction','У вулкана заработала геотермальная станция.',{power:24,water:-2,eco:-3});}
   if(id==='island'){target.island=true;
     mark('construction','Лава образовала новый остров.',{eco:-4,water:-3});}
+  if(id==='volcano-research'){target.researchCount=(target.researchCount||0)+1;
+    mark('research','Геотермальные исследования: этап '+target.researchCount+'.',
+      {power:5,eco:2});}
   if(id==='connect-grid'){const city=next.living.objects.find(o=>o.kind==='city'&&!o.gridConnected);
     city.gridConnected=true;target.gridBuilt=true;
     mark('construction','Город подключён к электросети.',{power:15});}
@@ -302,6 +309,9 @@ export function playFeature(world,id,targetId,{requestId}={}){
     mark('construction','Энергосеть расширена.',{power:18,water:-4});}
   if(id==='stabilize-grid'){target.gridStable=true;
     mark('construction','Энергосеть стабилизирована.',{power:6,eco:5});}
+  if(id==='upgrade-grid'){target.upgradeCount=(target.upgradeCount||0)+1;
+    mark('research','Модернизация энергосети: этап '+target.upgradeCount+'.',
+      {power:6,eco:2});}
   cascade(next,events,action.id);
   if(requestId){next.living.recentRequests.push(requestId);
     next.living.recentRequests=next.living.recentRequests.slice(-32);}
