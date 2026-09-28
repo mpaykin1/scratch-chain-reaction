@@ -64,3 +64,45 @@
 /* Modal shade: the backdrop must sit above the HUD but below every sheet. */
 #modalBackdrop{position:absolute;inset:0;z-index:45;background:rgba(2,9,17,.68)}
 #modalBackdrop[hidden]{display:none!important}
+
+/* Living Actions reuse exactly the same image nodes as in the world and catalogue. */
+.living-map{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.living-object{position:absolute;border:0;padding:0;background:transparent;pointer-events:auto;
+  transform:translate(-50%,-50%);width:min(30vw,350px);height:min(30vh,280px);
+  filter:drop-shadow(0 12px 16px #060c1ab0);transition:filter .2s}
+.living-object img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.living-object.city{width:min(33vw,390px)}.living-object.forest{width:min(35vw,420px)}
+.living-object.energy{width:min(23vw,260px)}.living-object.volcano{width:min(29vw,360px)}
+.living-object.selected{filter:drop-shadow(0 0 21px #ffd76f)}
+.living-object.damaged img{filter:sepia(.25) saturate(.8)}
+.living-object.dragon{width:120px;height:140px;animation:living-dragon 3s ease-in-out infinite}
+.living-emoji{display:grid;place-items:center;height:100%;font-size:clamp(58px,9vw,110px);
+  filter:drop-shadow(0 8px 15px #ff833c80)}
+.living-dome{display:none;position:absolute;inset:-12% -8% 4%;border:3px solid #7fe7ffb9;
+  border-radius:50% 50% 45% 45%;background:radial-gradient(ellipse at 45% 25%,#e5fcff7c,#6ed7ff32 30%,#54b7ff10 68%);
+  box-shadow:inset 0 0 28px #7bedff8a,0 0 28px #62dfff68;pointer-events:none}
+.living-dome.active{display:block;animation:living-dome-pulse 4s ease-in-out infinite}
+@keyframes living-dome-pulse{50%{opacity:.82;transform:scale(1.03)}}
+@keyframes living-dragon{50%{transform:translate(-50%,-57%)}}
+.option .preview-overlay{position:absolute;top:2%;right:3%;display:grid;place-items:center;
+  min-width:29%;height:49%;padding:2px;font-size:clamp(20px,3.4vw,39px);line-height:1;
+  border-radius:50%;background:radial-gradient(circle,#cbefffad,#14294b8c 65%,transparent);
+  filter:drop-shadow(0 0 9px #8cdcff)}
+.option:disabled{cursor:not-allowed;opacity:.56;filter:grayscale(.55)}
+.option:disabled .accessible-title{color:#e3e2da}
+.catalogue{margin:12px 0;padding:9px;border:1px solid #9bc9db7b;border-radius:10px}
+.catalogue summary{cursor:pointer;font-size:17px;font-weight:750}
+.catalog-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}
+.catalog-grid button{min-width:0;padding:4px;border:1px solid #7aa5bd;border-radius:8px;background:#203949;
+  font-weight:700;display:grid;gap:4px}
+.catalog-grid img{width:100%;height:62px;object-fit:contain}
+@media(orientation:portrait){
+  .living-object.city{width:50vw}.living-object.forest{width:58vw}
+  .living-object.volcano{width:48vw}.living-object.energy{width:40vw}
+  .living-object.dragon{width:80px;height:100px}
+  .living-dome{inset:-8% -5% 8%}
+  .option .preview-overlay{font-size:24px;min-width:40%;height:35%}
+}
+@media(prefers-reduced-motion:reduce){
+  .living-object.dragon,.living-dome.active{animation:none!important}
+}
