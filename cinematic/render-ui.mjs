@@ -34,7 +34,7 @@ export function createView(getWorld,doc=document){
         map.append(node);nodes.set(object.id,node);
       }
       node.style.left=(50+(object.x-viewport.x)*.8)+'%';
-      node.style.top=(48+(object.z-viewport.z)*.8)+'%';
+      node.style.top=(40+(object.z-viewport.z)*.8)+'%';
       node.hidden=Math.abs(object.x-viewport.x)>73||Math.abs(object.z-viewport.z)>73;
       node.classList.toggle('selected',object.id===selectedId);
       node.classList.toggle('damaged',(object.hp??100)<100);
