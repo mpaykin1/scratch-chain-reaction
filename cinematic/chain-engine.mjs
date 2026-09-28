@@ -30,6 +30,7 @@ const ACTION_LABEL={city:'Город',forest:'Лес',energy:'Энергия',vo
 const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
+  entities:(world.entities||[]).map(item=>({...item})),
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
   history:world.history.map(item=>({...item}))
 });
@@ -58,7 +59,7 @@ export function quoteIdea(world,input){
   return {allowed:true,reason:'',cost,actions};
 }
 export function createWorld(){
-  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[]};
+  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},entities:[],queue:[],history:[]};
 }
 function advanceQueue(world,events){
   const due=world.queue.filter(item=>item.turn<=world.state.turn);
@@ -179,11 +180,45 @@ export function playCustomDecision(world,input){
   if(event){event.type='decision';result.events.unshift(event);}
   return {...result,recognized:true,reason:''};
 }
+export function playWorldEvent(world,kind){
+  if(!['dragon','attack'].includes(kind))return {world,events:[],actions:[],reason:'Неизвестное событие.',recognized:false};
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  if(kind==='dragon'){
+    const entity={id:'dragon-'+next.state.turn+'-'+(next.history.length+1),kind:'dragon',hp:100,status:'flying'};
+    next.entities.push(entity);
+    const event=record(next,'creature','Прилетел дракон. Он кружит над миром.',null);
+    event.entityId=entity.id;events.push(event);
+    cascade(next,events,event.id);
+    return {world:next,events,actions:['dragon'],recognized:true,reason:''};
+  }
+  const target=[...next.entities].reverse().find(entity=>entity.kind==='dragon'&&entity.hp>0);
+  if(!target)return {world,events:[],actions:[],reason:'Нет живого дракона, в которого можно стрелять.',recognized:false};
+  const damage=30+((next.state.turn*7+next.history.length)%11);
+  target.hp=Math.max(0,target.hp-damage);
+  const shot=record(next,'combat','Люди стреляют в дракона: урон '+damage+', здоровье '+target.hp+'.',null);
+  shot.entityId=target.id;events.push(shot);
+  if(target.hp===0){
+    target.status='defeated';
+    const delta={eco:2};
+    update(next.state,delta);
+    const defeated=record(next,'combat','Дракон повержен. Угроза миновала.',shot.id,delta);
+    defeated.entityId=target.id;events.push(defeated);
+  }else{
+    next.queue.push({turn:next.state.turn+1,delta:{population:-2,eco:-3,budget:-5},
+      text:'Дракон отвечает огнём. Пострадали люди и дома.',parentId:shot.id});
+  }
+  cascade(next,events,shot.id);
+  return {world:next,events,actions:['attack'],recognized:true,reason:''};
+}
 export function serializeWorld(world){return JSON.stringify({version:VERSION,...world});}
 export function restoreWorld(raw){
   try{
     const data=JSON.parse(raw);
     if(data.version!==VERSION||!data.state||!data.placed||!Array.isArray(data.queue)||!Array.isArray(data.history))return null;
+    if(data.entities===undefined)data.entities=[];
+    if(!Array.isArray(data.entities)||data.entities.length>20||data.entities.some(e=>!e||e.kind!=='dragon'||!Number.isInteger(e.hp)||e.hp<0||e.hp>100))return null;
     if(Object.keys(INITIAL).some(k=>!Number.isInteger(data.state[k])||data.state[k]<0||data.state[k]>(k==='turn'?100000:100)))return null;
     if(Object.keys(createWorld().placed).some(k=>!Number.isInteger(data.placed[k])||data.placed[k]<0||data.placed[k]>10000))return null;
     if(data.queue.length>400||data.history.length>150||data.queue.some(e=>!Number.isInteger(e.turn)||e.turn<0||e.turn>100000||

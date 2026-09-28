@@ -4,7 +4,7 @@ import {createView} from './render-ui.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
 import {interpretGameIdea} from './ai-client.mjs';
 
-import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
+import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,playWorldEvent,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
 const SAVE='chain-reaction-world-v1';
 let saved=null;try{saved=restoreWorld(localStorage.getItem(SAVE));}catch{}
@@ -17,12 +17,52 @@ function hasPendingChoice(saved){
 let pendingDecision=hasPendingChoice(world);
 const undoStack=[];
 function checkpoint(){undoStack.push({world:serializeWorld(world),pendingDecision});if(undoStack.length>20)undoStack.shift();$('undo').disabled=false;}
-function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;persist();render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
+function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;persist();render();renderEntities();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
 
 function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
-function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();refreshChoices();}
+function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();renderEntities();refreshChoices();}
 const $=id=>document.getElementById(id);
 const {render,panel,caption,embers}=createView(()=>({state,placed,history:world.history}));
+function renderEntities(){
+  const dragon=$('dragonArt');if(!dragon)return;
+  const dragons=world.entities||[],living=[...dragons].reverse().find(entity=>entity.kind==='dragon'&&entity.hp>0);
+  const defeated=[...dragons].reverse().find(entity=>entity.kind==='dragon'&&entity.hp===0);
+  dragon.classList.toggle('active',Boolean(living));
+  dragon.classList.toggle('defeated',!living&&Boolean(defeated));
+  dragon.setAttribute('aria-label',living?'Дракон, здоровье '+living.hp:defeated?'Дракон повержен':'Дракон отсутствует');
+}
+function localEventKinds(text){
+  const t=String(text||'').toLowerCase();
+  if(/стрел|атак|обстрел|удар|сраж|убить/.test(t))return ['attack'];
+  if(/дракон/.test(t))return ['dragon'];
+  return [];
+}
+function submitWorldEvents(kinds,meta=null){
+  const clean=[...new Set((kinds||[]).filter(kind=>['dragon','attack'].includes(kind)))];
+  if(!clean.length)return false;
+  checkpoint();const before={...state};let current=world,allEvents=[];
+  for(const kind of clean){
+    const result=playWorldEvent(current,kind);
+    if(!result.recognized){
+      undoStack.pop();$('undo').disabled=undoStack.length===0;
+      panel('Событие не произошло',result.reason);closeSheets();return false;
+    }
+    current=result.world;allEvents.push(...result.events);
+  }
+  sync({world:current,events:allEvents,actions:clean});
+  if(meta?.original){
+    const event=[...world.history].reverse().find(e=>['creature','combat'].includes(e.type)&&e.tick===state.turn);
+    if(event){event.originalPrompt=String(meta.original).slice(0,800);event.aiProvider=String(meta.provider||'').slice(0,50);persist();}
+  }
+  if(clean.includes('attack')){
+    const dragon=$('dragonArt');dragon?.classList.add('struck');setTimeout(()=>dragon?.classList.remove('struck'),700);
+  }
+  caption(clean.includes('attack')?'⚔ ДРАКОН АТАКОВАН':'🐉 ДРАКОН');
+  const body=allEvents.map(event=>event.text).join(' ')+' '+deltaSummary(before,state)+
+    (meta?.provider?' Источник: '+meta.provider+'.':'');
+  panel(clean.includes('attack')?'Бой начался':'Событие произошло',body);
+  closeSheets();return true;
+}
 const RESOURCE_NAMES={population:'Люди',power:'Энергия',water:'Вода',food:'Еда',eco:'Экология',budget:'Бюджет'};
 function deltaSummary(before,after){
   const changed=Object.keys(RESOURCE_NAMES).filter(key=>before[key]!==after[key])
@@ -109,15 +149,17 @@ $('ideaForm').onsubmit=async e=>{
   const button=$('sendIdea'),status=$('aiProgress');
   aiPending=true;button.disabled=true;button.textContent='ИИ разбирает идею…';status.textContent='Проверяем сценарий';
   try{
-    const idea=await interpretGameIdea(t,$('aiProvider').value,{...state,placed:{...placed}});
-    if(!idea.commandText){
+    const idea=await interpretGameIdea(t,$('aiProvider').value,{...state,placed:{...placed},entities:(world.entities||[]).map(({kind,hp})=>({kind,hp}))});
+    if(idea.eventKinds?.length)submitWorldEvents(idea.eventKinds,{original:t,provider:idea.provider});
+    if(idea.commandText)submitIdea(idea.commandText,{original:t,provider:idea.provider,styles:idea.styles,unsupported:idea.unsupported});
+    if(!idea.commandText&&!idea.eventKinds?.length){
       closeSheets();panel('Идея пока не поддерживается',idea.unsupported.join('; ')||'ИИ не нашёл известного механизма. Мир не изменён.');return;
     }
-    submitIdea(idea.commandText,{original:t,provider:idea.provider,styles:idea.styles,unsupported:idea.unsupported});
   }catch{
     // Offline compatibility: only pre-existing, deterministic keyword mechanics.
-    const quote=quoteIdea(world,t);
-    if(quote.actions.length)submitIdea(t,{original:t,provider:'офлайн'});
+    const events=localEventKinds(t),quote=quoteIdea(world,t);
+    if(events.length)submitWorldEvents(events,{original:t,provider:'офлайн-событие'});
+    else if(quote.actions.length)submitIdea(t,{original:t,provider:'офлайн'});
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
   }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
@@ -152,7 +194,7 @@ installPortableControls(document,{
 });
 startWalkers($('people'));
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getEntities:()=> (world.entities||[]).map(e=>({...e})),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
 })();
