@@ -7,6 +7,17 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
     for(const view of [{name:'iphone11',width:414,height:896,dpr:2},{name:'iphone11-landscape',width:896,height:414,dpr:2},{name:'desktop',width:1440,height:900,dpr:1}]){
       const ctx=await browser.newContext({viewport:{width:view.width,height:view.height},deviceScaleFactor:view.dpr,isMobile:view.dpr>1,hasTouch:view.dpr>1});
       const page=await ctx.newPage(),errors=[];
+      await page.route('https://world-server.mmmpaykin.workers.dev/api/chain-ai',async route=>{
+        const request=route.request(),body=request.postDataJSON?.()||{};
+        const text=String(body.text||'').toLowerCase();
+        let commands=[],unknowns=[];
+        if(text.includes('прилетел дракон'))commands=[{action:'event',kind:'dragon',details:'Дракон прилетел'}];
+        else if(text.includes('стреляют'))commands=[{action:'event',kind:'attack',details:'Жители атакуют дракона'}];
+        else unknowns=['Неизвестный механизм'];
+        await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+          ok:true,provider:'cloudflare',executed:false,proposal:{summary:'test',commands,unknowns}
+        })});
+      });
       if(view.name==='iphone11-landscape')await page.addInitScript(()=>{
         const original=HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext=function(kind,...args){return kind==='webgl2'?null:original.call(this,kind,...args)};
@@ -59,6 +70,16 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       assert.equal(afterChoice.turn,2,'a Genie decision advances the deterministic clock');
       await page.evaluate(()=>window.__chainReaction.decide(3));
       assert.deepEqual(await page.evaluate(()=>window.__chainReaction.getState()),afterChoice,'decision cannot be applied twice');
+      await page.getByRole('button',{name:'Предложить свою идею'}).click();
+      await page.locator('#ideaText').fill('Прилетел дракон');
+      await page.getByRole('button',{name:/Отправить идею/}).click();
+      await page.waitForFunction(()=>document.getElementById('dragonArt').classList.contains('active'));
+      assert.equal((await page.evaluate(()=>__chainReaction.getEntities()[0].hp)),100,'dragon must appear in world state');
+      await page.getByRole('button',{name:'Предложить свою идею'}).click();
+      await page.locator('#ideaText').fill('Люди в него стреляют');
+      await page.getByRole('button',{name:/Отправить идею/}).click();
+      await page.waitForFunction(()=>__chainReaction.getEntities()[0].hp<100);
+      assert.ok(await page.evaluate(()=>__chainReaction.getHistory().some(e=>e.type==='combat')),'attack becomes a combat event');
       assert.equal(errors.length,0,JSON.stringify(errors));
       console.log('ENHANCEMENT_PASS',view.name,initial);
       await ctx.close();
