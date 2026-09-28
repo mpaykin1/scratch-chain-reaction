@@ -44,7 +44,7 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       assert.equal(await page.locator('#ideaBox').isVisible(),false,'Escape dismisses modal');
       assert.equal(await page.evaluate(()=>document.activeElement?.id),'askIdea','focus returns to opener');
       await page.getByRole('button',{name:'Предложить свою идею'}).click();
-      await page.locator('#ideaText').fill('Неизвестный механизм для дракона');
+      await page.locator('#ideaText').fill('Пусть вселенная танцует под музыку');
       await page.getByRole('button',{name:/Отправить идею/}).click();
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),1,'unknown ideas must not invent results');
       await page.getByRole('button',{name:'Меню'}).click();
