@@ -1,9 +1,12 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const fs=require('node:fs');
-const {chromium}=require(path.join(process.env.USERPROFILE,'Desktop','World_server','node_modules','playwright'));
-const base=process.env.BASE_URL||'http://127.0.0.1:8767/';
-(async()=>{const browser=await chromium.launch({headless:true,channel:'chrome'});
+let playwright;
+try{playwright=require('playwright');}
+catch{playwright=require(path.join(process.env.USERPROFILE||'','Desktop','World_server','node_modules','playwright'));}
+const {chromium}=playwright;
+const base=process.env.BASE_URL||(process.env.CI?'http://127.0.0.1:8765/':'http://127.0.0.1:8767/');
+(async()=>{const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome'});
 try{for(const view of [{name:'desktop',width:1365,height:768},{name:'mobile',width:390,height:844}]){
  const page=await browser.newPage({viewport:{width:view.width,height:view.height},isMobile:view.name==='mobile',hasTouch:view.name==='mobile'});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -12,7 +15,7 @@ try{for(const view of [{name:'desktop',width:1365,height:768},{name:'mobile',wid
  const area=await page.locator('#map').boundingBox();
  assert.ok(area.width*area.height/(view.width*view.height)>.85);
  assert.equal((await page.evaluate(()=>__voxelFactory.getWorld())).blocks.filter(b=>b.type==='volcano').length,0);
- const snap=path.join(process.env.USERPROFILE,'Desktop','voxel-factory-qa');fs.mkdirSync(snap,{recursive:true});
+ const snap=process.env.CI?path.join(process.cwd(),'qa-artifacts','voxel-factory'):path.join(process.env.USERPROFILE,'Desktop','voxel-factory-qa');fs.mkdirSync(snap,{recursive:true});
  await page.screenshot({path:path.join(snap,'start-'+view.name+'.png')});
  const tap=(x,z)=>page.locator('#map').click({position:{x:area.width/2+(x-z)*29,y:area.height/2+(x+z)*14.5}});
  await tap(0,0);await page.waitForFunction(()=>__voxelFactory.getWorld().blocks.some(b=>b.type==='forest'));
@@ -29,9 +32,16 @@ try{for(const view of [{name:'desktop',width:1365,height:768},{name:'mobile',wid
  assert.match(await page.locator('#events').innerText(),/Сохранённый мир.*пар над рекой.*выгоревший лес/);
  await page.screenshot({path:path.join(snap,'consequences-'+view.name+'.png')});
  const old=await page.evaluate(()=>__voxelFactory.getCamera());
- await page.mouse.move(area.width/2,area.height/2);await page.mouse.down();
- for(let i=0;i<20;i++)await page.mouse.move(area.width/2+80+i*4,area.height/2+40+i*3,{steps:2});
- await page.mouse.up();
+ if(view.name==='mobile'){
+  const cdp=await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:area.width/2,y:area.height/2}]});
+  for(let i=0;i<20;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:area.width/2+80+i*4,y:area.height/2+40+i*3}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ }else{
+  await page.mouse.move(area.width/2,area.height/2);await page.mouse.down();
+  for(let i=0;i<20;i++)await page.mouse.move(area.width/2+80+i*4,area.height/2+40+i*3,{steps:2});
+  await page.mouse.up();
+ }
  const moved=await page.evaluate(()=>__voxelFactory.getCamera());
  assert.notDeepEqual(moved,old);assert.deepEqual(errors,[]);
  console.log('VOXEL_UI_PASS',view.name,'events',before.events.length,'coverage',area.width*area.height/(view.width*view.height),'fps',await page.evaluate(()=>__voxelFactory.getStats()));
