@@ -45,12 +45,13 @@ export function createSheets(doc=document) {
   });
   return {closeSheets,openSheet};
 }
-export function delegateGameEvents(doc,{build,decide,openSheet}) {
+export function delegateGameEvents(doc,{build,decide,openSheet,living}) {
   const dock=doc.querySelector('.action-dock'),decisions=doc.querySelector('.decisions');
   dock.addEventListener('click',event=>{
     const button=event.target.closest('.option');
     if(!button || !dock.contains(button))return;
-    button.dataset.action==='idea'?openSheet('ideaBox'):build(button.dataset.action);
+    if(button.dataset.livingId)living(button.dataset.livingId,button.dataset.targetId||null);
+    else button.dataset.action==='idea'?openSheet('ideaBox'):build(button.dataset.action);
   });
   decisions.addEventListener('click',event=>{
     const button=event.target.closest('[data-decision]');
