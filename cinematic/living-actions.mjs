@@ -26,10 +26,12 @@ const SPECIAL={
   'guide-lava':['volcano','Направить лаву','🌋'],
   geothermal:['volcano','Геотермальная станция','⚡'],
   island:['volcano','Создать остров','🏝️'],
+  'volcano-research':['volcano','Исследовать вулкан','🔬'],
   'connect-grid':['energy','Подключить город','🔌'],
   battery:['energy','Построить накопитель','🔋'],
   'expand-grid':['energy','Расширить энергосеть','⚡'],
   'stabilize-grid':['energy','Стабилизировать сеть','🛠️'],
+  'upgrade-grid':['energy','Модернизировать сеть','⚙️'],
   'reinforce-dome':['city','Усилить купол','✨']
 };
 const visible=(o,v)=>Math.abs(o.x-v.x)<=55&&Math.abs(o.z-v.z)<=55;
@@ -49,9 +51,10 @@ export function getLivingActions(world,{selectedId=null,viewport={x:0,z:0}}={}){
     !city.dome?'dome':danger?'archers':dragon?.hp===0?'expand-city':'summon-dragon',targetId:city.id};
   if(forest)slots[1]={id:forest.wildlife?'expand-forest':'wildlife',targetId:forest.id};
   if(volcano)slots[2]={id:!volcano.lavaGuided?'guide-lava':
-    !volcano.geothermal?'geothermal':'island',targetId:volcano.id};
+    !volcano.geothermal?'geothermal':volcano.island?'volcano-research':'island',targetId:volcano.id};
   if(energy)slots[3]={id:city&&!city.gridConnected?'connect-grid':
-    !energy.battery?'battery':!energy.gridExpanded?'expand-grid':'stabilize-grid',targetId:energy.id};
+    !energy.battery?'battery':!energy.gridExpanded?'expand-grid':
+    energy.gridStable?'upgrade-grid':'stabilize-grid',targetId:energy.id};
   if(danger) {
     slots[0]={id:'archers',targetId:city.id};
     slots[1]={id:'negotiate',targetId:city.id};
@@ -65,7 +68,11 @@ export function getLivingActions(world,{selectedId=null,viewport={x:0,z:0}}={}){
     const base=slot.id.startsWith('build-');
     const kind=base?slot.kind:SPECIAL[slot.id][0];
     const quote=base?quoteBuild(world,kind):quoteFeature(world,slot.id,slot.targetId);
-    return {...slot,kind,label:base?slot.label:SPECIAL[slot.id][1],
+    const target=objects.find(o=>o.id===slot.targetId);
+    const level=slot.id==='volcano-research'?target?.researchCount:
+      slot.id==='upgrade-grid'?target?.upgradeCount:null;
+    return {...slot,kind,label:(base?slot.label:SPECIAL[slot.id][1])+
+      (level==null?'':' · '+((level||0)+1)),
       overlay:base?'':SPECIAL[slot.id][2],available:quote.allowed,cost:quote.cost,
       reason:quote.reason,slot:index};
   });
