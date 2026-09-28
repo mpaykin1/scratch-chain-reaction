@@ -18,11 +18,11 @@ export function compileAiGameActions(response) {
     commandText: supported.map(kind => WORDS[kind]).join(', '),
     supported, unsupported: unsupported.slice(0, 6), styles,
     summary: String(response.proposal.summary || '').slice(0, 300),
-    provider: response.provider === 'gemini' ? 'Gemini' : 'Cloudflare AI'
+    provider: response.provider === 'groq' ? 'Groq' : response.provider === 'gemini' ? 'Gemini' : 'Cloudflare AI'
   };
 }
 export async function interpretGameIdea(text, provider, worldContext, fetchImpl = fetch) {
-  const allowed = ['auto', 'cloudflare', 'gemini'];
+  const allowed = ['auto', 'cloudflare', 'groq', 'gemini'];
   const chosen = allowed.includes(provider) ? provider : 'auto';
   const response = await fetchImpl(ENDPOINT, {
     method: 'POST', headers: { 'content-type': 'application/json' },
