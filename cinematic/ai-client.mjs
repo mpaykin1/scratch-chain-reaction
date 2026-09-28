@@ -4,9 +4,13 @@ const WORDS = Object.freeze({ city: 'город', forest: 'лес', energy: 'э�
   volcano: 'вулкан', farm: 'ферма', irrigation: 'орошение', recycling: 'очистка' });
 export function compileAiGameActions(response) {
   if (!response?.ok || !Array.isArray(response.proposal?.commands)) throw Error('Некорректный ответ ИИ.');
-  const supported = [], unsupported = [...(Array.isArray(response.proposal.unknowns) ? response.proposal.unknowns : [])];
+  const supported = [], eventKinds = [], unsupported = [...(Array.isArray(response.proposal.unknowns) ? response.proposal.unknowns : [])];
   const styles = [];
   for (const command of response.proposal.commands.slice(0, 4)) {
+    if (command?.action === 'event' && ['dragon','attack'].includes(command.kind)) {
+      eventKinds.push(command.kind);
+      continue;
+    }
     if (!command || command.action !== 'create' || !Object.hasOwn(WORDS, command.kind)) {
       unsupported.push(String(command?.details || command?.kind || 'Неизвестное действие').slice(0, 130));
       continue;
@@ -16,7 +20,7 @@ export function compileAiGameActions(response) {
   }
   return {
     commandText: supported.map(kind => WORDS[kind]).join(', '),
-    supported, unsupported: unsupported.slice(0, 6), styles,
+    supported, eventKinds, unsupported: unsupported.slice(0, 6), styles,
     summary: String(response.proposal.summary || '').slice(0, 300),
     provider: response.provider === 'groq' ? 'Groq' : response.provider === 'gemini' ? 'Gemini' : 'Cloudflare AI'
   };
