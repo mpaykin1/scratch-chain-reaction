@@ -35,6 +35,11 @@ for(const v of views){
  await page.screenshot({path:shot+'/'+v.name+'-initial.png',fullPage:true});
  await page.getByRole('button',{name:'Закрыть сообщение'}).click();
  assert.ok(await page.locator('#dialog').evaluate(x=>x.classList.contains('hidden')));
+ const rejectedBefore=await page.evaluate(()=>__chainReaction.getState());
+ await page.getByRole('button',{name:'Энергия',exact:true}).click();
+ await page.locator('#predictionBox').waitFor({state:'visible'});
+ await page.getByRole('button',{name:'Нет',exact:true}).click();
+ assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),rejectedBefore,'No must cancel without changing world');
  const forestBefore=await page.evaluate(()=>__chainReaction.getState());
  await page.getByRole('button',{name:'Лес',exact:true}).click();
  await page.locator('#predictionBox').waitFor({state:'visible'});
