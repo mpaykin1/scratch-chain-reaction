@@ -50,9 +50,10 @@ export function quoteBuild(world,key){
   return {allowed:true,reason:'',cost};
 }
 export function quoteIdea(world,input){
-  const actions=parseIdeaActions(input);
-  if(!actions.length)return {allowed:false,reason:'Пока не могу рассчитать именно эту идею. Попробуй указать лес, город, энергию, вулкан, ферму, насос или очистку воды.',cost:0,actions:[]};
-  const cost=6;
+  const idea=sanitizeIdea(input);
+  const actions=idea.length>800?[]:parseIdeaActions(idea);
+  if(!actions.length)return {allowed:false,reason:'Идея не распознана или превышает 800 символов.',cost:0,actions:[]};
+  const cost=6+actions.reduce((sum,key)=>sum+Math.abs((BUILD_EFFECTS[key]||EXTRA[key]||{}).budget||0),0);
   if(world.state.budget<cost)return {allowed:false,reason:'Нужно ещё '+(cost-world.state.budget)+' к бюджету',cost,actions};
   return {allowed:true,reason:'',cost,actions};
 }
@@ -157,26 +158,26 @@ export function playDecision(world,index){
 }
 export function interpretIdea(input){
   const text=sanitizeIdea(input);
-  if(!text)return {actions:[],reason:'Напиши идею длиной от 1 до 800 символов.'};
+  if(!text||text.length>800)return {actions:[],reason:'Напиши идею длиной от 1 до 800 символов.'};
   const actions=parseIdeaActions(text);
   return {actions,reason:actions.length?'':'Пока не могу рассчитать именно эту идею. Попробуй указать лес, город, энергию, вулкан, ферму, насос или очистку воды.'};
 }
 export function playIdea(world,input){
   const parsed=interpretIdea(input);
   if(!parsed.actions.length)return {world,events:[],actions:[],reason:parsed.reason,recognized:false};
+  const quote=quoteIdea(world,input);
+  if(!quote.allowed)return {world,events:[],actions:parsed.actions,reason:quote.reason,recognized:false};
   return {...applyActions(world,parsed.actions,'Идея: '+String(input).trim().slice(0,180),6),recognized:true,reason:''};
 }
 export function playCustomDecision(world,input){
   const parsed=interpretIdea(input);
   if(!parsed.actions.length)return {world,events:[],actions:[],reason:parsed.reason,recognized:false};
-  const next=copy(world);
-  const event=record(next,'decision','Своё решение: '+String(input).trim().slice(0,120),null);
-  for(const key of parsed.actions){
-    const delta=BUILD_EFFECTS[key]||EXTRA[key];
-    if(delta)update(next.state,delta);
-  }
-  cascade(next,[event],event.id);
-  return {world:next,events:[event],actions:parsed.actions,recognized:true,reason:''};
+  const quote=quoteIdea(world,input);
+  if(!quote.allowed)return {world,events:[],actions:parsed.actions,reason:quote.reason,recognized:false};
+  const result=applyActions(world,parsed.actions,'Своё решение: '+String(input).trim().slice(0,120),6);
+  const event=result.world.history.find(e=>e.type==='action'&&e.tick===result.world.state.turn);
+  if(event){event.type='decision';result.events.unshift(event);}
+  return {...result,recognized:true,reason:''};
 }
 export function serializeWorld(world){return JSON.stringify({version:VERSION,...world});}
 export function restoreWorld(raw){
@@ -194,6 +195,9 @@ export function advanceTick(world){
   const next=copy(world),events=[];
   next.state.turn++;
   advanceQueue(next,events);
+  const economy={budget:next.state.population>0?2:0};
+  update(next.state,economy);
+  events.push(record(next,'economy','Налоговые поступления пополнили бюджет.',null,economy));
   cascade(next,events,null);
   events.push(record(next,'tick','Прошёл ход '+next.state.turn+'.',null));
   return {world:next,events,actions:[]};
