@@ -42,7 +42,7 @@ export function getLivingActions(world,{selectedId=null,viewport={x:0,z:0}}={}){
   const danger=dragon?.hp>0&&city&&Math.hypot(dragon.x-city.x,dragon.z-city.z)<60;
   let slots=BASE.map(a=>({...a}));
   if(city)slots[0]={id:city.hp<100&&!danger?'repair':
-    !city.dome?'dome':danger?'archers':'summon-dragon',targetId:city.id};
+    !city.dome?'dome':danger?'archers':dragon?.hp===0?'expand-city':'summon-dragon',targetId:city.id};
   if(forest)slots[1]={id:forest.wildlife?'expand-forest':'wildlife',targetId:forest.id};
   if(volcano)slots[2]={id:'guide-lava',targetId:volcano.id};
   if(energy)slots[3]={id:city&&!city.gridConnected?'connect-grid':'battery',targetId:energy.id};
