@@ -141,7 +141,13 @@ function submitIdea(input,meta=null){
   $('choiceTrigger').hidden=!pendingDecision;closeSheets();
   return true;
 }
-$('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
+$('choiceTrigger').onclick=()=>openSheet('choiceBox');
+$('expandDialog').onclick=()=>{
+  const compact=$('dialog').classList.toggle('compact');
+  $('expandDialog').textContent=compact?'▣':'▁';
+  $('expandDialog').setAttribute('aria-label',compact?'Развернуть сообщение':'Свернуть сообщение');
+};
+$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
 delegateGameEvents(document,{build,decide,openSheet,living:livingAction});
 document.getElementById('catalogGrid')?.addEventListener('click',event=>{
   const button=event.target.closest('[data-catalog-build]');
@@ -175,7 +181,7 @@ $('ideaForm').onsubmit=async e=>{
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
   }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
-$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;viewport={x:0,z:0};selectedId=null;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();refreshDock();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
+$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;viewport={x:0,z:0};selectedId=null;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();refreshDock();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!',{compact:false})};
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
