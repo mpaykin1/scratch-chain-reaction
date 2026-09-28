@@ -44,7 +44,20 @@ try{for(const view of [{name:'desktop',width:1365,height:768},{name:'mobile',wid
  }
  const moved=await page.evaluate(()=>__voxelFactory.getCamera());
  assert.notDeepEqual(moved,old);assert.deepEqual(errors,[]);
- console.log('VOXEL_UI_PASS',view.name,'events',before.events.length,'coverage',area.width*area.height/(view.width*view.height),'fps',await page.evaluate(()=>__voxelFactory.getStats()));
+ const motionStats=await page.evaluate(()=>__voxelFactory.getStats());
+ await page.waitForTimeout(1600);
+ const idleStats=await page.evaluate(()=>__voxelFactory.getStats());
+ assert.ok(idleStats.fps>0,'FPS sampling should produce a valid measurement');
+ console.log('VOXEL_UI_PASS',view.name,'events',before.events.length,'coverage',area.width*area.height/(view.width*view.height),'motionFPS',motionStats.fps,'idleStats',idleStats);
  await page.close();
+ if(view.name==='desktop'){
+  const damaged=await browser.newPage();
+  await damaged.goto(new URL('cinematic/voxel-factory.html',base).href,{waitUntil:'domcontentloaded'});
+  await damaged.evaluate(()=>localStorage.setItem('voxel-factory-v1-chain-main','{broken'));
+  await damaged.reload();await damaged.waitForFunction(()=>Boolean(window.__voxelFactory));
+  assert.match(await damaged.locator('#events').innerText(),/резервной копии/);
+  assert.equal(await damaged.evaluate(()=>localStorage.getItem('voxel-factory-v1-chain-main-backup')),'{broken');
+  await damaged.close();
+ }
 }}finally{await browser.close();}
 })().catch(e=>{console.error('VOXEL_UI_FAIL',e.stack);process.exitCode=1;});

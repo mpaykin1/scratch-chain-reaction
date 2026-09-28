@@ -5,7 +5,22 @@ const $=id=>document.getElementById(id),canvas=$('map'),ctx=canvas.getContext('2
 const params=new URLSearchParams(location.search),id=params.get('world')||'chain-main';
 const WORLD_ID=/^[a-z0-9-]{1,64}$/.test(id)?id:'chain-main',SAVE='voxel-factory-v1-'+WORLD_ID;
 let world=createFactoryWorld(270927,WORLD_ID),economy=createEconomy(),camera={x:0,z:0},selected='forest',dirty=true;
-try{const s=JSON.parse(localStorage.getItem(SAVE));const w=restoreFactoryWorld(s?.blocks),e=restoreEconomy(s?.economy);if(w&&e&&w.world_id===WORLD_ID){world=w;economy=e;camera=s.camera||camera;}}catch{}
+let restoreIssue='',originalSave=null;
+try{
+ originalSave=localStorage.getItem(SAVE);
+ if(originalSave!==null){
+  const s=JSON.parse(originalSave),w=restoreFactoryWorld(s?.blocks),e=restoreEconomy(s?.economy);
+  if(!w||!e||w.world_id!==WORLD_ID)throw Error('Invalid saved world');
+  world=w;economy=e;
+  if(Number.isFinite(s?.camera?.x)&&Number.isFinite(s?.camera?.z)&&Math.abs(s.camera.x)<1000000&&Math.abs(s.camera.z)<1000000)camera={x:s.camera.x,z:s.camera.z};
+ }
+}catch(error){
+ restoreIssue='Не удалось прочитать сохранение. Оригинал оставлен без изменений.';
+ if(originalSave!==null){
+  try{localStorage.setItem(SAVE+'-backup',originalSave);restoreIssue='Повреждённый мир сохранён в резервной копии. Можно начать новый мир.';}
+  catch(backupError){restoreIssue='Повреждённый мир. Не удалось создать резервную копию.';}
+ }
+}
 let width=1,height=1,scale=1,last=0,frames=0,frameFrom=performance.now();
 const background=document.createElement('canvas'),bg=background.getContext('2d');
 const cache=new Map(),label={city:'Город',forest:'Лес',volcano:'Вулкан',energy:'Энергия',river:'Река'};
@@ -156,4 +171,5 @@ if(world.turn>0){
  const unique=[...new Set(world.events.filter(e=>labels[e.type]).map(e=>labels[e.type]))];
  if(unique.length)notice('Сохранённый мир · ход '+world.turn+': '+unique.join(', ')+'.');
 }
+if(restoreIssue)notice(restoreIssue);
 window.__voxelFactory={getWorld:()=>structuredClone(world),getEconomy:()=>structuredClone(economy),getStats:()=>({...metrics}),getCamera:()=>({...camera})};
