@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-angle=swiftshader']});
+  const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome',args:['--enable-webgl','--use-angle=swiftshader']});
   try{
     for(const view of [{name:'iphone11',width:414,height:896,dpr:2},{name:'iphone11-landscape',width:896,height:414,dpr:2},{name:'desktop',width:1440,height:900,dpr:1}]){
       const ctx=await browser.newContext({viewport:{width:view.width,height:view.height},deviceScaleFactor:view.dpr,isMobile:view.dpr>1,hasTouch:view.dpr>1});
