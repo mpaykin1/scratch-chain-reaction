@@ -24,8 +24,12 @@ const SPECIAL={
   'expand-city':['city','Развивать город','🏗️'],
   wildlife:['forest','Заселить животными','🦌'], 'expand-forest':['forest','Расширить лес','🌳'],
   'guide-lava':['volcano','Направить лаву','🌋'],
+  geothermal:['volcano','Геотермальная станция','⚡'],
+  island:['volcano','Создать остров','🏝️'],
   'connect-grid':['energy','Подключить город','🔌'],
   battery:['energy','Построить накопитель','🔋'],
+  'expand-grid':['energy','Расширить энергосеть','⚡'],
+  'stabilize-grid':['energy','Стабилизировать сеть','🛠️'],
   'reinforce-dome':['city','Усилить купол','✨']
 };
 const visible=(o,v)=>Math.abs(o.x-v.x)<=55&&Math.abs(o.z-v.z)<=55;
@@ -44,8 +48,10 @@ export function getLivingActions(world,{selectedId=null,viewport={x:0,z:0}}={}){
   if(city)slots[0]={id:city.hp<100&&!danger?'repair':
     !city.dome?'dome':danger?'archers':dragon?.hp===0?'expand-city':'summon-dragon',targetId:city.id};
   if(forest)slots[1]={id:forest.wildlife?'expand-forest':'wildlife',targetId:forest.id};
-  if(volcano)slots[2]={id:'guide-lava',targetId:volcano.id};
-  if(energy)slots[3]={id:city&&!city.gridConnected?'connect-grid':'battery',targetId:energy.id};
+  if(volcano)slots[2]={id:!volcano.lavaGuided?'guide-lava':
+    !volcano.geothermal?'geothermal':'island',targetId:volcano.id};
+  if(energy)slots[3]={id:city&&!city.gridConnected?'connect-grid':
+    !energy.battery?'battery':!energy.gridExpanded?'expand-grid':'stabilize-grid',targetId:energy.id};
   if(danger) {
     slots[0]={id:'archers',targetId:city.id};
     slots[1]={id:'negotiate',targetId:city.id};
