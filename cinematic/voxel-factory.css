@@ -1,0 +1,16 @@
+:root{color-scheme:dark;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#f8f7eb;background:#17252f}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}
+#game{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#839ba0,#c1bd9b 50%,#564f3f)}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}#map:active{cursor:grabbing}
+.top{position:absolute;z-index:2;top:env(safe-area-inset-top,0px);left:0;right:0;padding:10px 14px;display:flex;align-items:center;gap:14px;justify-content:space-between;background:linear-gradient(#102029eb,#122b37c4,transparent);pointer-events:none}
+.top>*{pointer-events:auto}.top h1{font-size:clamp(15px,2vw,24px);margin:0 0 4px}.top p{font-size:clamp(11px,1.2vw,14px);margin:0;color:#deecdf}
+.back{font-size:14px;white-space:nowrap;color:#fff2cb;text-decoration:none;background:#163b48cc;border:1px solid #b2d0d0;padding:12px;border-radius:10px}
+.indicators{display:flex;gap:7px;flex-wrap:wrap}.indicators span{padding:8px 10px;border-radius:9px;background:#102936c9;white-space:nowrap;font-variant-numeric:tabular-nums}
+#events{position:absolute;z-index:2;left:50%;top:17%;transform:translateX(-50%);max-width:min(700px,90vw);text-align:center;background:#1c2931e3;border:1px solid #c6d3b0;border-radius:14px;padding:9px 15px;box-shadow:0 8px 28px #1118;pointer-events:none;font-size:clamp(12px,1.4vw,16px)}
+.actions{position:absolute;z-index:3;bottom:max(9px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:7px;width:min(940px,98%);background:#10222ecb;border:1px solid #b8d3cb80;border-radius:16px;padding:9px}
+button{font:inherit;font-weight:750;color:white;cursor:pointer;border:1px solid #9cbbb6;background:#254f56dd;border-radius:11px;padding:12px 14px;min-height:47px;touch-action:manipulation}
+button[data-build]{background:linear-gradient(125deg,#345444,#213949)}button.extra{background:#2a3b4b}button.active{border:2px solid #ffdc94;background:#406853;box-shadow:0 0 20px #e7c66f80}
+button:focus-visible,a:focus-visible{outline:3px solid #ffe18b;outline-offset:3px}
+#ideaForm{position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);width:min(520px,92vw);border:2px solid #d3ca97;border-radius:18px;padding:24px;background:#142831f6;box-shadow:0 12px 60px #000b}
+#ideaForm[hidden]{display:none}#ideaForm label{display:block;font-size:20px;margin-bottom:14px}#ideaForm input{width:100%;font-size:18px;background:#e9f1e1;color:#1d2b29;border-radius:9px;padding:12px;border:0;margin-bottom:12px}
+@media(max-width:600px){.top{align-items:flex-start;gap:7px;padding:7px}.back{font-size:11px;padding:8px}.top h1{font-size:14px}.top p{font-size:11px;max-width:180px}.indicators{justify-content:end;max-width:90px}.indicators span{font-size:11px;padding:5px}#events{top:22%;width:88%;font-size:12px}.actions{gap:4px;padding:5px}.actions button{font-size:12px;flex:1 1 22%;min-height:43px;padding:7px 4px}}
