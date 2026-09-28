@@ -74,7 +74,8 @@ export function createView(getWorld,doc=document){
       count>0&&!(getWorld().living?.objects||[]).some(o=>o.kind===kind));
     renderMap();
     $('rotor').classList.toggle('on',placed.energy>0);
-    $('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);
+    $('scenery').classList.toggle('developed',!getWorld().living&&
+      Object.values(placed).reduce((a,b)=>a+b,0)>=4);
     const log=$('historyLog');if(log){log.replaceChildren();for(const event of history.slice(-8).reverse()){const li=doc.createElement('li');li.textContent=event.text;log.appendChild(li);}}
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
