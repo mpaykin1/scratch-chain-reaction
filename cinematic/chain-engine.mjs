@@ -1,3 +1,4 @@
+import {createForge,validateForge} from './world-forge-core.mjs';
 import {parseIdeaActions,sanitizeIdea} from './idea-parser.mjs';
 // Pure, deterministic simulation for the cinematic mode. No DOM, network, time or RNG.
 export const VERSION=1;
@@ -31,7 +32,7 @@ const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
-  history:world.history.map(item=>({...item}))
+  history:world.history.map(item=>({...item})),forge:world.forge?JSON.parse(JSON.stringify(world.forge)):createForge()
 });
 const update=(stats,delta)=>{for(const [key,value] of Object.entries(delta)){
   if(!Object.hasOwn(INITIAL,key)||key==='turn'||!Number.isFinite(value))throw Error('Invalid resource delta: '+key);
