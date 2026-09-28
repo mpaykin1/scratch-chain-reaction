@@ -142,3 +142,9 @@
   #dialog.compact .dialog-text{font-size:10px;-webkit-line-clamp:1}
   #dialog.compact .choice-trigger{font-size:9px;padding:2px 4px;margin-top:2px}
 }
+
+/* Full-size close and expand buttons must never steal each other's touches. */
+#dialog:not(.compact) .dialog-expand{right:72px;top:12px;width:34px;height:34px}
+@media(orientation:portrait){
+  #dialog:not(.compact) .dialog-expand{right:46px;top:8px;width:30px;height:30px}
+}
