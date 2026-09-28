@@ -43,6 +43,7 @@ for(const v of views){
  const forestBefore=await page.evaluate(()=>__chainReaction.getState());
  await page.getByRole('button',{name:'Лес',exact:true}).click();
  await page.locator('#predictionBox').waitFor({state:'visible'});
+ await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),forestBefore,'prediction must not mutate world');
  assert.match(await page.locator('#predictionSummary').textContent(),/ИИ прогнозирует/);
  await page.getByRole('button',{name:'Да, строить'}).click();await page.waitForTimeout(170);
@@ -66,6 +67,7 @@ for(const v of views){
  await waitForBudget(12);
  await page.getByRole('button',{name:'Город',exact:true}).click();
  await page.locator('#predictionBox').waitFor({state:'visible'});
+ await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  await page.getByRole('button',{name:'Да, строить'}).click();
  await page.evaluate(()=>{
    const options=__chainReaction.getDecisionOptions();
@@ -74,6 +76,7 @@ for(const v of views){
  await waitForBudget(9);
  await page.getByRole('button',{name:'Вулкан',exact:true}).click();
  await page.locator('#predictionBox').waitFor({state:'visible'});
+ await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  await page.getByRole('button',{name:'Да, строить'}).click();
  assert.ok(await page.locator('#scenery').evaluate(x=>x.classList.contains('developed')));
  await page.screenshot({path:shot+'/'+v.name+'-developed.png',fullPage:true});
