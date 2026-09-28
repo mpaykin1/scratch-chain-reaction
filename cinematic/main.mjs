@@ -201,7 +201,7 @@ $('confirmPrediction').onclick=()=>{
   const kind=pendingBuild.kind;clearPrediction();closeSheets();commitBuild(kind);
 };
 $('modalBackdrop').addEventListener('click',clearPrediction);
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('predictionBox').hidden)clearPrediction();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&pendingBuild)clearPrediction();});
 delegateGameEvents(document,{build,decide,openSheet});
 let aiPending=false;
 $('ideaForm').onsubmit=async e=>{
