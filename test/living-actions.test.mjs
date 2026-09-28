@@ -155,3 +155,48 @@ test('world and dock refer to the same registered images (no duplicate art libra
   const painter=readFileSync(new URL('../cinematic/living-actions.mjs',import.meta.url),'utf8');
   assert.match(painter,/ASSET_REGISTRY\[action.kind\]/);
 });
+
+test('volcano evolves through safe lava, geothermal plant, island and repeatable research',()=>{
+  let world=playBuild(createWorld(),'volcano').world;
+  const target=world.living.objects[0].id;
+  assert.equal(act(world)[2].id,'guide-lava');
+  world=step(world,'guide-lava',target);
+  assert.equal(act(world)[2].id,'geothermal');
+  assert.equal(quoteFeature(world,'guide-lava',target).allowed,false);
+  const power=world.state.power;
+  world=step(world,'geothermal',target);
+  assert.ok(world.state.power>power);
+  assert.equal(act(world)[2].id,'island');
+  world=step(world,'island',target);
+  assert.equal(world.living.objects[0].island,true);
+  assert.equal(act(world)[2].id,'volcano-research');
+  world=step(world,'volcano-research',target);
+  assert.equal(world.living.objects[0].researchCount,1);
+  assert.match(act(world)[2].label,/2/);
+});
+
+test('energy controls evolve battery -> grid expansion -> stabilization -> upgrades',()=>{
+  let world=playBuild(createWorld(),'energy').world;
+  const target=world.living.objects[0].id;
+  assert.equal(act(world)[3].id,'battery');
+  world=step(world,'battery',target);
+  assert.equal(quoteFeature(world,'battery',target).allowed,false);
+  assert.equal(act(world)[3].id,'expand-grid');
+  world=step(world,'expand-grid',target);
+  assert.equal(act(world)[3].id,'stabilize-grid');
+  world=step(world,'stabilize-grid',target);
+  assert.equal(act(world)[3].id,'upgrade-grid');
+  world=step(world,'upgrade-grid',target);
+  assert.equal(world.living.objects[0].upgradeCount,1);
+  assert.match(act(world)[3].label,/2/);
+});
+
+test('defense cannot target a dragon across the infinite map',()=>{
+  let world=cityAt(createWorld());
+  const id=world.living.objects[0].id;
+  world=step(world,'dome',id);
+  world=step(world,'summon-dragon',id);
+  world.living.dragon.x=200;
+  assert.equal(quoteFeature(world,'archers',id).allowed,false);
+  assert.throws(()=>playFeature(world,'archers',id),/Поблизости/);
+});
