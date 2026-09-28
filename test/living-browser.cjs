@@ -30,6 +30,8 @@ async function check(browser,base,device){
   assert.deepEqual(await page.locator('.option').evaluateAll(nodes=>nodes.map(n=>n.dataset.livingId)),
     ['build-city','build-forest','build-volcano','build-energy','idea']);
   assert.equal(await page.locator('#volcanoArt.active').count(),0);
+  const backdrop=await page.locator('#scenery').evaluate(n=>getComputedStyle(n).backgroundImage);
+  assert.match(backdrop,/world_barren_(landscape|portrait)\.webp/,'barren world must not paint a volcano');
   const coverage=await page.locator('#game').evaluate((n)=>{
     const r=n.getBoundingClientRect();return r.width*r.height/(innerWidth*innerHeight);
   });
@@ -39,6 +41,17 @@ async function check(browser,base,device){
   await page.waitForFunction(()=>__chainReaction.getPlaced().city===1);
   assert.equal(await page.locator('.option').first().getAttribute('data-living-id'),'dome');
   assert.equal(await page.locator('.living-object.city').count(),1);
+  const objectVisibility=await page.locator('.living-object.city').evaluate(node=>{
+    const rect=node.getBoundingClientRect(),area=rect.width*rect.height;
+    const occluders=[...document.querySelectorAll('.hud,#dialog:not(.hidden),.action-dock')];
+    const blocked=occluders.reduce((sum,el)=>{
+      const r=el.getBoundingClientRect();
+      return sum+Math.max(0,Math.min(rect.right,r.right)-Math.max(rect.left,r.left))*
+        Math.max(0,Math.min(rect.bottom,r.bottom)-Math.max(rect.top,r.top));
+    },0);
+    return Math.round(100*Math.max(0,1-blocked/area));
+  });
+  assert.ok(objectVisibility>85,'new city must be at least 85% unobstructed: '+objectVisibility+'%');
   const sources=await page.evaluate(()=>[
     document.querySelector('.living-object.city img').getAttribute('src'),
     document.querySelector('.option[data-living-id="dome"] img').getAttribute('src')
@@ -74,7 +87,7 @@ async function check(browser,base,device){
   assert.ok(after.objects>0);
   assert.deepEqual(errors,[],'page errors');
   await context.close();
-  return {device:device.name,coverage:Math.round(coverage*100),
+  return {device:device.name,coverage:Math.round(coverage*100),objectVisibility,
     errors,scenarios:['city','dome','dragon','archers','retaliation','victory','repair','reload'],
     after};
 }
