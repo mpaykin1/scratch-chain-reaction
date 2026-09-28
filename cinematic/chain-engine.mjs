@@ -31,7 +31,18 @@ const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
-  history:world.history.map(item=>({...item}))
+  history:world.history.map(item=>({...item})),
+  living:world.living?{
+    objects:world.living.objects.map(o=>({...o})),
+    dragon:world.living.dragon?{...world.living.dragon}:null,
+    nextId:world.living.nextId,
+    recentRequests:[...world.living.recentRequests]
+  }:{
+    objects:Object.entries(world.placed).flatMap(([kind,count])=>
+      Array.from({length:count},(_,i)=>({id:'legacy-'+kind+'-'+i,kind,
+        x:i*8,z:0,hp:100,dome:0}))),
+    dragon:null,nextId:1,recentRequests:[]
+  }
 });
 const update=(stats,delta)=>{for(const [key,value] of Object.entries(delta)){
   if(!Object.hasOwn(INITIAL,key)||key==='turn'||!Number.isFinite(value))throw Error('Invalid resource delta: '+key);
@@ -58,7 +69,8 @@ export function quoteIdea(world,input){
   return {allowed:true,reason:'',cost,actions};
 }
 export function createWorld(){
-  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},queue:[],history:[]};
+  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},
+    queue:[],history:[],living:{objects:[],dragon:null,nextId:1,recentRequests:[]}};
 }
 function advanceQueue(world,events){
   const due=world.queue.filter(item=>item.turn<=world.state.turn);
@@ -87,7 +99,7 @@ function cascade(world,events,parentId){
     events.push(record(world,'hunger','Голод: −2 жителя.',parentId,delta));
   }
 }
-function applyActions(world,actions,description,charge=0){
+function applyActions(world,actions,description,charge=0,position={x:0,z:0}){
   const next=copy(world),events=[];
   next.state.turn++;
   advanceQueue(next,events);
@@ -96,7 +108,13 @@ function applyActions(world,actions,description,charge=0){
   for(const key of actions){
     const delta=BUILD_EFFECTS[key]||EXTRA[key];
     update(next.state,delta);
-    if(Object.hasOwn(next.placed,key))next.placed[key]++;
+    if(Object.hasOwn(next.placed,key)){
+      next.placed[key]++;
+      next.living.objects.push({id:'object-'+next.living.nextId++,kind:key,
+        x:Math.max(-100000,Math.min(100000,Number(position?.x)||0)),
+        z:Math.max(-100000,Math.min(100000,Number(position?.z)||0)),
+        hp:100,dome:0});
+    }
     events.push(record(next,'construction',ACTION_LABEL[key]+' изменил мир.',actionEvent.id,delta));
     if(key==='forest')next.queue.push({turn:next.state.turn+2,delta:{eco:4,food:3},text:'Подросший лес восстанавливает почву и питание.',parentId:actionEvent.id});
     if(key==='city')next.queue.push({turn:next.state.turn+2,delta:{water:-3,power:-3},text:'Разросшемуся городу снова требуются вода и энергия.',parentId:actionEvent.id});
@@ -105,9 +123,9 @@ function applyActions(world,actions,description,charge=0){
   cascade(next,events,actionEvent.id);
   return {world:next,events,actions};
 }
-export function playBuild(world,key){
+export function playBuild(world,key,{position}={}){
   if(!Object.hasOwn(BUILD_EFFECTS,key))throw Error('Unknown build action');
-  return applyActions(world,[key],'Построено: '+ACTION_LABEL[key]);
+  return applyActions(world,[key],'Построено: '+ACTION_LABEL[key],0,position);
 }
 const CRISIS_ORDER=['power','water','food','eco'];
 const CRISIS_LABEL={power:'энергии',water:'воды',food:'еды',eco:'экологии'};
@@ -179,6 +197,94 @@ export function playCustomDecision(world,input){
   if(event){event.type='decision';result.events.unshift(event);}
   return {...result,recognized:true,reason:''};
 }
+const FEATURE_COST=Object.freeze({
+  dome:9,'summon-dragon':0,archers:0,negotiate:12,evacuate:2,repair:10,
+  'expand-city':12,wildlife:4,'expand-forest':10,'guide-lava':3,
+  'connect-grid':7,battery:6,'reinforce-dome':8
+});
+export function quoteFeature(world,id,targetId){
+  if(!Object.hasOwn(FEATURE_COST,id))return {allowed:false,cost:0,reason:'Неизвестное действие'};
+  const cost=FEATURE_COST[id],objects=world.living?.objects||[];
+  const city=objects.find(o=>o.id===targetId&&o.kind==='city');
+  const target=objects.find(o=>o.id===targetId);
+  const dragon=world.living?.dragon,active=dragon?.hp>0;
+  let reason='';
+  if(['dome','summon-dragon','archers','negotiate','evacuate','repair',
+    'expand-city','reinforce-dome'].includes(id)&&!city)reason='Выбери город.';
+  else if(id==='dome'&&city.dome)reason='Купол уже создан.';
+  else if(id==='summon-dragon'&&(!city.dome||active))reason='Нужен купол и отсутствие дракона.';
+  else if(['archers','negotiate','evacuate'].includes(id)&&!active)reason='Поблизости нет дракона.';
+  else if(id==='repair'&&city.hp>=100)reason='Город не повреждён.';
+  else if(id==='reinforce-dome'&&(!city.dome||city.dome>=100))reason='Купол не требует усиления.';
+  else if(id==='wildlife'&&(!target||target.kind!=='forest'||target.wildlife))reason='Нужен лес без животных.';
+  else if(id==='expand-forest'&&target?.kind!=='forest')reason='Выбери лес.';
+  else if(id==='guide-lava'&&(!target||target.kind!=='volcano'||target.lavaGuided))reason='Нужен вулкан с ненаправленной лавой.';
+  else if(['connect-grid','battery'].includes(id)&&target?.kind!=='energy')reason='Нужна электростанция.';
+  else if(id==='connect-grid'&&!objects.some(o=>o.kind==='city'&&!o.gridConnected))
+    reason='Все города уже подключены.';
+  else if(world.state.budget<cost)reason='Недостаточно бюджета: нужно '+cost+'.';
+  return {allowed:!reason,reason,cost};
+}
+export function playFeature(world,id,targetId,{requestId}={}){
+  if(requestId!==undefined&&!/^[a-zA-Z0-9_-]{1,90}$/.test(requestId))
+    throw Error('Некорректный идентификатор запроса');
+  if(requestId&&world.living?.recentRequests.includes(requestId))
+    return {world,events:[],actions:[],duplicate:true};
+  const quote=quoteFeature(world,id,targetId);
+  if(!quote.allowed)throw Error(quote.reason);
+  if(id==='expand-city'||id==='expand-forest'){
+    const target=world.living.objects.find(o=>o.id===targetId);
+    const result=playBuild(world,id==='expand-city'?'city':'forest',
+      {position:{x:target.x+8,z:target.z+8}});
+    if(requestId)result.world.living.recentRequests.push(requestId);
+    return result;
+  }
+  const next=copy(world),events=[];next.state.turn++;advanceQueue(next,events);
+  const target=next.living.objects.find(o=>o.id===targetId);
+  const dragon=next.living.dragon;
+  if(quote.cost)update(next.state,{budget:-quote.cost});
+  const action=record(next,'action',id+' → '+(target?.id||'мир'),null);
+  const mark=(type,text,delta={})=>{
+    if(Object.keys(delta).length)update(next.state,delta);
+    events.push(record(next,type,text,action.id,delta));
+  };
+  if(id==='dome'){target.dome=50;mark('construction','Над городом возник прозрачный защитный купол.');}
+  if(id==='reinforce-dome'){target.dome=Math.min(100,target.dome+35);
+    mark('construction','Защитный купол укреплён.');}
+  if(id==='summon-dragon'){
+    next.living.dragon={id:'dragon-'+next.living.nextId++,x:target.x+6,z:target.z-7,
+      hp:100,status:'approaching'};
+    mark('creature','К городу приближается дракон.');
+  }
+  if(id==='archers'){
+    const damage=target.dome?65:42;dragon.hp=Math.max(0,dragon.hp-damage);
+    mark('combat','Лучники ранили дракона: '+damage+' урона.');
+    if(!dragon.hp){dragon.status='defeated';mark('combat','Дракон отступил, город защищён.',{population:2});}
+    else {
+      dragon.status='attacking';
+      const blocked=Math.min(target.dome,40);target.dome-=blocked;
+      const hit=blocked?12:42;
+      target.hp=Math.max(0,target.hp-hit);
+      mark('retaliation','Дракон атаковал город. Купол поглотил '+blocked+' урона.',
+        {population:blocked?-1:-5,eco:-3,budget:-3});
+    }
+  }
+  if(id==='negotiate'){dragon.hp=0;dragon.status='departed';
+    mark('diplomacy','Дракон согласился покинуть город.');}
+  if(id==='evacuate'){target.evacuated=true;mark('evacuation','Жители укрылись от дракона.',
+    {population:-1});}
+  if(id==='repair'){target.hp=Math.min(100,target.hp+50);mark('construction','Город восстановлен.');}
+  if(id==='wildlife'){target.wildlife=true;mark('ecology','В лес вернулись животные.',{food:6,eco:4});}
+  if(id==='guide-lava'){target.lavaGuided=true;mark('construction','Лава направлена в безопасное русло.',{eco:4});}
+  if(id==='connect-grid'){const city=next.living.objects.find(o=>o.kind==='city'&&!o.gridConnected);
+    city.gridConnected=true;target.gridBuilt=true;
+    mark('construction','Город подключён к электросети.',{power:15});}
+  if(id==='battery'){target.battery=true;mark('construction','Построен накопитель энергии.',{power:10});}
+  cascade(next,events,action.id);
+  if(requestId){next.living.recentRequests.push(requestId);
+    next.living.recentRequests=next.living.recentRequests.slice(-32);}
+  return {world:next,events,actions:[id]};
+}
 export function serializeWorld(world){return JSON.stringify({version:VERSION,...world});}
 export function restoreWorld(raw){
   try{
@@ -188,6 +294,18 @@ export function restoreWorld(raw){
     if(Object.keys(createWorld().placed).some(k=>!Number.isInteger(data.placed[k])||data.placed[k]<0||data.placed[k]>10000))return null;
     if(data.queue.length>400||data.history.length>150||data.queue.some(e=>!Number.isInteger(e.turn)||e.turn<0||e.turn>100000||
       !e.delta||Object.entries(e.delta).some(([k,v])=>!Object.hasOwn(INITIAL,k)||k==='turn'||!Number.isFinite(v))))return null;
+    if(data.living){
+      const l=data.living;
+      if(!Array.isArray(l.objects)||l.objects.length>1000||
+        !Number.isSafeInteger(l.nextId)||l.nextId<1||
+        !Array.isArray(l.recentRequests)||l.recentRequests.length>32||
+        l.recentRequests.some(id=>typeof id!=='string'||id.length>90)||
+        l.objects.some(o=>!o||typeof o.id!=='string'||!Object.hasOwn(data.placed,o.kind)||
+          !Number.isFinite(o.x)||!Number.isFinite(o.z)||!Number.isInteger(o.hp)||
+          o.hp<0||o.hp>100||!Number.isInteger(o.dome)||o.dome<0||o.dome>100)||
+        (l.dragon&&(!Number.isInteger(l.dragon.hp)||l.dragon.hp<0||
+          l.dragon.hp>100||typeof l.dragon.id!=='string')))return null;
+    }
     return copy(data);
   }catch{return null;}
 }
