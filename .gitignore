@@ -1,0 +1,7 @@
+node_modules/
+work/
+qa-artifacts/
+scenario-qa/
+test-results/
+playwright-report/
+.env.local
