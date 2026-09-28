@@ -108,24 +108,52 @@ export function playBuild(world,key){
   if(!Object.hasOwn(BUILD_EFFECTS,key))throw Error('Unknown build action');
   return applyActions(world,[key],'Построено: '+ACTION_LABEL[key]);
 }
+const CRISIS_ORDER=['power','water','food','eco'];
+const CRISIS_LABEL={power:'энергии',water:'воды',food:'еды',eco:'экологии'};
+const GENIE_OPTIONS={
+  power:[
+    {label:'⚡ Сжечь лес ради энергии: экология и вода пострадают',delta:{power:18,eco:-18,water:-6},role:'worsens'},
+    {label:'🏭 Быстрый запуск энергетики: больше энергии ценой экологии',delta:{power:23,eco:-15,food:-7},role:'worsens'},
+    {label:'🚚 Импортировать электроэнергию за счёт бюджета и воды',delta:{power:16,budget:-18,water:-7},role:'shifts'},
+    {label:'🌱 Поэтапное обновление сети с экономией ресурсов',delta:{power:11,eco:5,budget:-9},role:'balanced'}
+  ],
+  water:[
+    {label:'🚰 Срочная добыча воды: меньше экологии, выше нагрузка',delta:{water:23,eco:-15,power:-4},role:'worsens'},
+    {label:'🏗️ Перекрыть реку ради воды: вред соседним лесам',delta:{water:20,eco:-13,food:-5},role:'worsens'},
+    {label:'🚚 Импорт воды за счёт бюджета и энергии',delta:{water:15,budget:-17,power:-8},role:'shifts'},
+    {label:'🌧️ Водосбор и постепенное восстановление реки',delta:{water:11,eco:7,budget:-9},role:'balanced'}
+  ],
+  food:[
+    {label:'🚜 Ускорить производство еды за счёт воды и почвы',delta:{food:22,water:-13,eco:-11},role:'worsens'},
+    {label:'🏭 Интенсивная ферма: еды больше, загрязнение растёт',delta:{food:18,eco:-15,power:-5},role:'worsens'},
+    {label:'🚛 Импорт еды, оплаченный из общего бюджета',delta:{food:16,budget:-19,water:-3},role:'shifts'},
+    {label:'🌿 Смешанные фермы с бережным поливом',delta:{food:11,eco:5,water:-3,budget:-7},role:'balanced'}
+  ],
+  eco:[
+    {label:'🌳 Быстрое озеленение: экология растёт, вода убывает',delta:{eco:23,water:-17,power:-5},role:'worsens'},
+    {label:'🏭 Агрессивная очистка: экология ценой энергии и еды',delta:{eco:19,power:-16,food:-8},role:'worsens'},
+    {label:'🚚 Перенести загрязнение из города в соседний район',delta:{eco:15,budget:-17,water:-10},role:'shifts'},
+    {label:'🌱 Постепенно восстановить почву и биоразнообразие',delta:{eco:11,food:5,budget:-9},role:'balanced'}
+  ]
+};
 export function getGenieChoices(world){
-  return {
-    title:'Злой Джинн предлагает…',
-    choices:[
-      {label:'🔥 Сжечь лес ради энергии (энергия +13, экология −19)',delta:DECISIONS[0]},
-      {label:'🏭 Мегазавод (энергия +19, экология −15)',delta:DECISIONS[1]},
-      {label:'🚛 Импорт ресурсов (энергия +9, бюджет −18)',delta:DECISIONS[2]},
-      {label:'🌱 Экологический компромисс (энергия +8, экология +8)',delta:DECISIONS[3]}
-    ]
-  };
+  const crisis=CRISIS_ORDER.reduce((chosen,key)=>
+    world.state[key]<world.state[chosen]?key:chosen,CRISIS_ORDER[0]);
+  const choices=GENIE_OPTIONS[crisis].map((option,index)=>({...option,target:crisis,id:index,delta:{...option.delta}}));
+  return {title:'Злой Джинн: нехватка '+CRISIS_LABEL[crisis],crisis,choices};
 }
 export function getDecisionOptions(world){return getGenieChoices(world).choices;}
 export function playDecision(world,index){
-  if(!Number.isInteger(index)||index<0||index>=DECISIONS.length)throw Error('Unknown decision');
-  const next=copy(world),event=record(next,'decision',DECISION_MESSAGES[index],null,DECISIONS[index]);
-  update(next.state,DECISIONS[index]);
-  cascade(next,[event],event.id);
-  return {world:next,events:[event],actions:[]};
+  if(!Number.isInteger(index)||index<0||index>3)throw Error('Unknown decision');
+  const choice=getDecisionOptions(world)[index];
+  const next=copy(world),events=[];
+  next.state.turn++;
+  advanceQueue(next,events);
+  const event=record(next,'decision',choice.label,null,choice.delta);
+  events.push(event);
+  update(next.state,choice.delta);
+  cascade(next,events,event.id);
+  return {world:next,events,actions:[]};
 }
 export function interpretIdea(input){
   const text=sanitizeIdea(input);
