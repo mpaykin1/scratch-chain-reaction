@@ -17,6 +17,22 @@ test('AI request sends world context but no API secret',async()=>{
  assert.equal(result.commandText,'город, лес');assert.match(request.url,/api\/chain-ai$/);
  assert.deepEqual(JSON.parse(request.options.body),{text:'Построй готический город',provider:'gemini',worldContext:{turn:3}});
 });
+test('Explicit OpenRouter routes server-side and displays the actual free provider',async()=>{
+ let sent, endpoint;
+ const result=await interpretGameIdea('Сделай город','openrouter',{turn:5},async(url,options)=>{
+  endpoint=url;sent=JSON.parse(options.body);
+  return Response.json({...base,provider:'openrouter'});
+ });
+ assert.equal(result.provider,'OpenRouter (free)');
+ assert.equal(result.commandText,'город, лес');
+ assert.deepEqual(sent,{text:'Сделай город',provider:'openrouter',worldContext:{turn:5}});
+ assert.match(endpoint,/api\/chain-ai$/);
+ assert.ok(!JSON.stringify(sent).includes('OPENROUTER_API_KEY'));
+});
+test('Auto reports actual OpenRouter fallback instead of the requested auto label',()=>{
+ const result=compileAiGameActions({...base,provider:'openrouter'});
+ assert.equal(result.provider,'OpenRouter (free)');
+});
 test('Unknown AI actions never map into game actions',()=>{
  const result=compileAiGameActions({ok:true,provider:'cloudflare',proposal:{commands:[{kind:'unknown',action:'create',details:'космический порт'}]}});
  assert.equal(result.commandText,'');assert.deepEqual(result.unsupported,['космический порт']);
