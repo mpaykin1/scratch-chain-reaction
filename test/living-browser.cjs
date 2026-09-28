@@ -40,6 +40,11 @@ async function check(browser,base,device){
   await page.locator('[data-living-id="build-city"]').click();
   await page.waitForFunction(()=>__chainReaction.getPlaced().city===1);
   assert.equal(await page.locator('.option').first().getAttribute('data-living-id'),'dome');
+  assert.equal(await page.locator('#dialog.compact').count(),1);
+  await page.locator('#expandDialog').click();
+  assert.equal(await page.locator('#dialog.compact').count(),0);
+  await page.locator('#expandDialog').click();
+  assert.equal(await page.locator('#dialog.compact').count(),1);
   assert.equal(await page.locator('.living-object.city').count(),1);
   const objectVisibility=await page.locator('.living-object.city').evaluate(node=>{
     const rect=node.getBoundingClientRect(),area=rect.width*rect.height;
@@ -77,13 +82,40 @@ async function check(browser,base,device){
   await page.reload({waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>Boolean(window.__chainReaction));
   assert.equal(await page.locator('.option').first().getAttribute('data-living-id'),'expand-city');
+  // Genuine browser pointer events, including CDP touch events in mobile emulation.
+  const startX=Math.round(device.w*.83),startY=Math.round(device.h*.24);
+  if(device.mobile){
+    const cdp=await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',
+      touchPoints:[{x:startX,y:startY,id:1}]});
+    for(let step=1;step<=5;step++)await cdp.send('Input.dispatchTouchEvent',{
+      type:'touchMove',touchPoints:[{x:startX-step*10,y:startY,id:1}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await cdp.detach();
+  }else{
+    await page.mouse.move(startX,startY);
+    await page.mouse.down();
+    await page.mouse.move(startX-50,startY,{steps:6});
+    await page.mouse.up();
+  }
+  const panned=await page.evaluate(()=>__chainReaction.getViewport());
+  assert.ok(panned.x>1,'dragging must pan world: '+JSON.stringify(panned));
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>Boolean(window.__chainReaction));
+  const persisted=await page.evaluate(()=>__chainReaction.getViewport());
+  assert.ok(Math.abs(persisted.x-panned.x)<.01,'camera must survive reload');
+  assert.equal(await page.locator('.option').first().getAttribute('data-living-id'),'expand-city');
+  await page.getByRole('button',{name:'Меню',exact:true}).click();
+  await page.locator('[data-catalog-build="city"]').click();
+  assert.equal(await page.evaluate(()=>__chainReaction.getPlaced().city),2,
+    'catalogue must still build second city without replacing main button');
   const after=await page.evaluate(()=>({
     city:__chainReaction.getPlaced().city,history:__chainReaction.getHistory().length,
     options:__chainReaction.getLivingActions().map(a=>a.id),
     objects:document.querySelectorAll('.living-object:not([hidden])').length,
     viewport:__chainReaction.getViewport()
   }));
-  assert.equal(after.city,1);
+  assert.equal(after.city,2);
   assert.ok(after.objects>0);
   assert.deepEqual(errors,[],'page errors');
   await context.close();
@@ -96,7 +128,8 @@ async function check(browser,base,device){
   const base='http://127.0.0.1:'+server.address().port;
   let browser;
   try{
-    browser=await playwright.chromium.launch({headless:true,channel:'chrome'});
+    browser=await playwright.chromium.launch({headless:true,
+      channel:process.env.CI?undefined:'chrome'});
     const results=[];
     for(const device of [{name:'desktop',w:1440,h:900,mobile:false},
       {name:'mobile-emulation',w:390,h:844,mobile:true}])
