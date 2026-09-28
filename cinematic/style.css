@@ -2,7 +2,7 @@
 :root{font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;color:#f6f7ff;background:#070d15;--gold:#ffda92;--cyan:#78c9ff;--green:#a5f9ae;--red:#ff8670;--purple:#c884ff;--safe-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none}button,textarea{font:inherit}button{cursor:pointer;color:inherit}button:focus-visible{outline:3px solid #ffe2ae;outline-offset:4px}
 #game{position:fixed;inset:0;isolation:isolate;width:100vw;height:100vh;height:100svh;height:100dvh;overflow:hidden;touch-action:manipulation;background:#3c2624}
-.scenery{position:absolute;inset:0;background-image:linear-gradient(0deg,#0a101e8c 0%,transparent 30%,#0e18291c 75%,#0e172a88 100%),url('assets/world_landscape.webp');background-position:center;background-size:cover;transform:scale(1.017);transition:background-image 1.2s,filter 1s}
+.scenery{position:absolute;inset:0;background-image:linear-gradient(0deg,#0a101e8c 0%,transparent 30%,#0e18291c 75%,#0e172a88 100%),url('assets/world_barren_landscape.webp');background-position:center;background-size:cover;transform:scale(1.017);transition:background-image 1.2s,filter 1s}
 .scenery.developed{background-image:linear-gradient(0deg,#0913245c 0%,transparent 48%,#10213355 100%),url('assets/world_developed_landscape.webp')}
 .scenery:after{content:"";inset:0;position:absolute;background:linear-gradient(90deg,#0b0f1950 0%,transparent 33%,transparent 70%,#13101639);pointer-events:none}
 .atmosphere{position:absolute;inset:0;pointer-events:none;opacity:.75;mix-blend-mode:screen;background:radial-gradient(ellipse 23% 13% at 25% 55%,#ece2d43e,transparent),radial-gradient(ellipse 28% 10% at 70% 37%,#b1b4ba4a,transparent);filter:blur(18px);animation:drift 25s ease-in-out infinite alternate}
@@ -24,7 +24,7 @@
 #choiceBox,#ideaBox,#menuBox{position:absolute;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%) scale(.98);width:min(640px,92vw);padding:28px;max-height:calc(100dvh - 25px);overflow:auto;background:#071624f5;border:2px solid #dbbb80;border-radius:22px;box-shadow:0 25px 85px #000c;backdrop-filter:blur(20px)}[hidden]{display:none!important}.sheet h2{font-size:clamp(23px,3vw,34px);margin:0 44px 12px 0;color:#ffdc99}.sheet p{font-size:clamp(15px,1.8vw,20px);line-height:1.5;color:#dfebfc}.sheet .sheet-close{position:absolute;top:13px;right:15px;font-size:30px;background:#1b364d;border:1px solid #91b8cd;border-radius:11px;width:43px;height:42px}.decisions{display:grid;gap:10px;margin-top:18px}.decision{display:block;padding:13px 16px;border:1px solid #86b2c2a3;border-radius:12px;background:#163346;text-align:left;font-size:clamp(15px,1.8vw,19px)}.decision:hover{background:#2b4d5f}.idea-field{display:block;width:100%;min-height:120px;padding:16px;color:#f1faff;background:#10283c;border:1px solid #a5b8c9;border-radius:12px;font-size:18px;line-height:1.4;resize:vertical}.send{border:0;border-radius:12px;margin-top:15px;padding:15px 22px;background:linear-gradient(110deg,#8561e7,#357ae6);color:#fff;font-weight:800;font-size:18px}.quiet{display:inline-block;margin-top:14px;color:#acd4fb}
 #caption{position:absolute;z-index:24;top:21%;left:50%;transform:translateX(-50%);font-size:23px;font-weight:800;color:#fff2c1;text-shadow:0 2px 8px #070c13;pointer-events:none;opacity:0}#caption.animate{animation:caption-rise 1.7s ease-out forwards}@keyframes caption-rise{0%{opacity:0;transform:translate(-50%,18px)}25%,66%{opacity:1}100%{opacity:0;transform:translate(-50%,-34px)}}
 #game:fullscreen .action-dock{bottom:max(15px,var(--safe-bottom))}
-@media(orientation:portrait){.scenery{background-image:linear-gradient(0deg,#0a101e9b 0%,transparent 35%,#0e182900 72%,#0e172a7b 100%),url('assets/world_portrait.webp');background-position:center 42%}.scenery.developed{background-image:linear-gradient(0deg,#09132499 0%,transparent 48%,#10213343 100%),url('assets/world_developed_portrait.webp')}.world-object.city{left:-12%;bottom:40%;width:54vw}.world-object.forest{left:44%;bottom:39%;width:66vw}.world-object.energy{left:35%;bottom:57%;width:38vw}.world-object.volcano{right:-12%;top:22%;width:62vw}.hud{display:block;left:2%;right:2%;top:max(9px,env(safe-area-inset-top))}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding-right:4px}.stat{padding:5px 5px;min-width:0;max-width:100%;gap:4px;border-radius:9px}.stat .sym{font-size:18px;min-width:17px}.stat .lbl{font-size:clamp(9px,2.65vw,12px)}.stat .num{font-size:14px;min-width:26px;padding:1px 3px}.controls{justify-content:flex-end;gap:7px;margin-top:6px}.ctrl{height:38px;width:39px;font-size:20px;border-radius:10px}#dialog{left:5.5%;bottom:clamp(128px,17.5vh,210px);width:91%;min-height:0;padding:15px 42px 18px clamp(107px,30vw,160px);border-radius:14px}.genie{height:clamp(192px,27vh,270px);left:-43px;bottom:-12px}.dialog-title{font-size:clamp(19px,5.6vw,28px);margin-bottom:7px}.dialog-text{font-size:clamp(13px,3.65vw,20px);line-height:1.32}.dialog-close{width:32px;height:32px;right:7px;top:7px;font-size:24px}.action-dock{width:97%;gap:5px;bottom:max(9px,calc(var(--safe-bottom) + 2px))}.option{aspect-ratio:.72;border-width:1.5px;border-radius:10px}.option img{object-fit:cover}#choiceBox,#ideaBox{padding:19px}}
+@media(orientation:portrait){.scenery{background-image:linear-gradient(0deg,#0a101e9b 0%,transparent 35%,#0e182900 72%,#0e172a7b 100%),url('assets/world_barren_portrait.webp');background-position:center 42%}.scenery.developed{background-image:linear-gradient(0deg,#09132499 0%,transparent 48%,#10213343 100%),url('assets/world_developed_portrait.webp')}.world-object.city{left:-12%;bottom:40%;width:54vw}.world-object.forest{left:44%;bottom:39%;width:66vw}.world-object.energy{left:35%;bottom:57%;width:38vw}.world-object.volcano{right:-12%;top:22%;width:62vw}.hud{display:block;left:2%;right:2%;top:max(9px,env(safe-area-inset-top))}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding-right:4px}.stat{padding:5px 5px;min-width:0;max-width:100%;gap:4px;border-radius:9px}.stat .sym{font-size:18px;min-width:17px}.stat .lbl{font-size:clamp(9px,2.65vw,12px)}.stat .num{font-size:14px;min-width:26px;padding:1px 3px}.controls{justify-content:flex-end;gap:7px;margin-top:6px}.ctrl{height:38px;width:39px;font-size:20px;border-radius:10px}#dialog{left:5.5%;bottom:clamp(128px,17.5vh,210px);width:91%;min-height:0;padding:15px 42px 18px clamp(107px,30vw,160px);border-radius:14px}.genie{height:clamp(192px,27vh,270px);left:-43px;bottom:-12px}.dialog-title{font-size:clamp(19px,5.6vw,28px);margin-bottom:7px}.dialog-text{font-size:clamp(13px,3.65vw,20px);line-height:1.32}.dialog-close{width:32px;height:32px;right:7px;top:7px;font-size:24px}.action-dock{width:97%;gap:5px;bottom:max(9px,calc(var(--safe-bottom) + 2px))}.option{aspect-ratio:.72;border-width:1.5px;border-radius:10px}.option img{object-fit:cover}#choiceBox,#ideaBox{padding:19px}}
 @media(max-height:670px) and (orientation:landscape){.hud{top:5px}.stat{padding:3px 8px}.ctrl{width:37px;height:37px;font-size:21px}#dialog{bottom:103px;min-height:0;padding-top:11px;padding-bottom:11px}.genie{height:190px}.dialog-title{font-size:24px}.dialog-text{font-size:17px}.action-dock{width:min(820px,85%);bottom:4px}.option{aspect-ratio:1.65}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media(orientation:portrait){.dialog-text{font-size:clamp(15px,3.9vw,20px)}.dialog-title{font-size:clamp(22px,5.6vw,28px)}}
@@ -64,3 +64,87 @@
 /* Modal shade: the backdrop must sit above the HUD but below every sheet. */
 #modalBackdrop{position:absolute;inset:0;z-index:45;background:rgba(2,9,17,.68)}
 #modalBackdrop[hidden]{display:none!important}
+
+/* Living Actions reuse exactly the same image nodes as in the world and catalogue. */
+.living-map{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.living-object{position:absolute;border:0;padding:0;background:transparent;pointer-events:auto;
+  transform:translate(-50%,-50%);width:min(30vw,350px);height:min(30vh,280px);
+  filter:drop-shadow(0 12px 16px #060c1ab0);transition:filter .2s}
+.living-object img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.living-object.city{width:min(33vw,390px)}.living-object.forest{width:min(35vw,420px)}
+.living-object.energy{width:min(23vw,260px)}.living-object.volcano{width:min(29vw,360px)}
+.living-object.selected{filter:drop-shadow(0 0 21px #ffd76f)}
+.living-object.damaged img{filter:sepia(.25) saturate(.8)}
+.living-object.dragon{width:120px;height:140px;animation:living-dragon 3s ease-in-out infinite}
+.living-emoji{display:grid;place-items:center;height:100%;font-size:clamp(58px,9vw,110px);
+  filter:drop-shadow(0 8px 15px #ff833c80)}
+.living-dome{display:none;position:absolute;inset:-12% -8% 4%;border:3px solid #7fe7ffb9;
+  border-radius:50% 50% 45% 45%;background:radial-gradient(ellipse at 45% 25%,#e5fcff7c,#6ed7ff32 30%,#54b7ff10 68%);
+  box-shadow:inset 0 0 28px #7bedff8a,0 0 28px #62dfff68;pointer-events:none}
+.living-dome.active{display:block;animation:living-dome-pulse 4s ease-in-out infinite}
+@keyframes living-dome-pulse{50%{opacity:.82;transform:scale(1.03)}}
+@keyframes living-dragon{50%{transform:translate(-50%,-57%)}}
+.option .preview-overlay{position:absolute;top:2%;right:3%;display:grid;place-items:center;
+  min-width:29%;height:49%;padding:2px;font-size:clamp(20px,3.4vw,39px);line-height:1;
+  border-radius:50%;background:radial-gradient(circle,#cbefffad,#14294b8c 65%,transparent);
+  filter:drop-shadow(0 0 9px #8cdcff)}
+.option:disabled{cursor:not-allowed;opacity:.56;filter:grayscale(.55)}
+.option:disabled .accessible-title{color:#e3e2da}
+.catalogue{margin:12px 0;padding:9px;border:1px solid #9bc9db7b;border-radius:10px}
+.catalogue summary{cursor:pointer;font-size:17px;font-weight:750}
+.catalog-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}
+.catalog-grid button{min-width:0;padding:4px;border:1px solid #7aa5bd;border-radius:8px;background:#203949;
+  font-weight:700;display:grid;gap:4px}
+.catalog-grid img{width:100%;height:62px;object-fit:contain}
+@media(orientation:portrait){
+  .living-object.city{width:50vw}.living-object.forest{width:58vw}
+  .living-object.volcano{width:48vw}.living-object.energy{width:40vw}
+  .living-object.dragon{width:80px;height:100px}
+  .living-dome{inset:-8% -5% 8%}
+  .option .preview-overlay{font-size:24px;min-width:40%;height:35%}
+}
+@media(prefers-reduced-motion:reduce){
+  .living-object.dragon,.living-dome.active{animation:none!important}
+}
+
+/* Contextual lightweight world-state glyphs: changes are visible without a new GLB draw. */
+.living-world-state{position:absolute;right:5%;top:-3%;font-size:clamp(24px,3vw,46px);
+  line-height:1;padding:.14em;border-radius:50%;background:#142e40c9;
+  box-shadow:0 0 15px #8ce7ef90;pointer-events:none}
+@media(orientation:portrait){.living-world-state{font-size:clamp(22px,6vw,33px)}}
+
+/* Compact consequences by default AFTER a player action. The Genie remains
+   readable and expandable, while the newly placed world object stays visible. */
+#dialog.compact{width:min(42vw,520px);min-height:0;max-height:125px;
+  left:max(6%,32px);bottom:clamp(128px,16vh,198px);
+  padding:10px 65px 10px 85px;border-radius:14px}
+#dialog.compact .genie{height:126px;left:-36px;bottom:-8px}
+#dialog.compact .dialog-title{font-size:18px;line-height:1.05;margin:0 0 3px}
+#dialog.compact .dialog-text{font-size:13px;line-height:1.2;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#dialog.compact .choice-trigger{font-size:11px;margin-top:4px;padding:3px 7px}
+#dialog.compact .dialog-close{width:28px;height:28px;right:5px;top:5px;font-size:22px}
+.dialog-expand{position:absolute;right:40px;top:5px;width:28px;height:28px;
+  border:1px solid #a0c5e8;border-radius:7px;background:#153953e8;font-size:18px;line-height:1}
+@media(orientation:portrait){
+  #dialog.compact{left:5%;width:90%;bottom:clamp(118px,17.5vh,180px);
+    min-height:0;max-height:108px;padding:7px 44px 8px 78px}
+  #dialog.compact .genie{height:120px;left:-29px;bottom:-5px}
+  #dialog.compact .dialog-title{font-size:16px;margin-bottom:2px}
+  #dialog.compact .dialog-text{font-size:11.5px;line-height:1.18}
+  #dialog.compact .choice-trigger{font-size:10px;margin-top:3px;padding:2px 5px}
+}
+@media(max-height:500px) and (orientation:landscape){
+  #dialog.compact{left:4%;width:min(44vw,350px);bottom:87px;max-height:75px;
+    padding:5px 36px 5px 58px}
+  #dialog.compact .genie{height:88px;left:-22px;bottom:-5px}
+  #dialog.compact .dialog-title{font-size:13px}
+  #dialog.compact .dialog-text{font-size:10px;-webkit-line-clamp:1}
+  #dialog.compact .choice-trigger{font-size:9px;padding:2px 4px;margin-top:2px}
+}
+
+/* Full-size close and expand buttons must never steal each other's touches. */
+#dialog:not(.compact) .dialog-expand{right:72px;top:12px;width:34px;height:34px}
+@media(orientation:portrait){
+  #dialog:not(.compact) .dialog-expand{right:46px;top:8px;width:30px;height:30px}
+}

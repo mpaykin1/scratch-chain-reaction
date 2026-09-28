@@ -1,9 +1,67 @@
+import {ASSET_REGISTRY} from './living-actions.mjs';
 // The renderer reads a snapshot, never decides how the game evolves.
 export function createView(getWorld,doc=document){
   const $=id=>doc.getElementById(id);
   const stats=[...doc.querySelectorAll('[data-stat]')];
   const art=Object.fromEntries(['city','forest','energy','volcano'].map(kind=>[kind,$(kind+'Art')]));
-  const cap=$('caption');
+  const cap=$('caption'),map=$('worldLayer'),nodes=new Map();
+  function renderMap(){
+    if(!map)return;
+    const {living,viewport={x:0,z:0},selectedId}=getWorld();
+    const objects=[...(living?.objects||[])];
+    if(living?.dragon?.hp>0)objects.push({...living.dragon,kind:'dragon'});
+    const active=new Set();
+    for(const object of objects){
+      const asset=ASSET_REGISTRY[object.kind];
+      if(!asset)continue;
+      active.add(object.id);
+      let node=nodes.get(object.id);
+      if(!node){
+        node=doc.createElement('button');
+        node.type='button';node.className='living-object '+object.kind;
+        node.dataset.objectId=object.id;
+        if(asset.image){
+          const image=doc.createElement('img');
+          image.src=asset.image;image.alt='';image.decoding='async';node.append(image);
+        }else {
+          const glyph=doc.createElement('span');glyph.className='living-emoji';
+          glyph.textContent=asset.emoji;node.append(glyph);
+        }
+        if(object.kind==='city'){
+          const dome=doc.createElement('span');dome.className='living-dome';
+          dome.setAttribute('aria-hidden','true');node.append(dome);
+        }
+        if(['city','forest','volcano','energy'].includes(object.kind)){
+          const badge=doc.createElement('span');badge.className='living-world-state';
+          badge.setAttribute('aria-hidden','true');node.append(badge);
+        }
+        map.append(node);nodes.set(object.id,node);
+      }
+      node.style.left=(50+(object.x-viewport.x)*.8)+'%';
+      node.style.top=(40+(object.z-viewport.z)*.8)+'%';
+      node.hidden=Math.abs(object.x-viewport.x)>73||Math.abs(object.z-viewport.z)>73;
+      node.classList.toggle('selected',object.id===selectedId);
+      node.classList.toggle('damaged',(object.hp??100)<100);
+      if(object.kind==='city')node.querySelector('.living-dome')
+        .classList.toggle('active',object.dome>0);
+      const badge=node.querySelector('.living-world-state');
+      if(badge){
+        badge.textContent=object.kind==='city'?(object.evacuated?'🏃':object.gridConnected?'⚡':''):
+          object.kind==='forest'?(object.wildlife?'🦌':''):
+          object.kind==='volcano'?(object.island?'🏝️':object.geothermal?'⚡':object.lavaGuided?'♨️':''):
+          object.kind==='energy'?(object.gridStable?'✅':object.gridExpanded?'⚡':object.battery?'🔋':
+            object.gridBuilt?'🔌':''):'';
+        badge.hidden=!badge.textContent;
+      }
+      node.setAttribute('aria-label',asset.alt+(object.kind==='city'?
+        ', целостность '+object.hp+'%'+(object.dome?', защитный купол '+object.dome+'%':''):''));
+    }
+    for(const [id,node] of nodes){
+      if(!active.has(id)){node.remove();nodes.delete(id);}
+    }
+    const scenery=$('scenery');
+    scenery.style.backgroundPosition=(50-viewport.x*.2)+'% '+(50-viewport.z*.2)+'%';
+  }
   function render(){
     const {state,placed,history=[]}=getWorld();
     for(const node of stats){
@@ -25,16 +83,25 @@ export function createView(getWorld,doc=document){
         'Построить: '+(button.getAttribute('aria-label')||button.dataset.action);
       button.setAttribute('aria-description',button.title);
     }
-    for(const [kind,count]of Object.entries(placed))art[kind]?.classList.toggle('active',count>0);
+    for(const [kind,count]of Object.entries(placed))art[kind]?.classList.toggle('active',
+      count>0&&!(getWorld().living?.objects||[]).some(o=>o.kind===kind));
+    renderMap();
     $('rotor').classList.toggle('on',placed.energy>0);
-    $('scenery').classList.toggle('developed',Object.values(placed).reduce((a,b)=>a+b,0)>=4);
+    $('scenery').classList.toggle('developed',!getWorld().living&&
+      Object.values(placed).reduce((a,b)=>a+b,0)>=4);
     const log=$('historyLog');if(log){log.replaceChildren();for(const event of history.slice(-8).reverse()){const li=doc.createElement('li');li.textContent=event.text;log.appendChild(li);}}
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
-  function panel(title,body){
+  function panel(title,body,{compact=true}={}){
     $('dialogTitle').textContent=title;
     $('dialogText').textContent=body;
     $('dialog').classList.remove('hidden');
+    $('dialog').classList.toggle('compact',compact);
+    if($('expandDialog')){
+      $('expandDialog').hidden=!compact;
+      $('expandDialog').textContent='▣';
+      $('expandDialog').setAttribute('aria-label','Развернуть сообщение');
+    }
   }
   function caption(value){
     cap.textContent=value;
@@ -54,5 +121,5 @@ export function createView(getWorld,doc=document){
       ember.addEventListener('animationend',()=>ember.remove(),{once:true});
     }
   }
-  return {render,panel,caption,embers};
+  return {render,renderMap,panel,caption,embers};
 }

@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-angle=swiftshader']});
+  const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome',args:['--enable-webgl','--use-angle=swiftshader']});
   try{
     const page=await browser.newPage({viewport:{width:390,height:844},
       deviceScaleFactor:2,isMobile:true,hasTouch:true,acceptDownloads:true});

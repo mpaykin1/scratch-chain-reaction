@@ -1,15 +1,16 @@
 // Network-first HTML + cached same-origin assets. Scoped to this GitHub Pages project.
-const VERSION='chain-reaction-v7-cinematic-ai-20260928';
+const VERSION='chain-reaction-v8-living-actions-20260928';
 const CORE=['./','./index.html',
   './cinematic/','./cinematic/index.html','./cinematic/reactive.html',
   './cinematic/game-ui.mjs','./cinematic/world-engine.mjs','./manifest.webmanifest',
   './cinematic/main.mjs','./cinematic/ai-client.mjs','./cinematic/portable-save.mjs','./cinematic/ui.mjs',
-  './cinematic/walkers.mjs','./cinematic/render-ui.mjs',
+  './cinematic/walkers.mjs','./cinematic/render-ui.mjs','./cinematic/living-actions.mjs',
   './cinematic/idea-parser.mjs','./cinematic/style.css',
   './cinematic/chain-engine.mjs','./cinematic/quality.mjs',
   './cinematic/render-effects.mjs','./cinematic/adaptive-quality.mjs','./cinematic/ambient-audio.mjs',
   './cinematic/enhancements.mjs','./app-icon-192.png',
   './cinematic/assets/world_portrait.webp','./cinematic/assets/world_landscape.webp',
+  './cinematic/assets/world_barren_portrait.webp','./cinematic/assets/world_barren_landscape.webp',
   './cinematic/assets/world_developed_portrait.webp','./cinematic/assets/world_developed_landscape.webp',
   './cinematic/assets/genie.webp','./cinematic/assets/city.webp',
   './cinematic/assets/forest.webp','./cinematic/assets/energy.webp',

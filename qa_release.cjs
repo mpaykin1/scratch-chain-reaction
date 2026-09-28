@@ -20,7 +20,7 @@ for(const v of views){
  await page.getByRole('button',{name:'Закрыть сообщение'}).click();
  assert.ok(await page.locator('#dialog').evaluate(x=>x.classList.contains('hidden')));
  await page.getByRole('button',{name:'Лес',exact:true}).click();await page.waitForTimeout(170);
- assert.ok(await page.locator('#forestArt').evaluate(x=>x.classList.contains('active')));
+ assert.ok(await page.locator('.living-object.forest:not([hidden])').count(),'Forest visibly rendered at its saved position');
  assert.ok((await page.evaluate(()=>__chainReaction.getState())).eco>=14);
  await page.getByRole('button',{name:'Предложить свою идею'}).click();
  assert.ok(await page.locator('#ideaBox').isVisible());
@@ -45,7 +45,7 @@ for(const v of views){
  });
  await waitForBudget(9);
  await page.getByRole('button',{name:'Вулкан',exact:true}).click();
- assert.ok(await page.locator('#scenery').evaluate(x=>x.classList.contains('developed')));
+ assert.ok(await page.locator('.living-object.volcano:not([hidden])').count(),'Volcano drawn only after the player builds it');
  await page.screenshot({path:shot+'/'+v.name+'-developed.png',fullPage:true});
  const imgs=await page.locator('img').evaluateAll(xs=>xs.filter(x=>!x.complete||x.naturalWidth===0).map(x=>x.src));
  const seconds=(Date.now()-start)/1000;

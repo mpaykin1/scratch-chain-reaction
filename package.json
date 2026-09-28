@@ -7,10 +7,12 @@
     "build:portrait": "python3 scripts/build_portrait_sb3.py",
     "test:player": "node test_selfhost_player.mjs",
     "test:scenario": "node --test test/scenario-engine.test.mjs",
-    "test:cinematic": "node --test test/chain-engine.test.mjs test/idea-parser.test.mjs test/cinematic-architecture.test.mjs test/offline-core.test.mjs test/cinematic-portability.test.mjs test/genie-economy.test.mjs test_ai_client.mjs",
+    "test:cinematic": "node --test test/chain-engine.test.mjs test/idea-parser.test.mjs test/cinematic-architecture.test.mjs test/offline-core.test.mjs test/cinematic-portability.test.mjs test/genie-economy.test.mjs test_ai_client.mjs test/living-actions.test.mjs",
     "test:cinematic:browser": "node qa_release.cjs && node test_cinematic_enhancements.cjs && node test/portable-ui.cjs",
     "test:world": "node --test test/world-engine.test.mjs",
-    "test:world-ui": "node test/world-ui.cjs"
+    "test:world-ui": "node test/world-ui.cjs",
+    "test:living": "node --test test/living-actions.test.mjs",
+    "test:living:browser": "node test/living-browser.cjs"
   },
   "dependencies": {
     "@turbowarp/scaffolding": "0.4.0"
