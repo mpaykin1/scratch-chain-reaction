@@ -112,7 +112,7 @@ $('ideaForm').onsubmit=async e=>{
     const quote=quoteIdea(world,t);
     if(quote.actions.length)submitIdea(t,{original:t,provider:'офлайн'});
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
-  }finally{aiPending=false;button.disabled=false;button.textContent='Создать через ИИ ↗';status.textContent='';}
+  }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
 $('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
 $('undo').onclick=undo;
