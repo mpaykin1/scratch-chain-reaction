@@ -9,6 +9,17 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       const page=await ctx.newPage(),errors=[];
       await page.route('https://world-server.mmmpaykin.workers.dev/api/chain-ai',async route=>{
         const request=route.request(),body=request.postDataJSON?.()||{};
+        if(body.mode==='predict_build'){
+          return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+            ok:true,provider:'cloudflare',executed:false,prediction:{
+              summary:'Лес, вероятно, улучшит устойчивость мира.',
+              immediate:['Может улучшиться состояние экологии.'],
+              later:['Может снизиться давление на часть ресурсов.'],
+              risks:['Рост леса может потребовать времени для заметного эффекта.'],
+              surprise:'Лес может изменить ценность следующих решений.',confidence:0.76
+            }
+          })});
+        }
         const text=String(body.text||'').toLowerCase();
         let commands=[],unknowns=[];
         if(text.includes('прилетел дракон'))commands=[{action:'event',kind:'dragon',details:'Дракон прилетел'}];
@@ -40,6 +51,10 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       assert.equal(await page.locator('#soundBtn').getAttribute('aria-pressed'),'true');
       await page.getByRole('button',{name:'Выключить звук'}).click();
       await page.getByRole('button',{name:'Лес',exact:true}).click();
+      await page.locator('#predictionBox').waitFor({state:'visible'});
+      await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
+      assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),0,'prediction itself must not advance time');
+      await page.getByRole('button',{name:'Да, строить'}).click();
       await page.waitForFunction(()=>window.__chainReaction.getState().turn===1);
       const choices=await page.evaluate(()=>window.__chainReaction.getDecisionOptions());
       assert.equal(choices.length,4,'Genie needs four context-aware choices');
@@ -62,6 +77,9 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       await page.getByRole('button',{name:'↶ Отменить ход'}).click();
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),0,'undo restores previous world');
       await page.getByRole('button',{name:'Лес',exact:true}).click();
+      await page.locator('#predictionBox').waitFor({state:'visible'});
+      await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
+      await page.getByRole('button',{name:'Да, строить'}).click();
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),1,'can continue after undo');
       await page.locator('#choiceTrigger').click();
       assert.match(await page.locator('#choiceTitle').innerText(),/энергии/);
@@ -86,9 +104,20 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
     }
     const context=await browser.newContext({viewport:{width:390,height:844}});
     const page=await context.newPage();
+    await page.route('https://world-server.mmmpaykin.workers.dev/api/chain-ai',route=>route.fulfill({
+      status:200,contentType:'application/json',body:JSON.stringify({
+        ok:true,provider:'cloudflare',executed:false,prediction:{
+          summary:'Лес, вероятно, улучшит устойчивость мира.',
+          immediate:['Может улучшиться состояние экологии.'],later:[],risks:[],
+          surprise:'Лес может изменить следующие решения.',confidence:0.74
+        }
+      })
+    }));
     await page.goto(new URL('cinematic/',BASE).href,{waitUntil:'load'});
     await page.waitForFunction(()=>Boolean(window.__chainReaction&&navigator.serviceWorker?.controller),null,{timeout:25000});
     await page.getByRole('button',{name:'Лес',exact:true}).click();
+    await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
+    await page.getByRole('button',{name:'Да, строить'}).click();
     await context.setOffline(true);
     await page.reload({waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>Boolean(window.__chainReaction),null,{timeout:15000});
