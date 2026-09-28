@@ -1,8 +1,13 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
+async function choosePlace(page,x=.5,y=.66,touch=false){
+  const surface=page.locator('#placementSurface');await surface.waitFor({state:'visible'});
+  const box=await surface.boundingBox(),position={x:box.width*x,y:box.height*y};
+  if(touch)await surface.tap({position});else await page.mouse.click(box.x+position.x,box.y+position.y);
+}
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-angle=swiftshader']});
+  const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome',args:['--enable-webgl','--use-angle=swiftshader']});
   try{
     for(const view of [{name:'iphone11',width:414,height:896,dpr:2},{name:'iphone11-landscape',width:896,height:414,dpr:2},{name:'desktop',width:1440,height:900,dpr:1}]){
       const ctx=await browser.newContext({viewport:{width:view.width,height:view.height},deviceScaleFactor:view.dpr,isMobile:view.dpr>1,hasTouch:view.dpr>1});
@@ -51,6 +56,7 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       assert.equal(await page.locator('#soundBtn').getAttribute('aria-pressed'),'true');
       await page.getByRole('button',{name:'Выключить звук'}).click();
       await page.getByRole('button',{name:'Лес',exact:true}).click();
+      await choosePlace(page,.52,.66,view.dpr>1);
       await page.locator('#predictionBox').waitFor({state:'visible'});
       await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),0,'prediction itself must not advance time');
@@ -77,6 +83,7 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
       await page.getByRole('button',{name:'↶ Отменить ход'}).click();
       assert.equal(await page.evaluate(()=>window.__chainReaction.getState().turn),0,'undo restores previous world');
       await page.getByRole('button',{name:'Лес',exact:true}).click();
+      await choosePlace(page,.52,.66,view.dpr>1);
       await page.locator('#predictionBox').waitFor({state:'visible'});
       await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
       await page.getByRole('button',{name:'Да, строить'}).click();
@@ -116,6 +123,7 @@ const BASE=process.env.BASE_URL||'http://127.0.0.1:8765/';
     await page.goto(new URL('cinematic/',BASE).href,{waitUntil:'load'});
     await page.waitForFunction(()=>Boolean(window.__chainReaction&&navigator.serviceWorker?.controller),null,{timeout:25000});
     await page.getByRole('button',{name:'Лес',exact:true}).click();
+    await choosePlace(page,.52,.66);
     await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
     await page.getByRole('button',{name:'Да, строить'}).click();
     await context.setOffline(true);

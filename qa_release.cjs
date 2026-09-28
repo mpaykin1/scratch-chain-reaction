@@ -5,6 +5,16 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
 const shot=process.env.ARTIFACT_DIR||'qa-artifacts';fs.mkdirSync(shot,{recursive:true});
 const views=[{name:'iphone-portrait',w:390,h:844,mobile:true},{name:'iphone-landscape',w:844,h:390,mobile:true},{name:'desktop',w:1440,h:900,mobile:false}];
+async function choosePlace(page,x=.5,y=.66){
+ await page.locator('#placementSurface').waitFor({state:'visible'});
+ const box=await page.locator('#placementSurface').boundingBox();
+ await page.mouse.click(box.x+box.width*x,box.y+box.height*y);
+}
+async function visibleRatio(page,id){return page.evaluate(placementId=>{
+ const node=document.querySelector('[data-placement-id="'+placementId+'"]');if(!node)return 0;
+ const r=node.getBoundingClientRect(),w=Math.max(0,Math.min(innerWidth,r.right)-Math.max(0,r.left));
+ const h=Math.max(0,Math.min(innerHeight,r.bottom)-Math.max(0,r.top));return r.width&&r.height?(w*h)/(r.width*r.height):0;
+},id);}
 (async()=>{const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome',args:['--enable-webgl','--use-angle=swiftshader']});
 for(const v of views){
  const page=await browser.newPage({viewport:{width:v.w,height:v.h},isMobile:v.mobile,hasTouch:v.mobile,deviceScaleFactor:v.mobile?3:1});
@@ -36,18 +46,27 @@ for(const v of views){
  await page.getByRole('button',{name:'Закрыть сообщение'}).click();
  assert.ok(await page.locator('#dialog').evaluate(x=>x.classList.contains('hidden')));
  const rejectedBefore=await page.evaluate(()=>__chainReaction.getState());
+ const rejectedPlacements=await page.evaluate(()=>__chainReaction.getPlacements());
  await page.getByRole('button',{name:'Энергия',exact:true}).click();
+ await choosePlace(page,.48,.66);
  await page.locator('#predictionBox').waitFor({state:'visible'});
  await page.getByRole('button',{name:'Нет',exact:true}).click();
  assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),rejectedBefore,'No must cancel without changing world');
+ assert.deepEqual(await page.evaluate(()=>__chainReaction.getPlacements()),rejectedPlacements,'No must not place an object');
  const forestBefore=await page.evaluate(()=>__chainReaction.getState());
  await page.getByRole('button',{name:'Лес',exact:true}).click();
+ await choosePlace(page,.52,.66);
  await page.locator('#predictionBox').waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  assert.deepEqual(await page.evaluate(()=>__chainReaction.getState()),forestBefore,'prediction must not mutate world');
  assert.match(await page.locator('#predictionSummary').textContent(),/ИИ прогнозирует/);
  await page.getByRole('button',{name:'Да, строить'}).click();await page.waitForTimeout(170);
- assert.ok(await page.locator('#forestArt').evaluate(x=>x.classList.contains('active')));
+ const firstPlacement=await page.evaluate(()=>__chainReaction.getPlacements().at(-1));
+ assert.equal(firstPlacement.kind,'forest');
+ assert.ok(Math.abs(firstPlacement.x-.52)<.015&&Math.abs(firstPlacement.y-.66)<.015,'object must stay at the selected point');
+ const placementVisibility=await visibleRatio(page,firstPlacement.id);
+ assert.ok(placementVisibility>=.86,'placed forest must be >85% visible');
+ console.log('PLACEMENT_VISIBILITY_PASS',v.name,Math.round(placementVisibility*100)+'%');
  assert.ok((await page.evaluate(()=>__chainReaction.getState())).eco>=14);
  await page.getByRole('button',{name:'Предложить свою идею'}).click();
  assert.ok(await page.locator('#ideaBox').isVisible());
@@ -66,6 +85,7 @@ for(const v of views){
  }
  await waitForBudget(12);
  await page.getByRole('button',{name:'Город',exact:true}).click();
+ await choosePlace(page,.40,.68);
  await page.locator('#predictionBox').waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  await page.getByRole('button',{name:'Да, строить'}).click();
@@ -75,6 +95,7 @@ for(const v of views){
  });
  await waitForBudget(9);
  await page.getByRole('button',{name:'Вулкан',exact:true}).click();
+ await choosePlace(page,.63,.68);
  await page.locator('#predictionBox').waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
  await page.getByRole('button',{name:'Да, строить'}).click();

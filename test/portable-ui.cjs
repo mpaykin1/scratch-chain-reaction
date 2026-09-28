@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
 (async()=>{
-  const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-angle=swiftshader']});
+  const browser=await chromium.launch({headless:true,channel:process.env.CI?undefined:'chrome',args:['--enable-webgl','--use-angle=swiftshader']});
   try{
     const page=await browser.newPage({viewport:{width:390,height:844},
       deviceScaleFactor:2,isMobile:true,hasTouch:true,acceptDownloads:true});
@@ -25,6 +25,8 @@ const base=process.env.BASE_URL||'http://127.0.0.1:8765/';
     assert.ok(control&&control.x>=0&&control.x+control.width<=390,'next-turn control visible in portrait');
     assert.ok(control.y>=0&&control.y+control.height<=844,'next-turn control within screen');
     await page.getByRole('button',{name:'Лес',exact:true}).click();
+    const surface=page.locator('#placementSurface');await surface.waitFor({state:'visible'});
+    const buildBox=await surface.boundingBox();await page.mouse.click(buildBox.x+buildBox.width*.52,buildBox.y+buildBox.height*.66);
     await page.waitForFunction(()=>!document.getElementById('confirmPrediction').disabled);
     await page.getByRole('button',{name:'Да, строить'}).click();
     const initial=await page.evaluate(()=>__chainReaction.getState());

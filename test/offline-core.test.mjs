@@ -28,7 +28,7 @@ test('precaches all first-party scripts and CSS used by cinematic HTML',()=>{
   assert.ok(visited.size>=7,'should check nested imports and CSS');
 });
 test('new SW version upgrades the reactive cache without losing offline assets',()=>{
-  assert.match(sw,/chain-reaction-v7-cinematic-ai-20260928/);
+  assert.match(sw,/chain-reaction-v8-ai-place-20260928/);
   assert.match(sw,/caches\.delete\(key\)/);
   assert.match(sw,/request\.destination==='script'\|\|request\.destination==='style'/);
   assert.match(sw,/const response=await fetch\(request\)/);

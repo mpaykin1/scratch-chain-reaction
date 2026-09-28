@@ -86,3 +86,15 @@
 .prediction-yes{background:linear-gradient(110deg,#2c8b67,#46b36f);border:1px solid #8be6ac}
 .prediction-yes:disabled{opacity:.38;cursor:not-allowed;filter:grayscale(.5)}
 @media(orientation:portrait){.prediction-actions{grid-template-columns:1fr 1.25fr}.prediction-details{gap:7px}.prediction-details section{padding:8px 10px}}
+
+#placedObjects{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.placed-object{position:absolute;display:block;object-fit:contain;object-position:center bottom;transform:translate(-50%,-100%);filter:drop-shadow(0 8px 7px #0009);pointer-events:none;animation:placed-pop .45s cubic-bezier(.2,1.15,.35,1) both}
+@keyframes placed-pop{from{opacity:.1;transform:translate(-50%,-92%) scale(.65)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
+#placementSurface{position:absolute;inset:0;z-index:35;cursor:crosshair;touch-action:none;background:radial-gradient(circle at 50% 58%,#9fe8ff16,transparent 40%)}
+#placementMarker{position:absolute;z-index:36;width:34px;height:18px;border:3px solid #fff4ae;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 5px #54c8ff55,0 0 24px #fff0a6;pointer-events:none}
+#placementHint{position:absolute;z-index:37;left:50%;top:max(112px,16vh);transform:translateX(-50%);display:flex;align-items:center;gap:10px;max-width:92vw;padding:10px 12px;border:1px solid #9bdfff;border-radius:12px;background:#071826e8;box-shadow:0 8px 30px #0009;font-weight:800;text-align:center}
+#placementHint button{border:1px solid #adc5d7;border-radius:9px;background:#293c4e;padding:7px 10px;font-weight:750}
+#game.placing .action-dock,#game.placing .hud{pointer-events:none}
+@media(orientation:portrait){#placementHint{top:max(100px,14vh);font-size:14px}.placed-object{filter:drop-shadow(0 5px 5px #0009)}}
+@media(max-height:500px) and (orientation:landscape){#placementHint{top:48px;font-size:13px;padding:7px 9px}.placement-object{filter:none}}
+@media(prefers-reduced-motion:reduce){.placed-object{animation:none}}
