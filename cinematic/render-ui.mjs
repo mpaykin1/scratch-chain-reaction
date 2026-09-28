@@ -92,10 +92,16 @@ export function createView(getWorld,doc=document){
     const log=$('historyLog');if(log){log.replaceChildren();for(const event of history.slice(-8).reverse()){const li=doc.createElement('li');li.textContent=event.text;log.appendChild(li);}}
     window.dispatchEvent(new CustomEvent('worldStateUpdate',{detail:{...state,placed:{...placed}}}));
   }
-  function panel(title,body){
+  function panel(title,body,{compact=true}={}){
     $('dialogTitle').textContent=title;
     $('dialogText').textContent=body;
     $('dialog').classList.remove('hidden');
+    $('dialog').classList.toggle('compact',compact);
+    if($('expandDialog')){
+      $('expandDialog').hidden=!compact;
+      $('expandDialog').textContent='▣';
+      $('expandDialog').setAttribute('aria-label','Развернуть сообщение');
+    }
   }
   function caption(value){
     cap.textContent=value;
