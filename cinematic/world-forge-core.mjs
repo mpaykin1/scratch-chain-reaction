@@ -34,3 +34,46 @@ export function validateForge(f){
 export function forgeOf(world){
  return validateForge(world?.forge)?world.forge:createForge();
 }
+export function placeForgeBlock(world,type,x,z){
+ if(!FORGE_TYPES.includes(type)||!Number.isSafeInteger(x)||
+ !Number.isSafeInteger(z)||Math.abs(x)>100000||Math.abs(z)>100000)
+ throw Error('Некорректный блок или координаты');
+ const f=forgeOf(world);
+ if(f.blocks.length>=MAX_BLOCKS)throw Error('Лимит сохранённых блоков');
+ if(f.blocks.some(b=>b.x===x&&b.z===z))throw Error('Здесь уже стоит блок');
+ const id='wf-'+f.nextBlockId;
+ const block={version:1,id,type,x,z,seed:tileHash(f.seed,x,z),
+  biome:RECIPES[type].biome,recipe:RECIPES[type].geometry,
+  visualState:'active',createdTurn:world?.state?.turn??0,
+  simulationEventId:world?.history?.at(-1)?.id??null};
+ return {...world,forge:{...f,nextBlockId:f.nextBlockId+1,
+  blocks:[...f.blocks,block]}};
+}
+export function moveForgeCamera(world,x,y){
+ if(!Number.isFinite(x)||!Number.isFinite(y)||
+ Math.abs(x)>1e7||Math.abs(y)>1e7)throw Error('Камера вне карты');
+ const f=forgeOf(world);
+ return {...world,forge:{...f,camera:{x,y}}};
+}
+export function riverSockets(blocks,x,z){
+ const water=new Set(blocks.filter(b=>b.type==='river').map(b=>b.x+','+b.z));
+ return {north:water.has(x+','+(z-1)),east:water.has((x+1)+','+z),
+ south:water.has(x+','+(z+1)),west:water.has((x-1)+','+z)};
+}
+export function tileToScreen(x,z,camera,viewport){
+ return {x:(x-z)*TILE.width/2+viewport.width/2+camera.x,
+  y:(x+z)*TILE.height/2+viewport.height/2+camera.y};
+}
+export function screenToTile(px,py,camera,viewport){
+ const a=(px-viewport.width/2-camera.x)/(TILE.width/2);
+ const b=(py-viewport.height/2-camera.y)/(TILE.height/2);
+ return {x:Math.round((a+b)/2),z:Math.round((b-a)/2)};
+}
+export function visibleTileBounds(camera,viewport){
+ const points=[[0,0],[viewport.width,0],[0,viewport.height],
+ [viewport.width,viewport.height]].map(([x,y])=>screenToTile(x,y,camera,viewport));
+ return {minX:Math.min(...points.map(p=>p.x))-2,
+  maxX:Math.max(...points.map(p=>p.x))+2,
+  minZ:Math.min(...points.map(p=>p.z))-2,
+  maxZ:Math.max(...points.map(p=>p.z))+2};
+}
