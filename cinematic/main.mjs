@@ -2,7 +2,7 @@ import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
-import {interpretGameIdea} from './ai-client.mjs';
+import {interpretGameIdea,predictBuildConsequences} from './ai-client.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,playWorldEvent,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
@@ -22,7 +22,7 @@ function undo(){const prior=undoStack.pop();if(!prior)return false;const restore
 function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
 function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();renderEntities();refreshChoices();}
 const $=id=>document.getElementById(id);
-const {render,panel,caption,embers}=createView(()=>({state,placed,history:world.history}));
+const {render,panel,caption,embers}=createView(()=>({state,placed,placements:world.placements||[],history:world.history}));
 function renderEntities(){
   const dragon=$('dragonArt');if(!dragon)return;
   const dragons=world.entities||[],living=[...dragons].reverse().find(entity=>entity.kind==='dragon'&&entity.hp>0);
@@ -72,13 +72,21 @@ function deltaSummary(before,after){
 function refreshChoices(){const scenario=getGenieChoices(world);$('choiceTitle').textContent='Злой Джинн: '+scenario.title;
   document.querySelectorAll('[data-decision]').forEach(button=>{button.textContent=scenario.choices[Number(button.dataset.decision)].label;});}
 const messages={city:['Город построен!','Жители получили дома, но теперь им нужны вода, пища и энергия.'],forest:['Мир меняется!','Лес вырос! Экология и запасы воды постепенно восстанавливаются.'],energy:['Мир меняется!','Электростанция заработала! Энергии стало больше, но бюджет и вода уменьшаются.'],volcano:['Осторожно!','Вулкан проснулся! Появилась геотермальная энергия — и опасная лава.']};
-function build(kind,{fromIdea=false}={}){
-  if(!Object.hasOwn(BUILD_EFFECTS,kind))return;
-  if(pendingDecision){openSheet('choiceBox');return;}
+const BUILD_NAMES={city:'город',forest:'лес',energy:'энергетику',volcano:'вулкан'};
+const PLACEMENT_SHAPE={city:[.30,280,.68],forest:[.32,300,.70],energy:[.22,210,.95],volcano:[.30,300,.85]};
+let predictionPending=false,pendingBuild=null,predictionRequestId=0,placementPending=null;
+function commitBuild(kind,{fromIdea=false,point=null}={}){
+  if(!Object.hasOwn(BUILD_EFFECTS,kind))return false;
+  if(pendingDecision){openSheet('choiceBox');return false;}
   const quote=quoteBuild(world,kind);
-  if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return;}
+  if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return false;}
   const before={...state};
-  checkpoint();const result=playBuild(world,kind);sync(result);pendingDecision=true;
+  checkpoint();const result=playBuild(world,kind);
+  if(point){
+    const entry={id:'placed-'+result.world.state.turn+'-'+kind+'-'+result.world.placed[kind],kind,x:point.x,y:point.y};
+    result.world.placements.push(entry);
+  }
+  sync(result);pendingDecision=true;
   caption('+'+({city:' ГОРОД',forest:' ЛЕС',energy:' ЭНЕРГИЯ',volcano:' ВУЛКАН'}[kind]));
   window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
   if(kind==='volcano')embers();
@@ -88,6 +96,94 @@ function build(kind,{fromIdea=false}={}){
   if(extra)body+=' Цепная реакция: '+extra;
   panel(title,body);$('choiceTrigger').hidden=false;
   if(!fromIdea){choiceCount++;closeSheets();}
+  return true;
+}
+function aiWorldContext(){
+  return {...state,placed:{...placed},entities:(world.entities||[]).map(({kind,hp})=>({kind,hp}))};
+}
+function hidePlacementUi({marker=true}={}){
+  $('placementSurface').hidden=true;$('placementHint').hidden=true;$('game').classList.remove('placing');
+  if(marker)$('placementMarker').hidden=true;
+}
+function cancelPlacement(){placementPending=null;hidePlacementUi();return true;}
+function clearPrediction(){
+  pendingBuild=null;predictionPending=false;predictionRequestId++;$('placementMarker').hidden=true;
+}
+function placementFootprint(kind,gameRect){
+  const [share,max,ratio]=PLACEMENT_SHAPE[kind],width=Math.min(max,Math.max(72,gameRect.width*share));
+  return {width,height:width*ratio};
+}
+function overlaps(a,b){return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;}
+function validPlacement(kind,clientX,clientY){
+  const gameRect=$('game').getBoundingClientRect(),size=placementFootprint(kind,gameRect),pad=8;
+  const box={left:clientX-size.width/2,right:clientX+size.width/2,top:clientY-size.height,bottom:clientY};
+  if(box.left<gameRect.left+pad||box.right>gameRect.right-pad||box.top<gameRect.top+pad||box.bottom>gameRect.bottom-pad)return null;
+  const blocked=[...document.querySelectorAll('.hud,.action-dock')].map(node=>node.getBoundingClientRect());
+  if(blocked.some(rect=>overlaps(box,rect)))return null;
+  return {x:(clientX-gameRect.left)/gameRect.width,y:(clientY-gameRect.top)/gameRect.height};
+}
+function beginPlacement(kind){
+  if(!Object.hasOwn(BUILD_EFFECTS,kind))return false;
+  if(pendingDecision){openSheet('choiceBox');return false;}
+  const quote=quoteBuild(world,kind);if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return false;}
+  if(predictionPending)return false;
+  clearPrediction();placementPending={kind};closeSheets();$('dialog').classList.add('hidden');
+  $('placementHintText').textContent='Выбери место для '+BUILD_NAMES[kind]+'. Пока ничего не строится.';
+  $('placementSurface').hidden=false;$('placementHint').hidden=false;$('game').classList.add('placing');
+  return true;
+}
+function predictionSection(title,items){
+  if(!items?.length)return;
+  const section=document.createElement('section'),heading=document.createElement('strong'),list=document.createElement('ul');
+  heading.textContent=title;
+  for(const item of items){const li=document.createElement('li');li.textContent=item;list.appendChild(li);}
+  section.append(heading,list);$('predictionDetails').appendChild(section);
+}
+function showPrediction(kind,prediction){
+  $('predictionTitle').textContent='🧞 ИИ: строить '+BUILD_NAMES[kind]+'?';
+  $('predictionStatus').textContent='Прогноз до строительства';
+  $('predictionSummary').textContent=prediction.summary;
+  $('predictionDetails').replaceChildren();
+  predictionSection('Сразу',prediction.immediate);
+  predictionSection('Дальше может произойти',prediction.later);
+  predictionSection('Риски',prediction.risks);
+  if(prediction.surprise)predictionSection('Неочевидная цепочка',[prediction.surprise]);
+  $('predictionProvider').textContent='Источник: '+prediction.provider+' · уверенность '+Math.round(prediction.confidence*100)+'%';
+  $('confirmPrediction').disabled=false;
+}
+async function requestPrediction(kind,point){
+  const requestId=++predictionRequestId;
+  const location='Выбранная точка текущего экрана: x '+Math.round(point.x*100)+'%, y '+Math.round(point.y*100)+'%; тип местности отдельно не задан.';
+  predictionPending=true;pendingBuild={kind,point:{...point},location,requestId};
+  $('predictionTitle').textContent='🧞 ИИ анализирует: '+BUILD_NAMES[kind];
+  $('predictionStatus').textContent='Смотрю на текущее состояние мира. Будущее не проигрывается.';
+  $('predictionSummary').textContent='Секунду — оцениваю вероятные последствия…';
+  $('predictionDetails').replaceChildren();$('predictionProvider').textContent='';$('confirmPrediction').disabled=true;
+  openSheet('predictionBox');
+  try{
+    const prediction=await predictBuildConsequences(kind,$('aiProvider')?.value||'auto',aiWorldContext(),location);
+    if(!pendingBuild||pendingBuild.requestId!==requestId)return false;
+    showPrediction(kind,prediction);return true;
+  }catch(error){
+    if(!pendingBuild||pendingBuild.requestId!==requestId)return false;
+    $('predictionStatus').textContent='Прогноз не получен';
+    $('predictionSummary').textContent='ИИ сейчас недоступен. Объект не построен — попробуй ещё раз.';
+    $('predictionDetails').replaceChildren();$('predictionProvider').textContent=String(error.message||error).slice(0,160);
+    $('confirmPrediction').disabled=true;return false;
+  }finally{if(pendingBuild?.requestId===requestId)predictionPending=false;}
+}
+function selectPlacement(event){
+  if(!placementPending)return;
+  const kind=placementPending.kind,point=validPlacement(kind,event.clientX,event.clientY);
+  if(!point){$('placementHintText').textContent='Здесь объект перекроет интерфейс или выйдет за экран. Выбери свободное место.';return;}
+  placementPending=null;hidePlacementUi({marker:false});
+  const gameRect=$('game').getBoundingClientRect(),marker=$('placementMarker');
+  marker.style.left=(point.x*gameRect.width)+'px';marker.style.top=(point.y*gameRect.height)+'px';marker.hidden=false;
+  void requestPrediction(kind,point);
+}
+function build(kind,{fromIdea=false}={}){
+  if(fromIdea)return commitBuild(kind,{fromIdea:true});
+  return beginPlacement(kind);
 }
 const sheets=createSheets(document),closeSheets=sheets.closeSheets;
 function openSheet(id){if(id==='choiceBox')refreshChoices();sheets.openSheet(id);}
@@ -133,6 +229,16 @@ function submitIdea(input,meta=null){
   return true;
 }
 $('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
+$('placementSurface').addEventListener('click',selectPlacement);
+$('cancelPlacement').onclick=cancelPlacement;
+$('cancelPrediction').onclick=()=>{clearPrediction();closeSheets();};
+$('closePrediction').onclick=()=>{clearPrediction();closeSheets();};
+$('confirmPrediction').onclick=()=>{
+  if(!pendingBuild||predictionPending||$('confirmPrediction').disabled)return;
+  const {kind,point}=pendingBuild;clearPrediction();closeSheets();commitBuild(kind,{point});
+};
+$('modalBackdrop').addEventListener('click',clearPrediction);
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;if(placementPending){cancelPlacement();return;}if(pendingBuild)clearPrediction();});
 delegateGameEvents(document,{build,decide,openSheet});
 let aiPending=false;
 $('ideaForm').onsubmit=async e=>{
@@ -163,7 +269,7 @@ $('ideaForm').onsubmit=async e=>{
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
   }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
-$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
+$('restart').onclick=()=>{cancelPlacement();clearPrediction();world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
@@ -194,7 +300,7 @@ installPortableControls(document,{
 });
 startWalkers($('people'));
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getEntities:()=> (world.entities||[]).map(e=>({...e})),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getPlacements:()=> (world.placements||[]).map(e=>({...e})),getEntities:()=> (world.entities||[]).map(e=>({...e})),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox'),getPendingPlacement:()=>placementPending?{...placementPending}:null,getPendingBuild:()=>pendingBuild?{kind:pendingBuild.kind,point:{...pendingBuild.point},location:pendingBuild.location}:null};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
 })();

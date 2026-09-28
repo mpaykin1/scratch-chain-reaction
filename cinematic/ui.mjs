@@ -1,4 +1,4 @@
-const SHEETS=['choiceBox','ideaBox','menuBox'];
+const SHEETS=['choiceBox','ideaBox','menuBox','predictionBox'];
 export function createSheets(doc=document) {
   let backdrop=doc.getElementById('modalBackdrop');
   if (!backdrop) {

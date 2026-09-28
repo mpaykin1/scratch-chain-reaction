@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import { compileAiGameActions, interpretGameIdea } from './cinematic/ai-client.mjs';
+import { compileAiGameActions, compileBuildPrediction, interpretGameIdea, predictBuildConsequences } from './cinematic/ai-client.mjs';
 const base={ok:true,provider:'gemini',proposal:{summary:'Город и лес',commands:[
   {action:'create',kind:'city',style:'gothic'}, {action:'create',kind:'forest'},
   {action:'event',kind:'unknown',details:'дракон атакует'}],unknowns:[]}};
@@ -48,4 +48,29 @@ test('Dragon and attack events compile into executable event kinds',()=>{
   {action:'event',kind:'dragon'},{action:'event',kind:'attack'}],unknowns:[]}};
  const result=compileAiGameActions(response);
  assert.equal(result.commandText,'');assert.deepEqual(result.eventKinds,['dragon','attack']);
+});
+
+
+test('Build prediction request sends current world and never performs a build client-side',async()=>{
+ let request;
+ const response={ok:true,provider:'cloudflare',executed:false,prediction:{
+  summary:'Город может усилить спрос на воду.',
+  immediate:['Вероятно вырастет нагрузка на ресурсы.'],
+  later:['Может понадобиться новая инфраструктура.'],
+  risks:['При низкой воде возможен дефицит.'],
+  surprise:'Лес рядом может стать ценнее как зона отдыха.',confidence:0.71
+ }};
+ const before={turn:2,population:41,power:9,water:5,food:12,eco:20,budget:44,placed:{city:1,forest:1,energy:0,volcano:0}};
+ const result=await predictBuildConsequences('city','auto',before,'cinematic-default',async(url,options)=>{
+  request={url,options};return Response.json(response);
+ });
+ assert.equal(result.provider,'Cloudflare AI');assert.equal(result.confidence,0.71);
+ const payload=JSON.parse(request.options.body);
+ assert.equal(payload.mode,'predict_build');assert.equal(payload.build.kind,'city');
+ assert.equal(payload.build.location,'cinematic-default');assert.deepEqual(payload.worldContext,before);
+ assert.ok(!Object.hasOwn(payload,'execute'));
+});
+
+test('Prediction compiler rejects empty forecasts',()=>{
+ assert.throws(()=>compileBuildPrediction({ok:true,provider:'cloudflare',prediction:{summary:'',immediate:[],later:[],risks:[]}}),/содержательный|Некорректный/);
 });

@@ -27,10 +27,19 @@ const EXTRA=Object.freeze({
 });
 const ACTION_LABEL={city:'Город',forest:'Лес',energy:'Энергия',volcano:'Вулкан',
   irrigation:'Орошение',recycling:'Очистка воды',farm:'Фермы'};
+const PLACEMENT_KINDS=new Set(['city','forest','energy','volcano']);
+function validPlacements(value){
+  if(!Array.isArray(value)||value.length>5000)return false;
+  const ids=new Set();
+  return value.every(item=>item&&typeof item.id==='string'&&item.id.length<=80&&!ids.has(item.id)&&ids.add(item.id)&&
+    PLACEMENT_KINDS.has(item.kind)&&Number.isFinite(item.x)&&item.x>=0&&item.x<=1&&
+    Number.isFinite(item.y)&&item.y>=0&&item.y<=1);
+}
 const clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
 const copy=world=>({
   state:{...world.state},placed:{...world.placed},
   entities:(world.entities||[]).map(item=>({...item})),
+  placements:(world.placements||[]).map(item=>({...item})),
   queue:world.queue.map(item=>({...item,delta:{...item.delta}})),
   history:world.history.map(item=>({...item}))
 });
@@ -59,7 +68,7 @@ export function quoteIdea(world,input){
   return {allowed:true,reason:'',cost,actions};
 }
 export function createWorld(){
-  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},entities:[],queue:[],history:[]};
+  return {state:{...INITIAL},placed:{city:0,forest:0,energy:0,volcano:0},entities:[],placements:[],queue:[],history:[]};
 }
 function advanceQueue(world,events){
   const due=world.queue.filter(item=>item.turn<=world.state.turn);
@@ -218,7 +227,9 @@ export function restoreWorld(raw){
     const data=JSON.parse(raw);
     if(data.version!==VERSION||!data.state||!data.placed||!Array.isArray(data.queue)||!Array.isArray(data.history))return null;
     if(data.entities===undefined)data.entities=[];
+    if(data.placements===undefined)data.placements=[];
     if(!Array.isArray(data.entities)||data.entities.length>20||data.entities.some(e=>!e||e.kind!=='dragon'||!Number.isInteger(e.hp)||e.hp<0||e.hp>100))return null;
+    if(!validPlacements(data.placements))return null;
     if(Object.keys(INITIAL).some(k=>!Number.isInteger(data.state[k])||data.state[k]<0||data.state[k]>(k==='turn'?100000:100)))return null;
     if(Object.keys(createWorld().placed).some(k=>!Number.isInteger(data.placed[k])||data.placed[k]<0||data.placed[k]>10000))return null;
     if(data.queue.length>400||data.history.length>150||data.queue.some(e=>!Number.isInteger(e.turn)||e.turn<0||e.turn>100000||
