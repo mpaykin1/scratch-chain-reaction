@@ -1,0 +1,18 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Цепочка — мир из процедурных кубиков</title>
+<link rel="stylesheet" href="./voxel-factory.css"></head>
+<body><main id="game"><canvas id="map" aria-label="Интерактивная изометрическая карта"></canvas>
+<header class="top"><a class="back" href="./">← Cinematic</a>
+<div><h1>Цепочка · мир из кубиков</h1><p id="tip">Тяни карту мышью или пальцем. Выбери объект и нажми на землю.</p></div>
+<div class="indicators"><span id="pos">0,0</span><span id="fps">FPS: —</span></div></header>
+<aside id="events" aria-live="polite">Безжизненная земля. Несколько путников ищут место для нового мира.</aside>
+<div class="actions" aria-label="Строительство">
+<button data-build="city">🏘️ Город</button><button data-build="forest">🌳 Лес</button>
+<button data-build="volcano">🌋 Вулкан</button><button data-build="energy">⚡ Энергия</button>
+<button id="idea">💡 Идея</button><button data-build="river" class="extra">💧 Река</button>
+<button id="nextTurn" class="extra">⏩ Шаг</button><button id="reset" class="extra">↺ Заново</button></div>
+<form id="ideaForm" hidden><label for="ideaText">Какая у тебя идея?</label>
+<input id="ideaText" maxlength="160" placeholder="Например, посадить лес" required>
+<button type="submit">Создать</button><button type="button" id="closeIdea">Отмена</button></form>
+</main><script type="module" src="./voxel-factory.mjs"></script></body></html>
