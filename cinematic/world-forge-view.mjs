@@ -57,3 +57,35 @@ export function mountWorldForge(doc,bridge){
   if(n%11===0){ctx.fillStyle='#b8a07b';
    ctx.fillRect(point.x+10,point.y-1,5,3);}
  }
+ function paintForest(block,point){
+  diamond(point.x,point.y,'#49623d','#9ab172');
+  let seed=block.seed;
+  for(let i=0;i<4;i++){
+   seed=tileHash(seed,i,block.x);
+   const ox=(seed%49)-24,oy=((seed>>>8)%20)-10;
+   const h=17+((seed>>>16)%18),px=point.x+ox,py=point.y+oy;
+   ctx.fillStyle='#372d27';ctx.fillRect(px-3,py-h+12,6,h-7);
+   ctx.fillStyle=['#315a39','#447a45','#5d8542'][seed%3];
+   ctx.beginPath();ctx.moveTo(px,py-h-15);
+   ctx.lineTo(px-13,py-h+12);ctx.lineTo(px+13,py-h+12);
+   ctx.closePath();ctx.fill();
+   ctx.fillStyle='#81a45d77';ctx.fillRect(px-2,py-h-9,4,5);
+  }
+ }
+ function paintRiver(block,point,all){
+  const joins=riverSockets(all,block.x,block.z);
+  diamond(point.x,point.y,'#716b4e','#8c8053');
+  const ends=[];
+  if(joins.north)ends.push([-TILE.width/2,0]);
+  if(joins.east)ends.push([0,-TILE.height/2]);
+  if(joins.south)ends.push([TILE.width/2,0]);
+  if(joins.west)ends.push([0,TILE.height/2]);
+  if(!ends.length)ends.push([-TILE.width/2,0],[TILE.width/2,0]);
+  if(ends.length===1)ends.push([0,0]);
+  ctx.beginPath();
+  for(const [dx,dy]of ends){ctx.moveTo(point.x,point.y);
+   ctx.lineTo(point.x+dx,point.y+dy);}
+  ctx.lineCap='butt';ctx.strokeStyle='#2c8baa';ctx.lineWidth=27;ctx.stroke();
+  ctx.strokeStyle='#64bdd0';ctx.lineWidth=13;ctx.stroke();
+  ctx.fillStyle='#75d8df';ctx.fillRect(point.x-13,point.y-2,16,2);
+ }
