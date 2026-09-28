@@ -2,6 +2,7 @@ import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
+import {interpretGameIdea} from './ai-client.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
@@ -59,18 +60,22 @@ function decide(id){
   window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind:'choice'}}));
   closeSheets();
 }
-function submitIdea(input){
+function submitIdea(input,meta=null){
   const quote=quoteIdea(world,input);
   if(!quote.allowed){
     panel(quote.actions.length?'Недостаточно бюджета':'Нужно уточнить идею',quote.reason);
-    closeSheets();return;
+    closeSheets();return false;
   }
   const asDecision=pendingDecision,before={...state};
   const result=asDecision?playCustomDecision(world,input):playIdea(world,input);
   if(!result.recognized){
-    panel('Нужно уточнить идею',result.reason);closeSheets();return;
+    panel('Нужно уточнить идею',result.reason);closeSheets();return false;
   }
   checkpoint();sync(result);pendingDecision=!asDecision;
+  if(meta?.original){
+    const event=[...world.history].reverse().find(e=>(e.type==='action'||e.type==='decision')&&e.tick===state.turn);
+    if(event){event.originalPrompt=String(meta.original).slice(0,800);event.aiProvider=String(meta.provider||'').slice(0,50);persist();}
+  }
   const names={city:'город',forest:'лес',energy:'энергетика',volcano:'вулкан',irrigation:'орошение',recycling:'очистка воды',farm:'ферма'};
   for(const kind of result.actions){
     window.dispatchEvent(new CustomEvent('worldAction',{detail:{kind}}));
@@ -78,14 +83,44 @@ function submitIdea(input){
   }
   caption('+'+result.actions.map(x=>names[x]).join(', '));
   const effects=result.events.filter(e=>['shortage','drought','pollution','hunger','delayed'].includes(e.type)).map(e=>e.text).join(' ');
+  const notes=meta?(' Источник: '+String(meta.provider||'ИИ')+'.'+
+    (meta.styles?.length?' Запрошен стиль '+meta.styles.join(', ')+', но пока показана базовая графика.':'')+
+    (meta.unsupported?.length?' Пока не реализовано: '+meta.unsupported.join('; ')+'.':'')):'';
   panel(asDecision?'Твоё пятое решение':'Джинн рассчитал идею',
     'Распознано: '+result.actions.map(x=>names[x]).join(', ')+'. Стоимость: '+quote.cost+
-    '. '+deltaSummary(before,state)+(effects?' Цепная реакция: '+effects:''));
+    '. '+deltaSummary(before,state)+(effects?' Цепная реакция: '+effects:'')+notes);
   $('choiceTrigger').hidden=!pendingDecision;closeSheets();
+  return true;
 }
 $('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
 delegateGameEvents(document,{build,decide,openSheet});
-$('ideaForm').onsubmit=e=>{e.preventDefault();const t=$('ideaText').value.trim();if(t)submitIdea(t)};
+let aiPending=false;
+$('ideaForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(aiPending)return;
+  const t=$('ideaText').value.trim();if(!t)return;
+  // Instant deterministic path for ordinary constructions; richer descriptions
+  // and explicit provider comparisons still go through the AI interpreter.
+  const fast=quoteIdea(world,t);
+  const creative=/готич|средневек|драк|стрел|напад|фантаз|магич|волшеб|замок|космич|животн|вражд|атак/iu.test(t);
+  if($('aiProvider').value==='auto'&&fast.actions.length&&fast.allowed&&!creative){
+    submitIdea(t,{original:t,provider:'быстрый локальный движок'});return;
+  }
+  const button=$('sendIdea'),status=$('aiProgress');
+  aiPending=true;button.disabled=true;button.textContent='ИИ разбирает идею…';status.textContent='Проверяем сценарий';
+  try{
+    const idea=await interpretGameIdea(t,$('aiProvider').value,{...state,placed:{...placed}});
+    if(!idea.commandText){
+      closeSheets();panel('Идея пока не поддерживается',idea.unsupported.join('; ')||'ИИ не нашёл известного механизма. Мир не изменён.');return;
+    }
+    submitIdea(idea.commandText,{original:t,provider:idea.provider,styles:idea.styles,unsupported:idea.unsupported});
+  }catch{
+    // Offline compatibility: only pre-existing, deterministic keyword mechanics.
+    const quote=quoteIdea(world,t);
+    if(quote.actions.length)submitIdea(t,{original:t,provider:'офлайн'});
+    else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
+  }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
+};
 $('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
