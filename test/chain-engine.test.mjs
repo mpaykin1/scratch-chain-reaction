@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createWorld,playBuild,playIdea,playDecision,serializeWorld,restoreWorld,interpretIdea,getGenieChoices} from '../cinematic/chain-engine.mjs';
+import {createWorld,playBuild,playIdea,playDecision,playWorldEvent,serializeWorld,restoreWorld,interpretIdea,getGenieChoices} from '../cinematic/chain-engine.mjs';
 import {fitCanvas} from '../cinematic/quality.mjs';
 import {createAdaptiveQuality} from '../cinematic/adaptive-quality.mjs';
 
@@ -94,4 +94,24 @@ test('adaptive GPU quality drops under sustained load and recovers when stable',
   const before=budget.quality;
   for(let i=0;i<200;i++)budget.observe(100,{visible:false});
   assert.equal(budget.quality,before,'background tabs must not degrade quality');
+});
+
+test('dragon arrival and repeated attacks become deterministic world events',()=>{
+ const arrival=playWorldEvent(createWorld(),'dragon');
+ assert.equal(arrival.recognized,true);assert.equal(arrival.world.entities.length,1);
+ assert.equal(arrival.world.entities[0].hp,100);assert.equal(arrival.world.state.turn,1);
+ const shot=playWorldEvent(arrival.world,'attack');
+ assert.equal(shot.recognized,true);assert.ok(shot.world.entities[0].hp<100);
+ assert.ok(shot.events.some(event=>event.type==='combat'));
+ const replay=playWorldEvent(playWorldEvent(createWorld(),'dragon').world,'attack');
+ assert.equal(serializeWorld(shot.world),serializeWorld(replay.world));
+});
+test('attack without living dragon does not mutate world',()=>{
+ const world=createWorld(),result=playWorldEvent(world,'attack');
+ assert.equal(result.recognized,false);assert.equal(serializeWorld(result.world),serializeWorld(world));
+});
+test('old version-1 saves without entities remain restorable',()=>{
+ const world=createWorld();delete world.entities;
+ const restored=restoreWorld(JSON.stringify({version:1,...world}));
+ assert.ok(restored);assert.deepEqual(restored.entities,[]);
 });
