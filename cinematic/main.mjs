@@ -3,6 +3,7 @@ import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
 import {interpretGameIdea} from './ai-client.mjs';
+import {applyCityAction} from './action-evolution.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
@@ -20,7 +21,8 @@ function checkpoint(){undoStack.push({world:serializeWorld(world),pendingDecisio
 function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;persist();render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
 
 function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
-function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();refreshChoices();}
+function refreshLivingActions(){applyCityAction(document.querySelector('[data-action="city"], [data-action="energy"], [data-action="forest"]'),{placed});}
+function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();refreshChoices();refreshLivingActions();}
 const $=id=>document.getElementById(id);
 const {render,panel,caption,embers}=createView(()=>({state,placed,history:world.history}));
 const RESOURCE_NAMES={population:'Люди',power:'Энергия',water:'Вода',food:'Еда',eco:'Экология',budget:'Бюджет'};
@@ -94,6 +96,7 @@ function submitIdea(input,meta=null){
 }
 $('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
 delegateGameEvents(document,{build,decide,openSheet});
+refreshLivingActions();
 let aiPending=false;
 $('ideaForm').onsubmit=async e=>{
   e.preventDefault();
