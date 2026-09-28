@@ -200,7 +200,8 @@ export function playCustomDecision(world,input){
 const FEATURE_COST=Object.freeze({
   dome:9,'summon-dragon':0,archers:0,negotiate:12,evacuate:2,repair:10,
   'expand-city':12,wildlife:4,'expand-forest':10,'guide-lava':3,
-  'connect-grid':7,battery:6,'reinforce-dome':8
+  'connect-grid':7,battery:6,'reinforce-dome':8,
+  geothermal:12,island:10,'expand-grid':12,'stabilize-grid':8
 });
 export function quoteFeature(world,id,targetId){
   if(!Object.hasOwn(FEATURE_COST,id))return {allowed:false,cost:0,reason:'Неизвестное действие'};
@@ -213,13 +214,26 @@ export function quoteFeature(world,id,targetId){
     'expand-city','reinforce-dome'].includes(id)&&!city)reason='Выбери город.';
   else if(id==='dome'&&city.dome)reason='Купол уже создан.';
   else if(id==='summon-dragon'&&(!city.dome||active))reason='Нужен купол и отсутствие дракона.';
-  else if(['archers','negotiate','evacuate'].includes(id)&&!active)reason='Поблизости нет дракона.';
+  else if(['archers','negotiate','evacuate'].includes(id)&&
+    (!active||Math.hypot(dragon.x-city.x,dragon.z-city.z)>60))
+    reason='Поблизости нет дракона.';
+  else if(id==='evacuate'&&city.evacuated)reason='Жители уже укрыты.';
   else if(id==='repair'&&city.hp>=100)reason='Город не повреждён.';
   else if(id==='reinforce-dome'&&(!city.dome||city.dome>=100))reason='Купол не требует усиления.';
   else if(id==='wildlife'&&(!target||target.kind!=='forest'||target.wildlife))reason='Нужен лес без животных.';
   else if(id==='expand-forest'&&target?.kind!=='forest')reason='Выбери лес.';
   else if(id==='guide-lava'&&(!target||target.kind!=='volcano'||target.lavaGuided))reason='Нужен вулкан с ненаправленной лавой.';
-  else if(['connect-grid','battery'].includes(id)&&target?.kind!=='energy')reason='Нужна электростанция.';
+  else if(id==='geothermal'&&(!target||target.kind!=='volcano'||
+    !target.lavaGuided||target.geothermal))reason='Сначала направь лаву вулкана.';
+  else if(id==='island'&&(!target||target.kind!=='volcano'||!target.geothermal||
+    target.island))reason='Нужен геотермальный вулкан без нового острова.';
+  else if(['connect-grid','battery','expand-grid','stabilize-grid'].includes(id)&&
+    target?.kind!=='energy')reason='Нужна электростанция.';
+  else if(id==='battery'&&target.battery)reason='Накопитель уже создан.';
+  else if(id==='expand-grid'&&(!target.battery||target.gridExpanded))
+    reason='Сначала построй накопитель.';
+  else if(id==='stabilize-grid'&&(!target.gridExpanded||target.gridStable))
+    reason='Сначала расширь сеть.';
   else if(id==='connect-grid'&&!objects.some(o=>o.kind==='city'&&!o.gridConnected))
     reason='Все города уже подключены.';
   else if(world.state.budget<cost)reason='Недостаточно бюджета: нужно '+cost+'.';
@@ -276,10 +290,18 @@ export function playFeature(world,id,targetId,{requestId}={}){
   if(id==='repair'){target.hp=Math.min(100,target.hp+50);mark('construction','Город восстановлен.');}
   if(id==='wildlife'){target.wildlife=true;mark('ecology','В лес вернулись животные.',{food:6,eco:4});}
   if(id==='guide-lava'){target.lavaGuided=true;mark('construction','Лава направлена в безопасное русло.',{eco:4});}
+  if(id==='geothermal'){target.geothermal=true;
+    mark('construction','У вулкана заработала геотермальная станция.',{power:24,water:-2,eco:-3});}
+  if(id==='island'){target.island=true;
+    mark('construction','Лава образовала новый остров.',{eco:-4,water:-3});}
   if(id==='connect-grid'){const city=next.living.objects.find(o=>o.kind==='city'&&!o.gridConnected);
     city.gridConnected=true;target.gridBuilt=true;
     mark('construction','Город подключён к электросети.',{power:15});}
   if(id==='battery'){target.battery=true;mark('construction','Построен накопитель энергии.',{power:10});}
+  if(id==='expand-grid'){target.gridExpanded=true;
+    mark('construction','Энергосеть расширена.',{power:18,water:-4});}
+  if(id==='stabilize-grid'){target.gridStable=true;
+    mark('construction','Энергосеть стабилизирована.',{power:6,eco:5});}
   cascade(next,events,action.id);
   if(requestId){next.living.recentRequests.push(requestId);
     next.living.recentRequests=next.living.recentRequests.slice(-32);}
