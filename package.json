@@ -11,7 +11,8 @@
     "test:cinematic:browser": "node qa_release.cjs && node test_cinematic_enhancements.cjs && node test/portable-ui.cjs",
     "test:world": "node --test test/world-engine.test.mjs",
     "test:world-ui": "node test/world-ui.cjs",
-    "test:living": "node --test test/living-actions.test.mjs"
+    "test:living": "node --test test/living-actions.test.mjs",
+    "test:living:browser": "node test/living-browser.cjs"
   },
   "dependencies": {
     "@turbowarp/scaffolding": "0.4.0"
