@@ -7,10 +7,24 @@ import {getLivingActions,paintActionDock} from './living-actions.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices,playFeature,quoteFeature} from './chain-engine.mjs';
 (()=>{'use strict';
-const SAVE='chain-reaction-world-v1';
+const SAVE='chain-reaction-world-v1',VIEW='chain-reaction-view-v1';
+function readView(){
+  try{
+    const v=JSON.parse(localStorage.getItem(VIEW)||'null');
+    if(!v||!Number.isFinite(v.x)||!Number.isFinite(v.z)||
+      Math.abs(v.x)>100000||Math.abs(v.z)>100000)return null;
+    return {x:v.x,z:v.z,selectedId:typeof v.selectedId==='string'&&
+      v.selectedId.length<100?v.selectedId:null};
+  }catch{return null;}
+}
 let saved=null;try{saved=restoreWorld(localStorage.getItem(SAVE));}catch{}
 let world=saved||createWorld(),state=world.state,placed=world.placed,choiceCount=0;
-let viewport={x:0,z:0},selectedId=null,actionBusy=false;
+const oldView=saved?readView():null;
+let viewport={x:oldView?.x||0,z:oldView?.z||0},
+  selectedId=oldView?.selectedId||null,actionBusy=false;
+function persistView(){
+  try{localStorage.setItem(VIEW,JSON.stringify({...viewport,selectedId}));}catch{}
+}
 function hasPendingChoice(saved){
   return saved.state.turn>0 &&
     saved.history.some(event=>event.type==='action'&&event.tick===saved.state.turn) &&
@@ -18,8 +32,10 @@ function hasPendingChoice(saved){
 }
 let pendingDecision=hasPendingChoice(world);
 const undoStack=[];
-function checkpoint(){undoStack.push({world:serializeWorld(world),pendingDecision});if(undoStack.length>20)undoStack.shift();$('undo').disabled=false;}
-function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;persist();render();refreshChoices();refreshDock();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
+function checkpoint(){undoStack.push({world:serializeWorld(world),pendingDecision,
+  viewport:{...viewport},selectedId});if(undoStack.length>20)undoStack.shift();$('undo').disabled=false;}
+function undo(){const prior=undoStack.pop();if(!prior)return false;const restored=restoreWorld(prior.world);if(!restored)return false;world=restored;state=world.state;placed=world.placed;pendingDecision=prior.pendingDecision;viewport=prior.viewport||viewport;
+  selectedId=prior.selectedId||null;persistView();persist();render();refreshChoices();refreshDock();$('choiceTrigger').hidden=!pendingDecision;$('undo').disabled=undoStack.length===0;closeSheets();panel('Последнее действие отменено','Мир вернулся к состоянию перед предыдущим решением.');return true;}
 
 function persist(){try{localStorage.setItem(SAVE,serializeWorld(world));}catch{}}
 function sync(result){world=result.world;state=world.state;placed=world.placed;persist();render();refreshChoices();refreshDock();}
@@ -85,17 +101,17 @@ function installMapPan(){
     if(!drag||drag.id!==e.pointerId)return;
     const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
     if(dx||dy)drag.moved=true;
-    viewport={x:viewport.x-dx*100/Math.max(1,stage.clientWidth),
-      z:viewport.z-dy*100/Math.max(1,stage.clientHeight)};
+    viewport={x:Math.max(-100000,Math.min(100000,viewport.x-dx*100/Math.max(1,stage.clientWidth))),
+      z:Math.max(-100000,Math.min(100000,viewport.z-dy*100/Math.max(1,stage.clientHeight)))};
     drag.x=e.clientX;drag.y=e.clientY;
     if(!frame)frame=requestAnimationFrame(()=>{frame=null;renderMap();});
   });
-  const end=e=>{if(!drag||drag.id!==e.pointerId)return;drag=null;refreshDock();};
+  const end=e=>{if(!drag||drag.id!==e.pointerId)return;drag=null;persistView();refreshDock();};
   stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
   $('worldLayer').addEventListener('click',e=>{
     const object=e.target.closest('[data-object-id]');
     if(!object)return;
-    selectedId=object.dataset.objectId;renderMap();refreshDock();
+    selectedId=object.dataset.objectId;persistView();renderMap();refreshDock();
   });
 }
 const sheets=createSheets(document),closeSheets=sheets.closeSheets;
@@ -181,7 +197,7 @@ $('ideaForm').onsubmit=async e=>{
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
   }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
-$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;viewport={x:0,z:0};selectedId=null;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();refreshDock();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!',{compact:false})};
+$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;viewport={x:0,z:0};selectedId=null;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);localStorage.removeItem(VIEW);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();refreshDock();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!',{compact:false})};
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
@@ -199,6 +215,7 @@ function importSave(raw){
   const parsed=parsePortableSave(raw,restoreWorld);
   if(!parsed.world){panel('Импорт не выполнен',parsed.error);return false;}
   checkpoint();world=parsed.world;state=world.state;placed=world.placed;
+  viewport={x:0,z:0};selectedId=null;persistView();
   pendingDecision=hasPendingChoice(world);
   persist();render();refreshChoices();refreshDock();$('choiceTrigger').hidden=!pendingDecision;
   closeSheets();panel('Мир восстановлен','Сохранение загружено. Ход '+state.turn+'. Можно продолжать игру.');
@@ -213,7 +230,7 @@ installPortableControls(document,{
 startWalkers($('people'));installMapPan();
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
 window.__chainReaction={build,livingAction,getLivingActions:()=>getLivingActions(world,{selectedId,viewport}),
-  getViewport:()=>({...viewport}),selectObject:id=>{selectedId=id;renderMap();refreshDock();},
+  getViewport:()=>({...viewport}),selectObject:id=>{selectedId=id;persistView();renderMap();refreshDock();},
   getState:()=>({...state}),getPlaced:()=>({...placed}),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();refreshDock();$('choiceTrigger').hidden=!pendingDecision;
