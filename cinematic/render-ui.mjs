@@ -31,6 +31,10 @@ export function createView(getWorld,doc=document){
           const dome=doc.createElement('span');dome.className='living-dome';
           dome.setAttribute('aria-hidden','true');node.append(dome);
         }
+        if(['city','forest','volcano','energy'].includes(object.kind)){
+          const badge=doc.createElement('span');badge.className='living-world-state';
+          badge.setAttribute('aria-hidden','true');node.append(badge);
+        }
         map.append(node);nodes.set(object.id,node);
       }
       node.style.left=(50+(object.x-viewport.x)*.8)+'%';
@@ -40,6 +44,15 @@ export function createView(getWorld,doc=document){
       node.classList.toggle('damaged',(object.hp??100)<100);
       if(object.kind==='city')node.querySelector('.living-dome')
         .classList.toggle('active',object.dome>0);
+      const badge=node.querySelector('.living-world-state');
+      if(badge){
+        badge.textContent=object.kind==='city'?(object.evacuated?'🏃':object.gridConnected?'⚡':''):
+          object.kind==='forest'?(object.wildlife?'🦌':''):
+          object.kind==='volcano'?(object.island?'🏝️':object.geothermal?'⚡':object.lavaGuided?'♨️':''):
+          object.kind==='energy'?(object.gridStable?'✅':object.gridExpanded?'⚡':object.battery?'🔋':
+            object.gridBuilt?'🔌':''):'';
+        badge.hidden=!badge.textContent;
+      }
       node.setAttribute('aria-label',asset.alt+(object.kind==='city'?
         ', целостность '+object.hp+'%'+(object.dome?', защитный купол '+object.dome+'%':''):''));
     }
