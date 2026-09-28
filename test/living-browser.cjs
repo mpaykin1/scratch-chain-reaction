@@ -106,6 +106,7 @@ async function check(browser,base,device){
   assert.ok(Math.abs(persisted.x-panned.x)<.01,'camera must survive reload');
   assert.equal(await page.locator('.option').first().getAttribute('data-living-id'),'expand-city');
   await page.getByRole('button',{name:'Меню',exact:true}).click();
+  await page.locator('details.catalogue summary').click();
   await page.locator('[data-catalog-build="city"]').click();
   assert.equal(await page.evaluate(()=>__chainReaction.getPlaced().city),2,
     'catalogue must still build second city without replacing main button');
