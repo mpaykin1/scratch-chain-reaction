@@ -112,3 +112,33 @@
   line-height:1;padding:.14em;border-radius:50%;background:#142e40c9;
   box-shadow:0 0 15px #8ce7ef90;pointer-events:none}
 @media(orientation:portrait){.living-world-state{font-size:clamp(22px,6vw,33px)}}
+
+/* Compact consequences by default AFTER a player action. The Genie remains
+   readable and expandable, while the newly placed world object stays visible. */
+#dialog.compact{width:min(42vw,520px);min-height:0;max-height:125px;
+  left:max(6%,32px);bottom:clamp(128px,16vh,198px);
+  padding:10px 65px 10px 85px;border-radius:14px}
+#dialog.compact .genie{height:126px;left:-36px;bottom:-8px}
+#dialog.compact .dialog-title{font-size:18px;line-height:1.05;margin:0 0 3px}
+#dialog.compact .dialog-text{font-size:13px;line-height:1.2;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#dialog.compact .choice-trigger{font-size:11px;margin-top:4px;padding:3px 7px}
+#dialog.compact .dialog-close{width:28px;height:28px;right:5px;top:5px;font-size:22px}
+.dialog-expand{position:absolute;right:40px;top:5px;width:28px;height:28px;
+  border:1px solid #a0c5e8;border-radius:7px;background:#153953e8;font-size:18px;line-height:1}
+@media(orientation:portrait){
+  #dialog.compact{left:5%;width:90%;bottom:clamp(118px,17.5vh,180px);
+    min-height:0;max-height:108px;padding:7px 44px 8px 78px}
+  #dialog.compact .genie{height:120px;left:-29px;bottom:-5px}
+  #dialog.compact .dialog-title{font-size:16px;margin-bottom:2px}
+  #dialog.compact .dialog-text{font-size:11.5px;line-height:1.18}
+  #dialog.compact .choice-trigger{font-size:10px;margin-top:3px;padding:2px 5px}
+}
+@media(max-height:500px) and (orientation:landscape){
+  #dialog.compact{left:4%;width:min(44vw,350px);bottom:87px;max-height:75px;
+    padding:5px 36px 5px 58px}
+  #dialog.compact .genie{height:88px;left:-22px;bottom:-5px}
+  #dialog.compact .dialog-title{font-size:13px}
+  #dialog.compact .dialog-text{font-size:10px;-webkit-line-clamp:1}
+  #dialog.compact .choice-trigger{font-size:9px;padding:2px 4px;margin-top:2px}
+}
