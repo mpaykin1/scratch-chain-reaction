@@ -2,7 +2,7 @@ import {createSheets,delegateGameEvents} from './ui.mjs';
 import {startWalkers} from './walkers.mjs';
 import {createView} from './render-ui.mjs';
 import {installPortableControls,parsePortableSave,downloadPortableSave} from './portable-save.mjs';
-import {interpretGameIdea} from './ai-client.mjs';
+import {interpretGameIdea,predictBuildConsequences} from './ai-client.mjs';
 
 import {createWorld,restoreWorld,serializeWorld,BUILD_EFFECTS,playBuild,playDecision,playIdea,playCustomDecision,playWorldEvent,quoteBuild,quoteIdea,getDecisionOptions,advanceTick,getGenieChoices} from './chain-engine.mjs';
 (()=>{'use strict';
@@ -72,11 +72,11 @@ function deltaSummary(before,after){
 function refreshChoices(){const scenario=getGenieChoices(world);$('choiceTitle').textContent='Злой Джинн: '+scenario.title;
   document.querySelectorAll('[data-decision]').forEach(button=>{button.textContent=scenario.choices[Number(button.dataset.decision)].label;});}
 const messages={city:['Город построен!','Жители получили дома, но теперь им нужны вода, пища и энергия.'],forest:['Мир меняется!','Лес вырос! Экология и запасы воды постепенно восстанавливаются.'],energy:['Мир меняется!','Электростанция заработала! Энергии стало больше, но бюджет и вода уменьшаются.'],volcano:['Осторожно!','Вулкан проснулся! Появилась геотермальная энергия — и опасная лава.']};
-function build(kind,{fromIdea=false}={}){
-  if(!Object.hasOwn(BUILD_EFFECTS,kind))return;
-  if(pendingDecision){openSheet('choiceBox');return;}
+function commitBuild(kind,{fromIdea=false}={}){
+  if(!Object.hasOwn(BUILD_EFFECTS,kind))return false;
+  if(pendingDecision){openSheet('choiceBox');return false;}
   const quote=quoteBuild(world,kind);
-  if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return;}
+  if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return false;}
   const before={...state};
   checkpoint();const result=playBuild(world,kind);sync(result);pendingDecision=true;
   caption('+'+({city:' ГОРОД',forest:' ЛЕС',energy:' ЭНЕРГИЯ',volcano:' ВУЛКАН'}[kind]));
@@ -88,6 +88,67 @@ function build(kind,{fromIdea=false}={}){
   if(extra)body+=' Цепная реакция: '+extra;
   panel(title,body);$('choiceTrigger').hidden=false;
   if(!fromIdea){choiceCount++;closeSheets();}
+  return true;
+}
+let predictionPending=false,pendingBuild=null,predictionRequestId=0;
+const BUILD_NAMES={city:'город',forest:'лес',energy:'энергетику',volcano:'вулкан'};
+function aiWorldContext(){
+  return {...state,placed:{...placed},entities:(world.entities||[]).map(({kind,hp})=>({kind,hp}))};
+}
+function clearPrediction(){
+  pendingBuild=null;predictionPending=false;predictionRequestId++;
+}
+function predictionSection(title,items){
+  if(!items?.length)return;
+  const section=document.createElement('section'),heading=document.createElement('strong'),list=document.createElement('ul');
+  heading.textContent=title;
+  for(const item of items){const li=document.createElement('li');li.textContent=item;list.appendChild(li);}
+  section.append(heading,list);$('predictionDetails').appendChild(section);
+}
+function showPrediction(kind,prediction){
+  $('predictionTitle').textContent='🧞 ИИ: строить '+BUILD_NAMES[kind]+'?';
+  $('predictionStatus').textContent='Прогноз до строительства';
+  $('predictionSummary').textContent=prediction.summary;
+  $('predictionDetails').replaceChildren();
+  predictionSection('Сразу',prediction.immediate);
+  predictionSection('Дальше может произойти',prediction.later);
+  predictionSection('Риски',prediction.risks);
+  if(prediction.surprise)predictionSection('Неочевидная цепочка',[prediction.surprise]);
+  $('predictionProvider').textContent='Источник: '+prediction.provider+' · уверенность '+Math.round(prediction.confidence*100)+'%';
+  $('confirmPrediction').disabled=false;
+}
+async function build(kind,{fromIdea=false,location=''}={}){
+  if(fromIdea)return commitBuild(kind,{fromIdea:true});
+  if(!Object.hasOwn(BUILD_EFFECTS,kind))return false;
+  if(pendingDecision){openSheet('choiceBox');return false;}
+  const quote=quoteBuild(world,kind);
+  if(!quote.allowed){panel('Недостаточно бюджета',quote.reason);return false;}
+  if(predictionPending)return false;
+  const requestId=++predictionRequestId;
+  predictionPending=true;pendingBuild={kind,location:String(location||'').slice(0,160),requestId};
+  $('predictionTitle').textContent='🧞 ИИ анализирует: '+BUILD_NAMES[kind];
+  $('predictionStatus').textContent='Смотрю на текущее состояние мира. Будущее не проигрывается.';
+  $('predictionSummary').textContent='Секунду — оцениваю вероятные последствия…';
+  $('predictionDetails').replaceChildren();
+  $('predictionProvider').textContent='';
+  $('confirmPrediction').disabled=true;
+  openSheet('predictionBox');
+  try{
+    const prediction=await predictBuildConsequences(
+      kind,$('aiProvider')?.value||'auto',aiWorldContext(),pendingBuild.location
+    );
+    if(!pendingBuild||pendingBuild.requestId!==requestId)return false;
+    showPrediction(kind,prediction);return true;
+  }catch(error){
+    if(!pendingBuild||pendingBuild.requestId!==requestId)return false;
+    $('predictionStatus').textContent='Прогноз не получен';
+    $('predictionSummary').textContent='ИИ сейчас недоступен. Объект не построен — попробуй ещё раз.';
+    $('predictionDetails').replaceChildren();
+    $('predictionProvider').textContent=String(error.message||error).slice(0,160);
+    $('confirmPrediction').disabled=true;return false;
+  }finally{
+    if(pendingBuild?.requestId===requestId)predictionPending=false;
+  }
 }
 const sheets=createSheets(document),closeSheets=sheets.closeSheets;
 function openSheet(id){if(id==='choiceBox')refreshChoices();sheets.openSheet(id);}
@@ -133,6 +194,14 @@ function submitIdea(input,meta=null){
   return true;
 }
 $('choiceTrigger').onclick=()=>openSheet('choiceBox');$('closeDialog').onclick=()=>$('dialog').classList.add('hidden');$('askIdea').onclick=()=>openSheet('ideaBox');$('showHelp').onclick=()=>openSheet('menuBox');$('showMenu').onclick=()=>openSheet('menuBox');$('closeChoices').onclick=closeSheets;$('closeIdea').onclick=closeSheets;$('closeMenu').onclick=closeSheets;$('ideaFromChoices').onclick=()=>openSheet('ideaBox');
+$('cancelPrediction').onclick=()=>{clearPrediction();closeSheets();};
+$('closePrediction').onclick=()=>{clearPrediction();closeSheets();};
+$('confirmPrediction').onclick=()=>{
+  if(!pendingBuild||predictionPending||$('confirmPrediction').disabled)return;
+  const kind=pendingBuild.kind;clearPrediction();closeSheets();commitBuild(kind);
+};
+$('modalBackdrop').addEventListener('click',clearPrediction);
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('predictionBox').hidden)clearPrediction();});
 delegateGameEvents(document,{build,decide,openSheet});
 let aiPending=false;
 $('ideaForm').onsubmit=async e=>{
@@ -163,7 +232,7 @@ $('ideaForm').onsubmit=async e=>{
     else{closeSheets();panel('ИИ временно недоступен','Неизвестная идея не изменила мир. Попробуй позже или выбери известный объект.');}
   }finally{aiPending=false;button.disabled=false;button.textContent='Отправить идею ↗';status.textContent='';}
 };
-$('restart').onclick=()=>{world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
+$('restart').onclick=()=>{clearPrediction();world=createWorld();state=world.state;placed=world.placed;choiceCount=0;pendingDecision=false;undoStack.length=0;$('undo').disabled=true;try{localStorage.removeItem(SAVE);}catch{}$('choiceTrigger').hidden=true;render();refreshChoices();closeSheets();panel('Злой Джинн:','Этот мир пока пуст и ждёт твоего решения. Выбери, с чего начать, или поделись своей идеей!')};
 $('undo').onclick=undo;
 $('fullscreenBtn').onclick=async()=>{if(document.fullscreenEnabled&&$('game').requestFullscreen){try{await $('game').requestFullscreen();closeSheets();return}catch(e){}}$('fullscreenHint').hidden=false;};
 $('scratchLaunch').onclick=function(){this.href=new URL('../player/',location.href).href};
@@ -194,7 +263,7 @@ installPortableControls(document,{
 });
 startWalkers($('people'));
 // Desktop, iPad and iPhone fullscreen: CSS paints directly to 100dvh, rather than embedding a 4:3 iframe with white margins.
-window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getEntities:()=> (world.entities||[]).map(e=>({...e})),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox')};
+window.__chainReaction={build,getState:()=>({...state}),getPlaced:()=>({...placed}),getEntities:()=> (world.entities||[]).map(e=>({...e})),getHistory:()=>world.history.map(e=>({...e})),getDecisionOptions:()=>getDecisionOptions(world),quoteBuild:kind=>quoteBuild(world,kind),quoteIdea:input=>quoteIdea(world,input),submitIdea,decide,undo,advance:nextTurn,importSave,openChoices:()=>openSheet('choiceBox'),getPendingBuild:()=>pendingBuild?{kind:pendingBuild.kind,location:pendingBuild.location}:null};
 // The native Scratch file uses identical starting resources and native event-driven sprite code.
 render();refreshChoices();$('choiceTrigger').hidden=!pendingDecision;
 })();
