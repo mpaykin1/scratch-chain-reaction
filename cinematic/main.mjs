@@ -99,6 +99,13 @@ $('ideaForm').onsubmit=async e=>{
   e.preventDefault();
   if(aiPending)return;
   const t=$('ideaText').value.trim();if(!t)return;
+  // Instant deterministic path for ordinary constructions; richer descriptions
+  // and explicit provider comparisons still go through the AI interpreter.
+  const fast=quoteIdea(world,t);
+  const creative=/готич|средневек|драк|стрел|напад|фантаз|магич|волшеб|замок|космич|животн|вражд|атак/iu.test(t);
+  if($('aiProvider').value==='auto'&&fast.actions.length&&fast.allowed&&!creative){
+    submitIdea(t,{original:t,provider:'быстрый локальный движок'});return;
+  }
   const button=$('sendIdea'),status=$('aiProgress');
   aiPending=true;button.disabled=true;button.textContent='ИИ разбирает идею…';status.textContent='Проверяем сценарий';
   try{
