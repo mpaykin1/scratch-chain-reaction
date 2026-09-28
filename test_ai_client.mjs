@@ -42,3 +42,10 @@ test('Cinematic AI menu exposes Groq and correctly explains auto fallback',()=>{
   assert.match(html,/<option value="groq">Groq/);
   assert.match(html,/Cloudflare → Groq → Gemini/);
 });
+
+test('Dragon and attack events compile into executable event kinds',()=>{
+ const response={ok:true,provider:'cloudflare',proposal:{summary:'Дракон и бой',commands:[
+  {action:'event',kind:'dragon'},{action:'event',kind:'attack'}],unknowns:[]}};
+ const result=compileAiGameActions(response);
+ assert.equal(result.commandText,'');assert.deepEqual(result.eventKinds,['dragon','attack']);
+});
