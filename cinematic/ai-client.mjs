@@ -51,7 +51,7 @@ export async function predictBuildConsequences(kind, provider, worldContext, loc
   const chosen=allowed.includes(provider)?provider:'auto';
   const response=await fetchImpl(ENDPOINT,{
     method:'POST',headers:{'content-type':'application/json'},
-    signal:AbortSignal.timeout(15000),
+    signal:AbortSignal.timeout(20000),
     body:JSON.stringify({
       mode:'predict_build',
       text:'Предскажи последствия строительства: '+WORDS[kind],
