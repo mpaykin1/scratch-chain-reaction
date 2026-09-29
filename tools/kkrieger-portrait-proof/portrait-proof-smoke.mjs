@@ -63,7 +63,17 @@ try{
     throw new Error("canvas CSS does not fill visible viewport");
   }
 
-  const png=await page.locator("canvas").screenshot();
+  console.log("ENGINE_PORTRAIT_STATE",JSON.stringify({
+    inner:state.inner,
+    backing:state.backing,
+    master:m.master,
+    config:m.config,
+    aspect:m.aspect,
+    fullRT:state.proof.fullRT||null
+  }));
+  const box=await page.locator("canvas").boundingBox();
+  if(!box) throw new Error("canvas has no visible bounding box");
+  const png=await page.screenshot({clip:box});
   fs.writeFileSync(shot,png);
   const texture=texturedCoverage(png);
   if(texture.coverage < 0.85){
