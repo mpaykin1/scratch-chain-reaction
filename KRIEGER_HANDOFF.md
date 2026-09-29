@@ -23,6 +23,13 @@ The build is based on:
 
 Do not replace this with a JavaScript imitation or a new engine unless explicitly requested.
 
+Highest-priority Krieger Total Control program:
+- `KRIEGER_TOTAL_CONTROL.md`
+- `KRIEGER_LEVEL_AUTHORING_CONTRACT.md`
+- `KRIEGER_RENDERER_FORENSICS.md`
+
+These documents separate the current renderer-isolation Level Lab from the target native `GenScene -> Sector -> Portal -> Light -> Engine jobs` authoring path.
+
 Renderer forensics and permanent invariants learned from the Level Lab black-screen failure:
 `KRIEGER_RENDERER_FORENSICS.md`
 
