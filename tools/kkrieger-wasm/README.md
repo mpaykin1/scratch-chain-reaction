@@ -23,3 +23,20 @@ The browser smoke gate requires:
 - no external runtime sidecar tags
 
 Generated production file: `kkrieger/index.html`.
+
+
+## Physical iPhone status — OPEN user-reproduced bugs
+
+Do **not** treat the current automated mobile smoke PASS as proof that these are fixed.
+
+As of 2026-09-29 the user still reproduces on a physical iPhone:
+
+- USE does not reliably change the actual in-game weapon in portrait or landscape.
+- START GAME works intermittently in portrait and landscape.
+- Portrait mode still renders the real 3D scene as a horizontal band instead of true full-screen.
+
+The full canonical context and acceptance rules are in repository root:
+- `KRIEGER_HANDOFF.md`
+- `KRIEGER_KNOWN_ISSUES.md`
+
+The physical-device report takes precedence over DOM-label, synthetic-pointer, canvas-size, and headless-Chromium evidence.
