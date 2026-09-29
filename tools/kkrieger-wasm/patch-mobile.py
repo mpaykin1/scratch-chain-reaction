@@ -89,6 +89,11 @@ doc = doc.replace(
     "var request = el.requestFullscreen || el.webkitRequestFullscreen;\n"
     "    var p = request ? request.call(el, {navigationUI: 'hide'}) : null;"
 )
+doc = doc.replace(
+    "if(document.fullscreenElement) document.exitFullscreen(); else enterFullscreen();",
+    "var active = document.fullscreenElement || document.webkitFullscreenElement;\n"
+    "    if(active){ var exit = document.exitFullscreen || document.webkitExitFullscreen; if(exit) exit.call(document); } else enterFullscreen();"
+)
 
 style_anchor = "</style>"
 mobile_css = r'''
@@ -233,7 +238,9 @@ if script_anchor not in doc:
 doc = doc.replace(script_anchor, mobile_js + "\n" + script_anchor, 1)
 doc = doc.replace(
     "    Module.kkRes = pickedRes();",
-    "    if(matchMedia('(pointer:coarse)').matches || innerWidth <= 900) resSel.value='fit';\n"
+    "    var mobileStart = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;\n"
+    "    if(mobileStart) resSel.value='fit';\n"
+    "    if(mobileStart && !fsStart.checked && (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) enterFullscreen();\n"
     "    Module.kkRes = pickedRes();"
 )
 doc = doc.replace(
