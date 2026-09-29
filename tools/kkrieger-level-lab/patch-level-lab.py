@@ -380,6 +380,36 @@ static void kkLabInstallCollision(KKriegerGame *game)
     if marker not in s:
         raise SystemExit("player telemetry anchor missing")
     s=s.replace(marker,telemetry+marker,1)
+
+    # Keep the original beta document's intro/menu switch operators from
+    # pausing our independent gameplay simulation after startup.
+    old_tick='''  inOptions = Switches[KGS_GAME] == KGS_GAME_OPTIONS
+    || Switches[KGS_GAME] == KGS_GAME_INGAME && Switches[KGS_INGAME_MENU] == 1;
+'''
+    new_tick='''#if defined(__EMSCRIPTEN__)
+  if(kkJsFlag("__kkLevelLab"))
+    Switches[KGS_GAME] = KGS_GAME_RUN;
+#endif
+  inOptions = Switches[KGS_GAME] == KGS_GAME_OPTIONS
+    || Switches[KGS_GAME] == KGS_GAME_INGAME && Switches[KGS_INGAME_MENU] == 1;
+'''
+    s=one(s,old_tick,new_tick,"level lab keep simulation RUN")
+
+    # Instrument the real game input handler, not just the browser bridge.
+    old_key='''  LastKey = key&0x8001ffff;
+
+  switch(key&(0x8001ffff))
+'''
+    new_key='''  LastKey = key&0x8001ffff;
+#if defined(__EMSCRIPTEN__)
+  if(kkJsFlag("__kkLevelLab"))
+    fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"input_key\\\",\\\"key\\\":%u,\\\"break\\\":%d,\\\"accelForwBefore\\\":%.6f,\\\"accelSideBefore\\\":%.6f}\\n",
+            (unsigned)(key&0x1ffff),(key&sKEYQ_BREAK)?1:0,AccelForw,AccelSide);
+#endif
+
+  switch(key&(0x8001ffff))
+'''
+    s=one(s,old_key,new_key,"level lab input telemetry")
     return s
 
 def patch_wasm(s):
