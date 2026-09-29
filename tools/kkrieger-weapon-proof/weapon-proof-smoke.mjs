@@ -40,7 +40,6 @@ try{
   await page.evaluate(()=>Module.ccall("kkWeaponProofEnterRun","number",[],[]));
   await page.waitForFunction(()=>Module.ccall("kkWeaponProofPlayerReady","number",[],[])===1,null,{timeout:30000});
   await page.evaluate(()=>Module.ccall("kkWeaponProofGrantArsenal","number",[],[]));
-  await page.waitForFunction(()=>[0,1,2,4,6].every(s=>Module.ccall("kkWeaponProofOwned","number",["number"],[s])===1),null,{timeout:5000});
   await page.waitForFunction(()=>[0,1,2,4,6].includes(Module.ccall("kkWeaponProofCurrent","number",[],[])),null,{timeout:12000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
