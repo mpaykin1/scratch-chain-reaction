@@ -116,12 +116,52 @@ new_zoom = """      if(!(flags & 0x1000))
 if ov.count(old_zoom) != 1:
     raise SystemExit("portrait camera anchor missing")
 ov = ov.replace(old_zoom,new_zoom,1)
+old_screen_frac = """      sRect r;
+      r.x0 = view.Window.x0 + view.Window.XSize() * fx0;
+      r.y0 = view.Window.y0 + view.Window.YSize() * fy0;
+      r.x1 = view.Window.x0 + view.Window.XSize() * fx1;
+      r.y1 = view.Window.y0 + view.Window.YSize() * fy1;
+      if(r.x0<r.x1 && r.y0<r.y1)
+        view.Window = r;
+      sSystem->SetViewport(view);
+"""
+new_screen_frac = """      sRect r;
+#if defined(__EMSCRIPTEN__)
+      // The Breakpoint beta authored its final screen viewport as a 2:1 band.
+      // On portrait mobile screens that creates the large black areas seen by
+      // the user. Keep all off-screen/post-process viewport fractions intact,
+      // but let the final screen target cover the complete visible surface.
+      if(sSystem->ConfigY > sSystem->ConfigX && rt->Size >= GENOVER_RTSIZES)
+      {
+        r = view.Window;
+      }
+      else
+#endif
+      {
+        r.x0 = view.Window.x0 + view.Window.XSize() * fx0;
+        r.y0 = view.Window.y0 + view.Window.YSize() * fy0;
+        r.x1 = view.Window.x0 + view.Window.XSize() * fx1;
+        r.y1 = view.Window.y0 + view.Window.YSize() * fy1;
+      }
+      if(r.x0<r.x1 && r.y0<r.y1)
+        view.Window = r;
+      sSystem->SetViewport(view);
+"""
+if ov.count(old_screen_frac) != 1:
+    raise SystemExit("final screen viewport anchor missing")
+ov = ov.replace(old_screen_frac,new_screen_frac,1)
+
 overlay.write_text(ov, encoding="utf-8")
 
 doc = shell.read_text(encoding="utf-8")
 doc = doc.replace(
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
-    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover>\n'
+    '<meta name="apple-mobile-web-app-capable" content="yes">\n'
+    '<meta name="mobile-web-app-capable" content="yes">\n'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n'
+    '<meta name="apple-mobile-web-app-title" content=".kkrieger">\n'
+    '<meta name="theme-color" content="#000000">'
 )
 doc = doc.replace(
     "if(!resWanted) resWanted = '1024x768';",
@@ -158,6 +198,14 @@ mobile_css = r'''
   #mMenu{right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top))}
   #mWeapon{right:max(82px,calc(env(safe-area-inset-right) + 70px));top:max(14px,env(safe-area-inset-top))}
   #fs{top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));right:auto;z-index:9;min-width:48px;min-height:44px}
+  #startGame{min-width:190px;min-height:58px;padding:12px 22px;border:1px solid #777;background:#151515;color:#fff;
+             font:700 16px/1 monospace;letter-spacing:.08em;touch-action:manipulation}
+  #startGame:disabled{color:#888;border-color:#444}
+  #start.kk-starting{cursor:wait}
+  #start.kk-starting #startGame{display:none}
+  #start.kk-starting small{font-size:14px;color:#ddd}
+  body.kk-standalone #fs{display:none}
+  @media (display-mode:standalone){#fs{display:none}}
   @media (pointer:coarse),(max-width:900px){
     body.kk-running #mobile-ui{display:block}
     body.kk-running #fs{opacity:.72}
@@ -174,6 +222,15 @@ mobile_css = r'''
 if style_anchor not in doc:
     raise SystemExit("style anchor missing")
 doc = doc.replace(style_anchor, mobile_css + "\n" + style_anchor, 1)
+
+doc = doc.replace(
+    '<div id="start"><div>click to start<small>WebGL2 · procedural content is generated on load, please wait</small>',
+    '<div id="start"><div><button id="startGame" type="button" disabled>LOADING ENGINE…</button><small>WebGL2 · procedural content is generated on load, please wait</small>'
+)
+doc = doc.replace(
+    "onRuntimeInitialized: function(){ if(statusEl) statusEl.textContent = 'ready'; },",
+    "onRuntimeInitialized: function(){ window.__kkRuntimeReady = true; if(statusEl) statusEl.textContent = 'ready'; var b=document.getElementById('startGame'); if(b){b.disabled=false;b.textContent='START GAME';} },"
+)
 
 body_anchor = '<button id="fs" title="fullscreen (Esc or the button leaves it)">&#x26F6; fullscreen</button>'
 mobile_html = r'''
@@ -193,6 +250,8 @@ doc = doc.replace(body_anchor, body_anchor + "\n" + mobile_html, 1)
 script_anchor = "  document.getElementById('start').addEventListener('click', function(){"
 mobile_js = r'''
   var kkRunning = false;
+  var kkStandalone = !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  if(kkStandalone) document.body.classList.add('kk-standalone');
   window.__kkMobileEvents = 0;
   window.__kkMobileLookEvents = 0;
   window.__kkWeapon = 1;
@@ -277,7 +336,7 @@ mobile_js = r'''
   document.getElementById('mMenu').addEventListener('click',function(e){kkPulse(1002);e.preventDefault();});
   var weapon=1;
   function cycleWeapon(){
-    weapon=weapon%9+1;
+    weapon=weapon%3+1;
     window.__kkWeapon=weapon;
     document.getElementById('mWeapon').textContent='W'+weapon;
     kkPulse(48+weapon);
@@ -292,16 +351,62 @@ mobile_js = r'''
 if script_anchor not in doc:
     raise SystemExit("start script anchor missing")
 doc = doc.replace(script_anchor, mobile_js + "\n" + script_anchor, 1)
-doc = doc.replace(
-    "    Module.kkRes = pickedRes();",
-    "    var mobileStart = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;\n"
-    "    if(mobileStart) resSel.value='fit';\n"
-    "    if(mobileStart && !fsStart.checked && (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) enterFullscreen();\n"
-    "    Module.kkRes = pickedRes();"
-)
-doc = doc.replace(
-    "    this.remove();\n    statusEl = null;",
-    "    this.remove();\n    document.body.classList.add('kk-running');\n    kkRunning = true;\n    statusEl = null;"
-)
+old_start = """  document.getElementById('start').addEventListener('click', function(){
+    if(fsStart.checked) enterFullscreen();
+    Module.kkRes = pickedRes();
+    this.remove();
+    statusEl = null;
+    Module.canvas.focus();
+    // default: the Breakpoint 2004 release data, converted by wasm/tools/kxconv.py;
+    // ?data=3383 plays data/kkrieger3383.kx (a later development snapshot)
+    var data = new URLSearchParams(location.search).get('data');
+    Module.callMain(data === '3383' ? [] : ['/kkrieger_beta.kx']);
+  });
+"""
+new_start = """  var startEl = document.getElementById('start');
+  var kkStartBusy = false;
+  function kkBeginGame(){
+    if(kkStartBusy) return;
+    if(!window.__kkRuntimeReady){
+      if(statusEl) statusEl.textContent = 'loading engine…';
+      return;
+    }
+    kkStartBusy = true;
+    var mobileStart = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
+    if(mobileStart) resSel.value = 'fit';
+    if(fsStart.checked || (mobileStart && !kkStandalone)) enterFullscreen();
+    Module.kkRes = pickedRes();
+    startEl.classList.add('kk-starting');
+    startEl.querySelector('small').textContent = 'STARTING GAME · generating procedural world…';
+    if(statusEl) statusEl.textContent = 'please wait';
+    Module.canvas.focus();
+
+    // Give Safari one paint before the synchronous procedural generation begins.
+    requestAnimationFrame(function(){
+      setTimeout(function(){
+        try {
+          var data = new URLSearchParams(location.search).get('data');
+          Module.callMain(data === '3383' ? [] : ['/kkrieger_beta.kx']);
+          document.body.classList.add('kk-running');
+          kkRunning = true;
+          startEl.remove();
+          statusEl = null;
+          Module.canvas.focus();
+        } catch(e) {
+          kkStartBusy = false;
+          startEl.classList.remove('kk-starting');
+          if(statusEl) statusEl.textContent = 'start failed · tap START GAME again';
+          var b=document.getElementById('startGame'); if(b){b.disabled=false;b.textContent='START GAME';}
+          console.error(e);
+        }
+      },60);
+    });
+  }
+  startEl.addEventListener('click',kkBeginGame);
+  document.getElementById('startGame').addEventListener('click',kkBeginGame);
+"""
+if doc.count(old_start) != 1:
+    raise SystemExit("start handler anchor missing")
+doc = doc.replace(old_start,new_start,1)
 
 shell.write_text(doc, encoding="utf-8")
