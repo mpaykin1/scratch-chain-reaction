@@ -61,23 +61,29 @@ try{
   if(mw!==v.config[0] || mh!==v.config[1]) throw new Error("custom level lost full portrait master viewport");
   if(Math.abs(v.aspect-(v.config[0]/v.config[1]))>.002) throw new Error("custom level projection aspect mismatch");
 
-  // Real input boundary: hold W through the exported C++ bridge.
+  // Real input boundary. Do not use fixed sleeps: software WebGL can render
+  // only a few frames per second. Wait for the C++ simulation state itself.
+  const p0=before.player.pos.slice();
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,1]));
-  await page.waitForTimeout(900);
+  await page.waitForFunction((p)=>{
+    const q=window.__kkLab?.player?.pos;
+    return q && Math.hypot(q[0]-p[0],q[2]-p[2])>0.08;
+  },p0,{timeout:45000});
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
-  await page.waitForTimeout(600);
   const after=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   const dx=after.player.pos[0]-before.player.pos[0];
   const dz=after.player.pos[2]-before.player.pos[2];
   const moved=Math.hypot(dx,dz);
   if(moved < 0.08) throw new Error("real Krieger player did not move inside custom level: "+moved);
 
-  // Real look boundary.
+  // Real look boundary: wait until PlayerDir/PlayerLook changes in C++.
   const dir0=after.player.dir, look0=after.player.look;
   await page.evaluate(()=>Module.ccall("kkLabLook",null,["number","number"],[90,-45]));
-  await page.waitForTimeout(500);
+  await page.waitForFunction(({d,l})=>{
+    const p=window.__kkLab?.player;
+    return p && (Math.abs(p.dir-d)>=0.001 || Math.abs(p.look-l)>=0.001);
+  },{d:dir0,l:look0},{timeout:45000});
   const looked=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab.player)));
-  if(Math.abs(looked.dir-dir0)<0.001 && Math.abs(looked.look-look0)<0.001) throw new Error("camera look did not reach real game state");
 
   const canvas=await page.locator("canvas").evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});
   const cdp=await context.newCDPSession(page);
