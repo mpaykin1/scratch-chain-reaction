@@ -54,6 +54,18 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGameState()
 {
   return Game ? Game->Switches[KGS_GAME] : -1;
 }
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
+{
+  if(!Game) return -1;
+  static const sInt slots[5] = {0,1,2,4,6};
+  sInt pos = 0;
+  for(sInt i=0;i<5;i++)
+    if(slots[i] == Game->Player.CurrentWeapon) { pos=i; break; }
+  sInt next = slots[(pos+1)%5];
+  if(Game->Player.Weapon[next])
+    Game->Player.NextWeapon = next;
+  return Game->Player.NextWeapon;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
 {
   return weapon>=0 && weapon<8 ? kkWeaponProofShotCount[weapon] : -1;
@@ -286,11 +298,7 @@ def patch_shell(s):
     setTimeout(kkForceGameplay,220);
   }
   function kkNextWeapon(){
-    var cur=kkReadNumber("kkWeaponProofCurrent",[]);
-    var pos=kkWeaponSlots.indexOf(cur);
-    if(pos<0) pos=0;
-    pos=(pos+1)%kkWeaponSlots.length;
-    kkPulseKey(kkWeaponKeys[pos]);
+    kkReadNumber("kkWeaponProofUse",[]);
   }
   var useBtn=document.getElementById("weaponUse");
   var fireBtn=document.getElementById("weaponFire");
