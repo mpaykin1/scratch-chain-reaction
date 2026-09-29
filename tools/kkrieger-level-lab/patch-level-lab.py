@@ -369,8 +369,8 @@ static void kkLabInstallCollision(KKriegerGame *game)
   if(kkJsFlag("__kkLevelLab"))
   {
     static sInt labtick;
-    if(labtick++ < 4 || (labtick % 30)==0)
-      fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"player\\\",\\\"pos\\\":[%.5f,%.5f,%.5f],\\\"dir\\\":%.6f,\\\"look\\\":%.6f,\\\"cell\\\":%d}\\n",
+    if(labtick++ < 4 || (labtick % 20)==0 || AccelForw!=0 || AccelSide!=0)
+      fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"player\\\",\\\"pos\\\":[%.5f,%.5f,%.5f],\\\"dir\\\":%.6f,\\\"look\\\":%.6f,\\\"cell\\\":%d,\\\"accelForw\\\":%.6f,\\\"accelSide\\\":%.6f}\\n",
               PlayerPos.x,PlayerPos.y,PlayerPos.z,PlayerDir,PlayerLook,PlayerCell?1:0);
   }
 #endif
