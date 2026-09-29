@@ -180,6 +180,7 @@ mobile_js = r'''
   addEventListener('orientationchange',kkResizeRunning,{passive:true});
   if(window.visualViewport) visualViewport.addEventListener('resize',kkResizeRunning,{passive:true});
 
+  function kkCapture(el,id){ try { if(el.setPointerCapture) el.setPointerCapture(id); } catch(e) {} }
   var movePad = document.getElementById('movePad');
   var moveKnob = document.getElementById('moveKnob');
   var movePointer = null;
@@ -205,13 +206,13 @@ mobile_js = r'''
     moveKnob.style.transform='translate(0,0)';
     movePointer=null;
   }
-  movePad.addEventListener('pointerdown',function(e){movePointer=e.pointerId; movePad.setPointerCapture(e.pointerId); updateMove(e); e.preventDefault();});
+  movePad.addEventListener('pointerdown',function(e){movePointer=e.pointerId; kkCapture(movePad,e.pointerId); updateMove(e); e.preventDefault();});
   movePad.addEventListener('pointermove',function(e){if(e.pointerId===movePointer){updateMove(e);e.preventDefault();}});
   movePad.addEventListener('pointerup',stopMove);
   movePad.addEventListener('pointercancel',stopMove);
 
   var lookPad=document.getElementById('lookPad'), lookPointer=null, lx=0, ly=0;
-  lookPad.addEventListener('pointerdown',function(e){lookPointer=e.pointerId;lx=e.clientX;ly=e.clientY;lookPad.setPointerCapture(e.pointerId);e.preventDefault();});
+  lookPad.addEventListener('pointerdown',function(e){lookPointer=e.pointerId;lx=e.clientX;ly=e.clientY;kkCapture(lookPad,e.pointerId);e.preventDefault();});
   lookPad.addEventListener('pointermove',function(e){
     if(e.pointerId!==lookPointer) return;
     var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
@@ -222,7 +223,7 @@ mobile_js = r'''
 
   function holdButton(id,down,up){
     var el=document.getElementById(id);
-    el.addEventListener('pointerdown',function(e){el.setPointerCapture(e.pointerId);down();e.preventDefault();});
+    el.addEventListener('pointerdown',function(e){kkCapture(el,e.pointerId);down();e.preventDefault();});
     ['pointerup','pointercancel'].forEach(function(ev){el.addEventListener(ev,function(e){up();e.preventDefault();});});
   }
   holdButton('mFire',function(){kkCall('kkMobileFire',[1]);},function(){kkCall('kkMobileFire',[0]);});
