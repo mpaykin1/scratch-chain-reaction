@@ -60,7 +60,7 @@ try{
   await page.waitForTimeout(1200);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
-  if(before.built.visualCubes!==28) throw new Error("unexpected procedural cube count "+before.built.visualCubes);
+  if(before.built.visualCubes!==29) throw new Error("unexpected procedural cube count "+before.built.visualCubes);
   if(before.built.collisionCells < 5) throw new Error("custom collision graph was not built");
   if(before.render?.basePasses!==1 || before.render?.lightPasses!==1)
     throw new Error("2004 renderer contract missing base/depth + light passes: "+JSON.stringify(before.render));
@@ -139,8 +139,10 @@ try{
   const png=Buffer.from(cap.data,"base64");
   fs.writeFileSync(shot,png);
   const visual=sceneStats(png);
-  if(visual.nonBlackRatio < 0.04 || visual.maxLuma < 24 || visual.lumaStdDev < 3)
-    throw new Error("custom 3D framebuffer is black/flat: "+JSON.stringify(visual));
+  // User-visible scene gate: do not publish a test link unless real 3D
+  // content occupies more than 85% of the measured central framebuffer.
+  if(visual.nonBlackRatio <= 0.85 || visual.maxLuma < 24 || visual.lumaStdDev < 3)
+    throw new Error("custom 3D framebuffer visibility must exceed 85%: "+JSON.stringify(visual));
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
   if(realErrors.length) throw new Error(realErrors.join(" | "));

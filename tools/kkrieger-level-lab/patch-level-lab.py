@@ -308,6 +308,10 @@ static GenMesh *kkLabBuildMesh()
   kkLabAddCube(mesh,0.50f,4.5f,24.0f,KKLAB_X-12.0f,2.0f,0.0f);
   kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f,-8.25f);
   kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f, 8.25f);
+  // Close the first chamber overhead. Portrait cameras have a very tall
+  // vertical field of view; without a ceiling the upper ~15% of the frame was
+  // empty black even though the renderer was fixed.
+  kkLabAddCube(mesh,24.0f,0.50f,24.0f,KKLAB_X,5.75f,0.0f);
 
   // Signature central arch + four pillars.
   kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X-5.5f,2.5f,-4.5f);
@@ -350,7 +354,7 @@ static GenMesh *kkLabBuildMesh()
   KriegerLevelLabInstallRenderMesh(mesh,light);
 
   fprintf(stderr,"[level-lab] {\"stage\":\"built\",\"id\":\"bridge-chamber-v1\",\"visualCubes\":%d,\"collisionCells\":%d,\"origin\":[%.1f,0,0]}\n",
-          28,mesh->Coll.Count,KKLAB_X);
+          29,mesh->Coll.Count,KKLAB_X);
   return mesh;
 }
 
