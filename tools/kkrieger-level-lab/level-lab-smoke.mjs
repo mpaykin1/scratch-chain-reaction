@@ -48,10 +48,12 @@ try{
 
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="bridge-chamber-v1",null,{timeout:90000});
   await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
-  await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
+  await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT && window.__kkLab?.renderCamera,null,{timeout:30000});
   await page.waitForTimeout(1200);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
+  if(before.renderCamera.pos[0] < 980)
+    throw new Error("renderer is not using the Level Lab player camera: "+JSON.stringify(before.renderCamera));
   if(before.built.visualCubes!==28) throw new Error("unexpected procedural cube count "+before.built.visualCubes);
   if(before.built.collisionCells < 5) throw new Error("custom collision graph was not built");
   if(Math.abs(before.built.origin[0]-1000)>0.01) throw new Error("custom level is not isolated from original world coordinates");
