@@ -6,13 +6,17 @@ function contentCoverage(buffer) {
   const png=PNG.sync.read(buffer);
   const active=[];
   for(let y=0;y<png.height;y++){
-    let lit=0;
-    for(let x=0;x<png.width;x++){
+    let min=255,max=0,bright=0,samples=0;
+    for(let x=0;x<png.width;x+=2){
       const i=(y*png.width+x)*4;
       const v=(png.data[i]+png.data[i+1]+png.data[i+2])/3;
-      if(v>4) lit++;
+      min=Math.min(min,v); max=Math.max(max,v);
+      if(v>24) bright++;
+      samples++;
     }
-    if(lit/png.width>=0.01) active.push(y);
+    // A black/flat letterbox row may be slightly above zero, so absolute
+    // brightness alone is not enough. Real game rows have spatial texture.
+    if(max-min>=18 && bright/Math.max(samples,1)>=0.015) active.push(y);
   }
   if(!active.length) return 0;
   return (active[active.length-1]-active[0]+1)/png.height;
@@ -36,10 +40,18 @@ try {
     w:innerWidth,h:innerHeight,
     canvas:document.querySelector("canvas")?.getBoundingClientRect().toJSON(),
     start:document.getElementById("start")?.getBoundingClientRect().toJSON(),
+    pwa:document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.content||"",
+    statusBar:document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.content||"",
+    startDisabled:document.getElementById("startGame")?.disabled
   }));
   if(!pre.canvas || pre.canvas.width < pre.w*.98 || pre.canvas.height < pre.h*.98) throw new Error("portrait canvas does not fill viewport");
+  if(pre.pwa!=="yes" || pre.statusBar!=="black-translucent") throw new Error("iOS standalone metadata missing");
 
-  await page.locator("#start").click();
+  // The start button must ignore premature taps and only become actionable
+  // after Emscripten has initialized. One deliberate tap must then start.
+  await page.waitForFunction(()=>window.__kkRuntimeReady===true && !document.getElementById("startGame").disabled,null,{timeout:30000});
+  await page.locator("#startGame").click();
+  await page.waitForFunction(()=>document.getElementById("start")?.classList.contains("kk-starting") || document.body.classList.contains("kk-running"),null,{timeout:2000});
   await page.waitForFunction(()=>document.body.classList.contains("kk-running"),null,{timeout:30000});
   await page.waitForTimeout(5000);
 
@@ -71,10 +83,16 @@ try {
   await page.locator("#lookPad").dispatchEvent("pointermove",{pointerId:13,pointerType:"touch",clientX:92,clientY:280});
   await page.locator("#lookPad").dispatchEvent("pointerup",{pointerId:13,pointerType:"touch",clientX:92,clientY:280});
 
-  // USE is intentionally the mobile weapon/fire-mode cycle.
-  await page.locator("#mUse").dispatchEvent("pointerdown",{pointerId:14,pointerType:"touch"});
-  await page.locator("#mUse").dispatchEvent("pointerup",{pointerId:14,pointerType:"touch"});
-  await page.waitForTimeout(250);
+  // USE cycles only the three weapons owned at game start. Keys 4..8 are
+  // unavailable/ignored in the beta until pickups, which made the old W1..W9
+  // UI look intermittent even though taps were arriving.
+  const labels=[];
+  for(let n=0;n<4;n++){
+    await page.locator("#mUse").dispatchEvent("pointerdown",{pointerId:14+n,pointerType:"touch"});
+    await page.locator("#mUse").dispatchEvent("pointerup",{pointerId:14+n,pointerType:"touch"});
+    await page.waitForTimeout(120);
+    labels.push(await page.locator("#mWeapon").textContent());
+  }
 
   const portraitInput=await page.evaluate(()=>({
     events:window.__kkMobileEvents,
@@ -83,7 +101,8 @@ try {
     weaponLabel:document.getElementById("mWeapon").textContent
   }));
   if(portraitInput.lookEvents < 1) throw new Error("portrait swipe-look did not reach WASM bridge");
-  if(portraitInput.weapon !== 2 || portraitInput.weaponLabel !== "W2") throw new Error("USE did not cycle weapon");
+  if(labels.join(",")!=="W2,W3,W1,W2") throw new Error("USE weapon cycle is not deterministic: "+labels.join(","));
+  if(portraitInput.weapon !== 2 || portraitInput.weaponLabel !== "W2") throw new Error("USE final weapon mismatch");
   const afterInput=portraitInput.events;
   if(afterInput < 4) throw new Error("mobile controls did not reach wasm bridge");
   const fullscreenState=await page.evaluate(()=>({
@@ -93,7 +112,7 @@ try {
   if(fullscreenState.supported && !fullscreenState.active) throw new Error("mobile auto-fullscreen did not engage");
   const portraitCanvas=await page.locator("canvas").screenshot();
   const portraitCoverage=contentCoverage(portraitCanvas);
-  if(portraitCoverage < 0.85) throw new Error("portrait rendered game content below 85% height: "+portraitCoverage);
+  if(portraitCoverage < 0.82) throw new Error("portrait textured game content below 82% height (letterbox still present): "+portraitCoverage);
   fs.writeFileSync(process.env.KK_PORTRAIT_SHOT||"kkrieger-mobile-portrait.png",portraitCanvas);
 
   // Chromium cannot resize a fullscreen OS window. Exit only for the synthetic
