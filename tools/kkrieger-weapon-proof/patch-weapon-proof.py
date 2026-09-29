@@ -24,10 +24,37 @@ def one(text, old, new, label):
     return text.replace(old,new,1)
 
 def patch_start(s):
+    s=one(s,'#include "kdoc.hpp"','#include "kdoc.hpp"\n#include "kkriegergame.hpp"\n#include <stdint.h>',"weapon proof game include")
     anchor="void sSystem_::WaitForKey() {}"
     inject=r'''
 // Weapon Proof input bridge. These calls enter the same key/mouse buffers as
 // the original desktop game; the HTML buttons do not mutate weapon state.
+extern KKriegerGame *Game;
+extern sInt kkWeaponProofShotCount[8];
+
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofCurrent()
+{
+  return Game ? Game->Player.CurrentWeapon : -1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofNext()
+{
+  return Game ? Game->Player.NextWeapon : -1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
+{
+  return weapon>=0 && weapon<8 ? kkWeaponProofShotCount[weapon] : -1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotEffect(int weapon)
+{
+  if(!Game || weapon<0 || weapon>=8 || !Game->WeaponShot[weapon]) return 0;
+  return (int)(uintptr_t)Game->WeaponShot[weapon];
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOpticsEffect(int weapon)
+{
+  if(!Game || weapon<0 || weapon>=8 || !Game->WeaponOptics[weapon]) return 0;
+  return (int)(uintptr_t)Game->WeaponOptics[weapon];
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofKey(int code,int down)
 {
   if(!sSystem || code < 32 || code >= 127) return;
@@ -101,6 +128,7 @@ def patch_game(s):
     new_fire="""  info = &ShotInfoTable[weapon];
   if(info->Mode==0) return;
 #if defined(__EMSCRIPTEN__)
+  kkWeaponProofShotCount[weapon]++;
   fprintf(stderr,
     "[weapon-proof] {\\\"stage\\\":\\\"fire\\\",\\\"weapon\\\":%d,\\\"mode\\\":%d,\\\"speed\\\":%.4f,\\\"effect\\\":\\\"%p\\\",\\\"cool\\\":%.4f,\\\"flags\\\":%d}\\n",
     weapon,info->Mode,info->Speed,(void*)WeaponShot[weapon],WeaponCool[weapon],WeaponFlags[weapon]);
@@ -219,8 +247,22 @@ def patch_shell(s):
     kkCall("kkWeaponProofKey",[code,1]);
     setTimeout(function(){kkCall("kkWeaponProofKey",[code,0]);},70);
   }
+  function kkReadNumber(name,args){
+    try{return Module.ccall(name,"number",new Array((args||[]).length).fill("number"),args||[]);}catch(e){return -1;}
+  }
+  function kkSyncWeaponProof(){
+    if(!document.body.classList.contains("weapon-running")) return;
+    var cur=kkReadNumber("kkWeaponProofCurrent",[]);
+    if(kkWeaponSlots.indexOf(cur)>=0) window.__kkWeaponProof.current=cur;
+    kkWeaponSlots.forEach(function(slot){
+      var n=kkReadNumber("kkWeaponProofShotCountGet",[slot]);
+      if(n>0) window.__kkWeaponProof.fired[slot]=n;
+    });
+    kkWeaponRender();
+  }
+  setInterval(kkSyncWeaponProof,180);
   function kkNextWeapon(){
-    var cur=window.__kkWeaponProof.current;
+    var cur=kkReadNumber("kkWeaponProofCurrent",[]);
     var pos=kkWeaponSlots.indexOf(cur);
     if(pos<0) pos=0;
     pos=(pos+1)%kkWeaponSlots.length;
