@@ -69,14 +69,14 @@ try{
     const q=window.__kkLab?.player?.pos;
     return q && Math.hypot(q[0]-p[0],q[2]-p[2])>0.08;
   },p0,{timeout:45000});
-  await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
   const after=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   const dx=after.player.pos[0]-before.player.pos[0];
   const dz=after.player.pos[2]-before.player.pos[2];
   const moved=Math.hypot(dx,dz);
   if(moved < 0.08) throw new Error("real Krieger player did not move inside custom level: "+moved);
 
-  // Real look boundary: wait until PlayerDir/PlayerLook changes in C++.
+  // Keep W held while proving mouse-look, so movement telemetry is emitted on
+  // every real simulation tick even on very slow software WebGL runners.
   const dir0=after.player.dir, look0=after.player.look;
   await page.evaluate(()=>Module.ccall("kkLabLook",null,["number","number"],[90,-45]));
   await page.waitForFunction(({d,l})=>{
@@ -84,6 +84,7 @@ try{
     return p && (Math.abs(p.dir-d)>=0.001 || Math.abs(p.look-l)>=0.001);
   },{d:dir0,l:look0},{timeout:45000});
   const looked=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab.player)));
+  await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
 
   const canvas=await page.locator("canvas").evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});
   const cdp=await context.newCDPSession(page);
