@@ -83,7 +83,7 @@ try{
   ]);
   let pose1=pose0;
   for(let attempt=0;attempt<6;attempt++){
-    await page.evaluate(()=>Module.ccall("kkLabLook",null,["number","number"],[45,-24]));
+    await page.evaluate(()=>Module.ccall("kkLabDirectLook",null,["number","number"],[45,-24]));
     await page.waitForTimeout(900);
     pose1=await page.evaluate(()=>[
       Module.ccall("kkLabPose","number",["number"],[0]),
