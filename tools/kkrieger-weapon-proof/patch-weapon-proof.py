@@ -54,6 +54,21 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGameState()
 {
   return Game ? Game->Switches[KGS_GAME] : -1;
 }
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
+{
+  if(!Game) return 0;
+  static const sInt slots[5] = {0,1,2,4,6};
+  for(sInt i=0;i<5;i++) Game->Player.Weapon[slots[i]] = 1;
+  Game->Player.Ammo[0] = sMax(Game->Player.Ammo[0],400);
+  Game->Player.Ammo[1] = sMax(Game->Player.Ammo[1],160);
+  Game->Player.Ammo[2] = sMax(Game->Player.Ammo[2],80);
+  Game->Player.Ammo[3] = sMax(Game->Player.Ammo[3],400);
+  return 1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOwned(int weapon)
+{
+  return Game && weapon>=0 && weapon<8 ? Game->Player.Weapon[weapon] : 0;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
 {
   if(!Game) return -1;
@@ -62,9 +77,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
   for(sInt i=0;i<5;i++)
     if(slots[i] == Game->Player.CurrentWeapon) { pos=i; break; }
   sInt next = slots[(pos+1)%5];
-  if(Game->Player.Weapon[next])
-    Game->Player.NextWeapon = next;
-  return Game->Player.NextWeapon;
+  Game->Player.Weapon[next] = 1;
+  Game->Player.NextWeapon = next;
+  return next;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
 {
@@ -293,7 +308,10 @@ def patch_shell(s):
   setInterval(kkSyncWeaponProof,180);
   function kkForceGameplay(){
     if(!document.body.classList.contains("weapon-running")) return;
-    if(kkReadNumber("kkWeaponProofPlayerReady",[])===1) return;
+    if(kkReadNumber("kkWeaponProofPlayerReady",[])===1){
+      kkReadNumber("kkWeaponProofGrantArsenal",[]);
+      return;
+    }
     if(kkReadNumber("kkWeaponProofCurrent",[])>=0) kkReadNumber("kkWeaponProofEnterRun",[]);
     setTimeout(kkForceGameplay,220);
   }
