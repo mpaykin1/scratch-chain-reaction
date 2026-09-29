@@ -77,6 +77,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofFire(int down)
     return one(s,anchor,inject+"\n"+anchor,"weapon input bridge")
 
 def patch_game(s):
+    s=one(s,
+      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\n',
+      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\nsInt kkWeaponProofShotCount[8] = {0,0,0,0,0,0,0,0};\n',
+      "weapon proof FireShot counter")
     old="""  Ammo[0] = 100;
   Ammo[1] = 50;
   Ammo[2] = 0;
