@@ -321,7 +321,14 @@ static void kkLabInstallCollision(KKriegerGame *game)
   SetPainter(root,env);
 #if defined(__EMSCRIPTEN__)
   if(kkJsFlag("__kkLevelLab"))
+  {
+    // Level Lab owns its physics graph. Reconnecting the already-built
+    // original collision cells a second time is both unnecessary and unsafe.
+    // Keep the original document only as the renderer/postprocess host.
+    Flush();
+    Monsters.Count = 0;
     kkLabInstallCollision(this);
+  }
 #endif
   Restart();
 #if defined(__EMSCRIPTEN__)
