@@ -108,7 +108,30 @@ def patch_game(s):
 
   shot = Shots.Add();
 """
-    return one(s,old_fire,new_fire,"actual shot telemetry")
+    s=one(s,old_fire,new_fire,"actual shot telemetry")
+
+    old_state="""  if(PlayerCell==0 || Switches[KGS_GAME]!=KGS_GAME_RUN)
+    return;
+
+  TickCount += slices;
+"""
+    new_state="""  if(PlayerCell==0 || Switches[KGS_GAME]!=KGS_GAME_RUN)
+    return;
+
+#if defined(__EMSCRIPTEN__)
+  static sInt kkWeaponProofLastState = -1;
+  if(kkWeaponProofLastState != Player.CurrentWeapon)
+  {
+    kkWeaponProofLastState = Player.CurrentWeapon;
+    fprintf(stderr,
+      "[weapon-proof] {\\\"stage\\\":\\\"state\\\",\\\"current\\\":%d,\\\"next\\\":%d,\\\"optics\\\":\\\"%p\\\"}\\n",
+      Player.CurrentWeapon,Player.NextWeapon,(void*)WeaponOptics[Player.CurrentWeapon]);
+  }
+#endif
+
+  TickCount += slices;
+"""
+    return one(s,old_state,new_state,"current weapon state telemetry")
 
 def patch_shell(s):
     s=s.replace("<title>.kkrieger</title>","<title>.kkrieger · Weapon Proof</title>",1)
@@ -171,7 +194,7 @@ def patch_shell(s):
     try{
       var e=JSON.parse(t.slice(p+mark.length)),st=window.__kkWeaponProof;
       st.events.push(e);
-      if(e.stage==="switch"){st.current=e.current;st.switches++;st.lastOptics=e.optics;}
+      if(e.stage==="switch"||e.stage==="state"){st.current=e.current;if(e.stage==="switch")st.switches++;st.lastOptics=e.optics;}
       if(e.stage==="fire"){st.current=e.weapon;st.fired[e.weapon]=(st.fired[e.weapon]||0)+1;st.lastFire=e;}
       kkWeaponRender();
     }catch(err){console.error("weapon proof parse",err,t);}
