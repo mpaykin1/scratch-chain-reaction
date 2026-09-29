@@ -71,9 +71,9 @@ try{
     aspect:m.aspect,
     fullRT:state.proof.fullRT||null
   }));
-  const box=await page.locator("canvas").boundingBox();
-  if(!box) throw new Error("canvas has no visible bounding box");
-  const png=await page.screenshot({clip:box});
+  const box={x:state.canvasCss[0],y:state.canvasCss[1],width:state.canvasCss[2],height:state.canvasCss[3]};
+  if(box.width<=0 || box.height<=0) throw new Error("canvas has no visible DOM rectangle");
+  const png=await page.screenshot({clip:box,animations:"allow",timeout:30000});
   fs.writeFileSync(shot,png);
   const texture=texturedCoverage(png);
   if(texture.coverage < 0.85){
