@@ -205,11 +205,32 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     return one(s,old2,new2,"engine lab paint injection")
 
 def patch_game(s):
+    s=one(s,
+      '#include <stdio.h>\n',
+      '#include <stdio.h>\n#include <emscripten/emscripten.h>\n',
+      "game emscripten include")
     # Add helpers before ResetRoot.
     anchor='''void KKriegerGame::ResetRoot(KEnvironment *env,KOp *root,sBool firsttime)
 {
 '''
     helper=r'''#if defined(__EMSCRIPTEN__)
+extern KKriegerGame *Game;
+
+extern "C" EMSCRIPTEN_KEEPALIVE double kkLabPose(int which)
+{
+  if(!Game) return 0.0;
+  switch(which)
+  {
+  case 0: return Game->PlayerDir;
+  case 1: return Game->PlayerLook;
+  case 2: return Game->PlayerPos.x;
+  case 3: return Game->PlayerPos.y;
+  case 4: return Game->PlayerPos.z;
+  case 5: return Game->PlayerCell ? 1.0 : 0.0;
+  default: return 0.0;
+  }
+}
+
 static const sF32 KKLAB_X = 1000.0f;
 
 static void kkLabAddCube(GenMesh *&dst,sF32 sx,sF32 sy,sF32 sz,sF32 tx,sF32 ty,sF32 tz)
