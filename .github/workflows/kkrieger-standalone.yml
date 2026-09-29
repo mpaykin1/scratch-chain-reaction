@@ -1,0 +1,128 @@
+name: Kkrieger standalone single-file
+
+on:
+  push:
+    branches: ["ai/**", main]
+    paths:
+      - "tools/kkrieger-wasm/**"
+      - ".github/workflows/kkrieger-standalone.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/kkrieger-wasm/**"
+      - ".github/workflows/kkrieger-standalone.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kkrieger-standalone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout game repository
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned kkrieger-wasm source
+        uses: actions/checkout@v4
+        with:
+          repository: MasonDye/kkrieger-wasm
+          ref: 3bf0ff017372e640e966c2785a4d95a998cec242
+          path: .upstream/kkrieger-wasm
+
+      - name: Set up Emscripten 6.0.9
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.9
+          actions-cache-folder: emsdk-cache
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build one autonomous HTML
+        run: bash tools/kkrieger-wasm/build-singlefile.sh .upstream/kkrieger-wasm
+
+      - name: Verify no runtime sidecars
+        run: node tools/kkrieger-wasm/verify-singlefile.mjs work/kkrieger-singlefile/kkrieger_standalone.html
+
+      - name: Install browser smoke dependency
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Serve built HTML
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory work/kkrieger-singlefile >/tmp/kkrieger-http.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:8765/kkrieger_standalone.html >/dev/null && break
+            sleep 1
+          done
+
+      - name: Real browser smoke and >85% user visibility gate
+        env:
+          KK_URL: http://127.0.0.1:8765/kkrieger_standalone.html
+          KK_SCREENSHOT: work/kkrieger-singlefile/kkrieger-smoke.png
+        run: node tools/kkrieger-wasm/browser-smoke.mjs
+
+      - name: Upload verified standalone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-standalone-${{ github.sha }}
+          path: |
+            work/kkrieger-singlefile/kkrieger_standalone.html
+            work/kkrieger-singlefile/kkrieger-smoke.png
+          retention-days: 7
+
+      - name: Publish verified single file into GitHub Pages source
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p kkrieger
+          cp work/kkrieger-singlefile/kkrieger_standalone.html kkrieger/index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kkrieger/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "build(kkrieger): publish verified standalone HTML [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Verify permanent GitHub Pages URL serves exact bytes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          LIVE_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/
+        run: |
+          local_sha="$(sha256sum work/kkrieger-singlefile/kkrieger_standalone.html | awk '{print $1}')"
+          ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fLsS --max-time 30 "$LIVE_URL?build=$GITHUB_SHA" -o /tmp/kkrieger-live.html; then
+              live_sha="$(sha256sum /tmp/kkrieger-live.html | awk '{print $1}')"
+              if [ "$live_sha" = "$local_sha" ]; then
+                echo "LIVE_EXACT_BYTES_PASS sha=$GITHUB_SHA attempt=$attempt"
+                ok=1
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test "$ok" -eq 1
+
+      - name: Live browser smoke
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          KK_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/
+          KK_SCREENSHOT: work/kkrieger-singlefile/kkrieger-live.png
+        run: node tools/kkrieger-wasm/browser-smoke.mjs
+
+      - name: Upload live proof
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-live-proof-${{ github.sha }}
+          path: work/kkrieger-singlefile/kkrieger-live.png
+          if-no-files-found: ignore
