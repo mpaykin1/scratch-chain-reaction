@@ -36,7 +36,10 @@ try{
   await page.locator("#proofStart").click();
   await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:90000});
   await page.waitForFunction(()=>document.body.classList.contains("weapon-running"),null,{timeout:90000});
-  await page.waitForFunction(()=>typeof Module!=="undefined"&&Module.ccall&&[0,1,2,4,6].includes(Module.ccall("kkWeaponProofCurrent","number",[],[])),null,{timeout:12000});
+  await page.waitForFunction(()=>typeof Module!=="undefined"&&Module.ccall&&Module.ccall("kkWeaponProofCurrent","number",[],[])>=0,null,{timeout:12000});
+  await page.evaluate(()=>Module.ccall("kkWeaponProofEnterRun","number",[],[]));
+  await page.waitForFunction(()=>Module.ccall("kkWeaponProofPlayerReady","number",[],[])===1,null,{timeout:30000});
+  await page.waitForFunction(()=>[0,1,2,4,6].includes(Module.ccall("kkWeaponProofCurrent","number",[],[])),null,{timeout:12000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
   const m=portrait.proof.master,mw=m.master[2]-m.master[0],mh=m.master[3]-m.master[1];
