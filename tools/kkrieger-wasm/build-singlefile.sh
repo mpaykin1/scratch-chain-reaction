@@ -22,6 +22,8 @@ PATCHED="$ROOT/wasm/build.singlefile.generated.sh"
 rm -rf "$WORK_ROOT"
 mkdir -p "$WORK_ROOT"
 
+python3 "$PWD/tools/kkrieger-wasm/patch-mobile.py" "$ROOT"
+
 cp "$ROOT/wasm/build.sh" "$PATCHED"
 
 python3 - "$PATCHED" <<'PY'
