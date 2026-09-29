@@ -36,7 +36,7 @@ try{
   await page.locator("#proofStart").click();
   await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:90000});
   await page.waitForFunction(()=>document.body.classList.contains("weapon-running"),null,{timeout:90000});
-  await page.waitForFunction(()=>[0,1,2,4,6].includes(window.__kkWeaponProof?.current),null,{timeout:12000});
+  await page.waitForFunction(()=>typeof Module!=="undefined"&&Module.ccall&&[0,1,2,4,6].includes(Module.ccall("kkWeaponProofCurrent","number",[],[])),null,{timeout:12000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
   const m=portrait.proof.master,mw=m.master[2]-m.master[0],mh=m.master[3]-m.master[1];
@@ -45,34 +45,39 @@ try{
     throw new Error("master viewport not full portrait: "+JSON.stringify(m));
 
   async function fireAndProve(slot){
-    const before=await page.evaluate(s=>window.__kkWeaponProof.events.filter(e=>e.stage==="fire"&&e.weapon===s).length,slot);
+    const before=await page.evaluate(s=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s]),slot);
     await page.locator("#weaponFire").dispatchEvent("pointerdown",{pointerId:80+slot,pointerType:"touch"});
     await page.waitForTimeout(700);
     await page.locator("#weaponFire").dispatchEvent("pointerup",{pointerId:80+slot,pointerType:"touch"});
-    await page.waitForFunction(([s,n])=>window.__kkWeaponProof.events.filter(e=>e.stage==="fire"&&e.weapon===s).length>n,[slot,before],{timeout:7000});
+    await page.waitForFunction(([s,n])=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s])>n,[slot,before],{timeout:7000});
   }
 
-  const startSlot=await page.evaluate(()=>window.__kkWeaponProof.current);
+  const startSlot=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
   const startIndex=slots.indexOf(startSlot);
   const order=[...slots.slice(startIndex),...slots.slice(0,startIndex)];
   await fireAndProve(order[0]);
   for(const slot of order.slice(1)){
     await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:40+slot,pointerType:"touch"});
     await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:40+slot,pointerType:"touch"});
-    await page.waitForFunction(s=>window.__kkWeaponProof.current===s,slot,{timeout:7000});
+    await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,slot,{timeout:7000});
     await fireAndProve(slot);
   }
 
-  const state=await page.evaluate(()=>window.__kkWeaponProof);
-  for(const slot of slots) if(!state.fired[slot]) throw new Error("weapon did not fire: "+slot);
-  const fires=state.events.filter(e=>e.stage==="fire"&&slots.includes(e.weapon));
-  const latest=Object.fromEntries(slots.map(s=>[s,[...fires].reverse().find(e=>e.weapon===s)]));
+  const engineProof=await page.evaluate(slots=>Object.fromEntries(slots.map(slot=>[slot,{
+    shots:Module.ccall("kkWeaponProofShotCountGet","number",["number"],[slot]),
+    shotEffect:Module.ccall("kkWeaponProofShotEffect","number",["number"],[slot]),
+    opticsEffect:Module.ccall("kkWeaponProofOpticsEffect","number",["number"],[slot])
+  }])),slots);
   for(const slot of slots){
-    const e=latest[slot];
-    if(!e||!e.effect||e.effect==="0"||e.effect==="0x0") throw new Error("missing real WeaponShot effect for "+slot);
+    const e=engineProof[slot];
+    if(e.shots<1) throw new Error("real FireShot count missing for "+slot);
+    if(!e.shotEffect) throw new Error("real WeaponShot effect missing for "+slot);
+    if(!e.opticsEffect) throw new Error("real WeaponOptics model missing for "+slot);
   }
-  const effectCount=new Set(slots.map(s=>latest[s].effect)).size;
-  if(effectCount<5) throw new Error("player weapons do not resolve to five distinct WeaponShot effects: "+JSON.stringify(latest));
+  const effectCount=new Set(slots.map(s=>engineProof[s].shotEffect)).size;
+  const opticsCount=new Set(slots.map(s=>engineProof[s].opticsEffect)).size;
+  if(effectCount<5) throw new Error("expected five distinct real WeaponShot effects: "+JSON.stringify(engineProof));
+  if(opticsCount<5) throw new Error("expected five distinct real WeaponOptics models: "+JSON.stringify(engineProof));
 
   await page.waitForTimeout(1000);
   const png=await page.screenshot({fullPage:false});
@@ -85,7 +90,7 @@ try{
   console.log(JSON.stringify({
     pass:true,iphone11Viewport:portrait.inner,engine:m.config,master:m.master,
     texturedHeightCoverage:coverage,playerWeaponSlots:slots,
-    fired:Object.fromEntries(slots.map(s=>[s,latest[s]])),distinctWeaponShotEffects:effectCount
+    engineWeaponProof:engineProof,distinctWeaponShotEffects:effectCount,distinctWeaponOpticsModels:opticsCount
   },null,2));
   await context.close();
 }finally{await browser.close();}
