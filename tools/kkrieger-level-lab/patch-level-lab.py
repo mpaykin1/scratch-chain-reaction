@@ -126,15 +126,62 @@ def patch_engine(s):
     inject='''#include "materials/material11.hpp"
 
 static EngMesh *kkLevelLabMesh = 0;
+static GenMaterial *kkLevelLabMaterial = 0;
 static sVector kkLevelLabLightPos;
+
+static GenMaterial *kkLevelLabMakeMaterial()
+{
+  // The 2004 renderer draws light passes with ZFUNC=EQUAL and ZWRITE=off.
+  // Mesh_Cube's DefaultMat only has ENGU_LIGHT, so it can never seed depth:
+  // the result is a perfectly running game behind a black framebuffer.
+  // Mirror the real Krieger multi-pass material contract: base writes depth,
+  // then light adds the lit surface at the same depth.
+  GenMaterial *gm = new GenMaterial;
+
+  sMaterial11 *base = new sMaterial11;
+  base->ShaderLevel = sPS_11;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
+  base->Color[0] = 0x00324458;
+  base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
+  base->AlphaCombiner = sMCA_ZERO;
+  sVERIFY(base->Compile());
+  gm->AddPass(base,ENGU_BASE,MPP_STATIC,0);
+
+  sMaterial11 *light = new sMaterial11;
+  light->ShaderLevel = sPS_11;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|
+                     sMBF_BLENDADD|sMBF_DOUBLESIDED;
+  light->LightFlags = sMLF_BUMPX;
+  light->SpecPower = 16.0f;
+  light->Color[0] = 0x00d9e5ff;
+  light->Combiner[sMCS_LIGHT] = sMCOA_SET;
+  light->Combiner[sMCS_COLOR0] = sMCOA_MUL;
+  light->AlphaCombiner = sMCA_ZERO;
+  light->SpecialFlags |= sMSF_NOSPECULAR;
+  sVERIFY(light->Compile());
+  gm->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
+
+  return gm;
+}
 
 void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
 {
+  if(!kkLevelLabMaterial)
+    kkLevelLabMaterial = kkLevelLabMakeMaterial();
+
+  if(mesh->Mtrl.Count > 1)
+  {
+    mesh->Mtrl[1].Material->Release();
+    mesh->Mtrl[1].Material = kkLevelLabMaterial;
+    kkLevelLabMaterial->AddRef();
+  }
+
   sRelease(kkLevelLabMesh);
   kkLevelLabMesh = new EngMesh;
   kkLevelLabMesh->FromGenMesh(mesh);
   kkLevelLabLightPos = lightPos;
-  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d}\\n",
+  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d,\\\"material\\\":\\\"base+light\\\"}\\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
 }
 #endif
@@ -149,6 +196,7 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
 {
 #if defined(__EMSCRIPTEN__)
   sRelease(kkLevelLabMesh);
+  sRelease(kkLevelLabMaterial);
 #endif
   Matrices.Exit();
 '''
