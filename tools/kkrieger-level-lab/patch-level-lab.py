@@ -231,6 +231,18 @@ extern "C" EMSCRIPTEN_KEEPALIVE double kkLabPose(int which)
   }
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void kkLabDirectLook(int dx,int dy)
+{
+  if(!Game) return;
+  sF32 f = Game->MouseTurnSpeed*(Game->Switches[KGS_MOUSESPEED]+2)/7;
+  Game->PlayerDir += dx*f;
+  f = Game->MouseLookSpeed*(Game->Switches[KGS_MOUSESPEED]+2)/7*
+      (-Game->Switches[KGS_MOUSEINVERT]*2+1);
+  Game->PlayerLook += dy*f;
+  Game->PlayerLook = sRange<sF32>(Game->PlayerLook,sPIF/2,-sPIF/2);
+  Game->PlayerMat.InitEuler(Game->FlyMode?Game->PlayerLook:0,Game->PlayerDir,0);
+}
+
 static const sF32 KKLAB_X = 1000.0f;
 
 static void kkLabAddCube(GenMesh *&dst,sF32 sx,sF32 sy,sF32 sz,sF32 tx,sF32 ty,sF32 tz)
@@ -598,7 +610,7 @@ def patch_shell(s):
 
   var lx=0,ly=0,lp=-1;
   look.addEventListener('pointerdown',function(e){ if(e.target!==look) return; lp=e.pointerId;lx=e.clientX;ly=e.clientY;look.setPointerCapture(lp); });
-  look.addEventListener('pointermove',function(e){ if(e.pointerId!==lp) return; var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;labCall('kkLabLook',[Math.round(dx*2.1),Math.round(dy*2.1)],['number','number']);});
+  look.addEventListener('pointermove',function(e){ if(e.pointerId!==lp) return; var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;labCall('kkLabDirectLook',[Math.round(dx*2.1),Math.round(dy*2.1)],['number','number']);});
   look.addEventListener('pointerup',function(e){if(e.pointerId===lp)lp=-1;});
   look.addEventListener('pointercancel',function(e){if(e.pointerId===lp)lp=-1;});
 
