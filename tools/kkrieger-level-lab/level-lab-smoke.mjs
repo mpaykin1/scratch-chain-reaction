@@ -103,7 +103,13 @@ try{
   }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
 
-  const canvas=await page.locator("canvas").evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});
+  const canvas=await page.evaluate(()=>{
+    const el=document.querySelector("canvas");
+    if(!el) return null;
+    const r=el.getBoundingClientRect();
+    return {x:r.x,y:r.y,width:r.width,height:r.height};
+  });
+  if(!canvas || canvas.width<=0 || canvas.height<=0) throw new Error("canvas DOM rectangle unavailable");
   const cdp=await context.newCDPSession(page);
   const cap=await cdp.send("Page.captureScreenshot",{
     format:"png",fromSurface:true,captureBeyondViewport:false,
