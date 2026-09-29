@@ -1,0 +1,129 @@
+name: Kkrieger Level Lab
+
+on:
+  push:
+    branches: ["feat/kkrieger-level-lab-20260929", main]
+    paths:
+      - "tools/kkrieger-level-lab/**"
+      - ".github/workflows/kkrieger-level-lab.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/kkrieger-level-lab/**"
+      - ".github/workflows/kkrieger-level-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kkrieger-level-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  level-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout exact Krieger source
+        uses: actions/checkout@v4
+        with:
+          repository: MasonDye/kkrieger-wasm
+          ref: 3bf0ff017372e640e966c2785a4d95a998cec242
+          path: .upstream/kkrieger-wasm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.9
+          actions-cache-folder: emsdk-cache
+
+      - name: Build original procedural level
+        run: bash tools/kkrieger-level-lab/build.sh .upstream/kkrieger-wasm
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.63.0 pngjs@7.0.0
+          node node_modules/playwright/cli.js install chromium
+
+      - name: Serve Level Lab
+        run: |
+          python3 -m http.server 8767 --bind 127.0.0.1 --directory work/kkrieger-level-lab >/tmp/kkrieger-level-lab-http.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:8767/index.html >/dev/null && break
+            sleep 1
+          done
+
+      - name: Prove geometry collision movement look and portrait
+        env:
+          KK_URL: http://127.0.0.1:8767/index.html
+          KK_SCREENSHOT: work/kkrieger-level-lab/level-lab.png
+        run: node tools/kkrieger-level-lab/level-lab-smoke.mjs
+
+      - name: Upload Level Lab evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-level-lab-${{ github.sha }}
+          path: |
+            work/kkrieger-level-lab/index.html
+            work/kkrieger-level-lab/level-lab.png
+          retention-days: 14
+
+      - name: Publish separate permanent Level Lab
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p kkrieger-level-lab
+          cp work/kkrieger-level-lab/index.html kkrieger-level-lab/index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kkrieger-level-lab/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "build(kkrieger): publish Level Lab [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Wait for exact public bytes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          LIVE_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-level-lab/
+        run: |
+          local_sha="$(sha256sum work/kkrieger-level-lab/index.html | awk '{print $1}')"
+          ok=0
+          for attempt in $(seq 1 30); do
+            if curl -fLsS --max-time 30 "$LIVE_URL?build=$GITHUB_SHA" -o /tmp/live-level-lab.html; then
+              live_sha="$(sha256sum /tmp/live-level-lab.html | awk '{print $1}')"
+              if [ "$live_sha" = "$local_sha" ]; then
+                echo "LEVEL_LAB_LIVE_EXACT_BYTES_PASS attempt=$attempt"
+                ok=1
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test "$ok" -eq 1
+
+      - name: Re-prove custom level on permanent public URL
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          KK_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-level-lab/
+          KK_SCREENSHOT: work/kkrieger-level-lab/live-level-lab.png
+        run: node tools/kkrieger-level-lab/level-lab-smoke.mjs
+
+      - name: Upload live Level Lab proof
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-live-level-lab-${{ github.sha }}
+          path: work/kkrieger-level-lab/live-level-lab.png
+          if-no-files-found: ignore
+          retention-days: 14
