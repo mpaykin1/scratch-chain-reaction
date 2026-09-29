@@ -381,7 +381,7 @@ static void kkLabInstallCollision(KKriegerGame *game)
   game->CellList.Exit();
 
   game->PlayerStartPos.Init(KKLAB_X-5.0f,1.0f,8.0f,1.0f);
-  fprintf(stderr,"[level-lab] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,8.0],\\\"startDir\\\":2.582993,\\\"startLook\\\":-0.08}\n",
+  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"collision_ready\\\",\\\"adds\\\":%d,\\\"subs\\\":%d,\\\"zones\\\":%d,\\\"start\\\":[%.1f,1.0,8.0],\\\"startDir\\\":2.582993,\\\"startLook\\\":-0.08}\\n",
           game->CellAdd.Count,game->CellSub.Count,game->CellZone.Count,KKLAB_X-5.0f);
 }
 #endif
