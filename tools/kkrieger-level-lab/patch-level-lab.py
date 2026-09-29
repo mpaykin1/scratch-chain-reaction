@@ -107,6 +107,25 @@ def patch_overlay(s):
   }
 """
     s=one(s,old,new,"level lab full-size RT")
+
+    # The converted 2004 beta normally replaces GameCam with the camera
+    # authored inside its viewport scene (flag 0x80). Level Lab lives at
+    # X~=1000 while that authored camera remains around the original map.
+    # Keep the real player's GameCam for this independent level.
+    cam_old="""        if(flags & 0x80)
+        {
+          kkSceneCamEntry *sc = kkFindSceneCam(parent,sFALSE);
+          if(sc) env.CameraSpace = sc->Cam;
+        }
+"""
+    cam_new="""        if((flags & 0x80) && !kkJsFlag("__kkLevelLab"))
+        {
+          kkSceneCamEntry *sc = kkFindSceneCam(parent,sFALSE);
+          if(sc) env.CameraSpace = sc->Cam;
+        }
+"""
+    s=one(s,cam_old,cam_new,"level lab must use player GameCam")
+
     if 'extern "C" int kkJsFlag' not in s:
         marker='#include <stdio.h>\n'
         s=one(s,marker,marker+'extern "C" int kkJsFlag(const char *name);\n',"genoverlay kkJsFlag declaration")
@@ -245,6 +264,11 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     labLight.Id = 7002;
     AddLightJob(labLight);
     AddAmbientLight(0x202028);
+
+    static sInt kkLabCamLog;
+    if(kkLabCamLog++ < 6 || (kkLabCamLog % 30)==0)
+      fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_camera\\\",\\\"pos\\\":[%.5f,%.5f,%.5f]}\\n",
+              Env.CameraSpace.l.x,Env.CameraSpace.l.y,Env.CameraSpace.l.z);
   }
 #endif
 
@@ -569,7 +593,7 @@ def patch_shell(s):
     printErr: function(t){
 '''
     new='''  window.__kkLevelLab = 1;
-  window.__kkLab = {events:[],built:null,collision:null,player:null,viewport:null,fullRT:null};
+  window.__kkLab = {events:[],built:null,collision:null,player:null,viewport:null,fullRT:null,renderCamera:null};
   function kkLabLine(t){
     if(typeof t!=='string') return;
     var p=t.indexOf('[level-lab] ');
@@ -582,6 +606,7 @@ def patch_shell(s):
       if(e.stage==='player') window.__kkLab.player=e;
       if(e.stage==='viewport') window.__kkLab.viewport=e;
       if(e.stage==='full_rt') window.__kkLab.fullRT=e;
+      if(e.stage==='render_camera') window.__kkLab.renderCamera=e;
       var b=document.getElementById('labBadge');
       if(b){
         var p0=window.__kkLab.player;
