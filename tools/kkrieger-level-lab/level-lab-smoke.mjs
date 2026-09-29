@@ -5,22 +5,31 @@ import { PNG } from "pngjs";
 const url=process.env.KK_URL || "http://127.0.0.1:8767/index.html";
 const shot=process.env.KK_SCREENSHOT || "level-lab.png";
 
-function texturedCoverage(buffer){
+function sceneStats(buffer){
   const png=PNG.sync.read(buffer);
-  const active=[];
-  for(let y=0;y<png.height;y++){
-    let min=255,max=0,bright=0,n=0;
-    for(let x=0;x<png.width;x+=2){
+  const x0=Math.floor(png.width*0.08), x1=Math.ceil(png.width*0.92);
+  const y0=Math.floor(png.height*0.08), y1=Math.ceil(png.height*0.92);
+  let n=0,nonBlack=0,bright=0,sum=0,sum2=0,min=255,max=0;
+  for(let y=y0;y<y1;y++){
+    for(let x=x0;x<x1;x+=2){
       const i=(y*png.width+x)*4;
       const v=(png.data[i]+png.data[i+1]+png.data[i+2])/3;
       min=Math.min(min,v); max=Math.max(max,v);
-      if(v>18) bright++;
-      n++;
+      if(v>12) nonBlack++;
+      if(v>28) bright++;
+      sum+=v; sum2+=v*v; n++;
     }
-    if((max-min)>=14 && bright/Math.max(1,n)>=0.01) active.push(y);
   }
-  if(!active.length) return 0;
-  return (active.at(-1)-active[0]+1)/png.height;
+  const mean=sum/Math.max(1,n);
+  const variance=Math.max(0,sum2/Math.max(1,n)-mean*mean);
+  return {
+    width:png.width,height:png.height,
+    nonBlackRatio:nonBlack/Math.max(1,n),
+    brightRatio:bright/Math.max(1,n),
+    meanLuma:mean,
+    lumaStdDev:Math.sqrt(variance),
+    minLuma:min,maxLuma:max
+  };
 }
 
 const browser=await chromium.launch({
@@ -46,12 +55,15 @@ try{
 
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="bridge-chamber-v1",null,{timeout:90000});
   await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
+  await page.waitForFunction(()=>window.__kkLab?.render?.basePasses===1 && window.__kkLab?.render?.lightPasses===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
   await page.waitForTimeout(1200);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   if(before.built.visualCubes!==28) throw new Error("unexpected procedural cube count "+before.built.visualCubes);
   if(before.built.collisionCells < 5) throw new Error("custom collision graph was not built");
+  if(before.render?.basePasses!==1 || before.render?.lightPasses!==1)
+    throw new Error("2004 renderer contract missing base/depth + light passes: "+JSON.stringify(before.render));
   if(Math.abs(before.built.origin[0]-1000)>0.01) throw new Error("custom level is not isolated from original world coordinates");
   if(before.player.pos[0] < 980) throw new Error("player did not spawn in custom level");
 
@@ -103,6 +115,15 @@ try{
   }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
 
+  // Visual proof must measure the 3D framebuffer, not HTML controls. The old
+  // oracle accidentally counted the cyan badge + joystick/buttons as scene
+  // pixels, so an entirely black WebGL canvas could pass with ~96% "coverage".
+  await page.evaluate(()=>{
+    for(const el of document.querySelectorAll("#labBadge,#labTouch,#fs,#status,#start"))
+      el.style.visibility="hidden";
+  });
+  await page.waitForTimeout(250);
+
   const canvas=await page.evaluate(()=>{
     const el=document.querySelector("canvas");
     if(!el) return null;
@@ -117,8 +138,9 @@ try{
   });
   const png=Buffer.from(cap.data,"base64");
   fs.writeFileSync(shot,png);
-  const coverage=texturedCoverage(png);
-  if(coverage < 0.72) throw new Error("custom 3D level visual coverage too small: "+coverage);
+  const visual=sceneStats(png);
+  if(visual.nonBlackRatio < 0.04 || visual.maxLuma < 24 || visual.lumaStdDev < 3)
+    throw new Error("custom 3D framebuffer is black/flat: "+JSON.stringify(visual));
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
   if(realErrors.length) throw new Error(realErrors.join(" | "));
@@ -132,7 +154,8 @@ try{
     playerAfter:after.player,
     moved,
     playerLooked:looked,
-    texturedHeightCoverage:coverage,
+    renderer:before.render,
+    framebuffer:visual,
     errors:realErrors
   },null,2));
   await context.close();

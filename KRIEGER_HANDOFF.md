@@ -23,6 +23,9 @@ The build is based on:
 
 Do not replace this with a JavaScript imitation or a new engine unless explicitly requested.
 
+Renderer forensics and permanent invariants learned from the Level Lab black-screen failure:
+`KRIEGER_RENDERER_FORENSICS.md`
+
 ## Mobile status — physical-device truth
 
 The user's physical iPhone result overrides synthetic Chromium evidence.

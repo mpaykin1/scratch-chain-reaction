@@ -130,11 +130,45 @@ static sVector kkLevelLabLightPos;
 
 void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
 {
+  // The Breakpoint-2004 renderer's ENGU_LIGHT pass uses ZFUNC=EQUAL and does
+  // not write depth. A mesh with only GenOverlayManager->DefaultMat therefore
+  // stays black: there is no earlier base/depth pass to populate Z. Give the
+  // lab geometry the same base->light contract as a real Krieger material.
+  GenMaterial *labMat = new GenMaterial;
+
+  sMaterial11 *base = new sMaterial11;
+  base->ShaderLevel = sPS_11;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL;
+  base->Color[0] = 0x0026303a;
+  base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->AlphaCombiner = sMCA_ZERO;
+  sBool baseOk = base->Compile();
+  sVERIFY(baseOk);
+  labMat->AddPass(base,ENGU_BASE,MPP_STATIC,0);
+
+  sMaterial11 *light = new sMaterial11;
+  light->ShaderLevel = sPS_11;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD;
+  light->LightFlags = sMLF_BUMPX;
+  light->SpecPower = 16.0f;
+  light->Color[0] = 0x00d8e4f2;
+  light->Combiner[sMCS_LIGHT] = sMCOA_SET;
+  light->Combiner[sMCS_COLOR0] = sMCOA_MUL;
+  light->AlphaCombiner = sMCA_ZERO;
+  light->SpecialFlags |= sMSF_NOSPECULAR;
+  sBool lightOk = light->Compile();
+  sVERIFY(lightOk);
+  labMat->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
+
+  sVERIFY(mesh->Mtrl.Count > 1);
+  sRelease(mesh->Mtrl[1].Material);
+  mesh->Mtrl[1].Material = labMat;
+
   sRelease(kkLevelLabMesh);
   kkLevelLabMesh = new EngMesh;
   kkLevelLabMesh->FromGenMesh(mesh);
   kkLevelLabLightPos = lightPos;
-  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d}\\n",
+  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d,\\\"basePasses\\\":1,\\\"lightPasses\\\":1}\\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
 }
 #endif
@@ -521,7 +555,7 @@ def patch_shell(s):
     printErr: function(t){
 '''
     new='''  window.__kkLevelLab = 1;
-  window.__kkLab = {events:[],built:null,collision:null,player:null,viewport:null,fullRT:null};
+  window.__kkLab = {events:[],built:null,collision:null,render:null,player:null,viewport:null,fullRT:null};
   function kkLabLine(t){
     if(typeof t!=='string') return;
     var p=t.indexOf('[level-lab] ');
@@ -531,6 +565,7 @@ def patch_shell(s):
       window.__kkLab.events.push(e);
       if(e.stage==='built') window.__kkLab.built=e;
       if(e.stage==='collision_ready') window.__kkLab.collision=e;
+      if(e.stage==='render_mesh') window.__kkLab.render=e;
       if(e.stage==='player') window.__kkLab.player=e;
       if(e.stage==='viewport') window.__kkLab.viewport=e;
       if(e.stage==='full_rt') window.__kkLab.fullRT=e;
