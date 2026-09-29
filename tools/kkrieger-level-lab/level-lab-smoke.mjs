@@ -32,8 +32,13 @@ try{
   const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844}});
   const page=await context.newPage();
   const errors=[];
-  page.on("pageerror",e=>errors.push(String(e)));
-  page.on("console",m=>{ if(m.type()==="error") errors.push(m.text()); });
+  page.on("pageerror",e=>{ errors.push(String(e)); console.log("PAGEERROR",String(e)); });
+  page.on("console",m=>{
+    const t=m.text();
+    if(/\[level-lab\]|abort|assert|exception|error/i.test(t)) console.log("BROWSER",m.type(),t);
+    if(m.type()==="error") errors.push(t);
+  });
+  page.on("crash",()=>console.log("BROWSER_CRASH"));
 
   await page.goto(url,{waitUntil:"domcontentloaded",timeout:120000});
   await page.waitForFunction(()=>window.__kkRuntimeReady===true,null,{timeout:60000});
