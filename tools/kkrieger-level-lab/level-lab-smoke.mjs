@@ -5,22 +5,24 @@ import { PNG } from "pngjs";
 const url=process.env.KK_URL || "http://127.0.0.1:8767/index.html";
 const shot=process.env.KK_SCREENSHOT || "level-lab.png";
 
-function texturedCoverage(buffer){
+function canvasVisualMetrics(buffer){
   const png=PNG.sync.read(buffer);
   const active=[];
+  let visible=0,total=0;
   for(let y=0;y<png.height;y++){
-    let min=255,max=0,bright=0,n=0;
+    let bright=0,n=0;
     for(let x=0;x<png.width;x+=2){
       const i=(y*png.width+x)*4;
-      const v=(png.data[i]+png.data[i+1]+png.data[i+2])/3;
-      min=Math.min(min,v); max=Math.max(max,v);
-      if(v>18) bright++;
-      n++;
+      const peak=Math.max(png.data[i],png.data[i+1],png.data[i+2]);
+      if(peak>14){ bright++; visible++; }
+      n++; total++;
     }
-    if((max-min)>=14 && bright/Math.max(1,n)>=0.01) active.push(y);
+    if(bright/Math.max(1,n)>=0.08) active.push(y);
   }
-  if(!active.length) return 0;
-  return (active.at(-1)-active[0]+1)/png.height;
+  return {
+    heightCoverage: active.length ? (active.at(-1)-active[0]+1)/png.height : 0,
+    visiblePixelRatio: visible/Math.max(1,total)
+  };
 }
 
 const browser=await chromium.launch({
@@ -110,6 +112,21 @@ try{
     return {x:r.x,y:r.y,width:r.width,height:r.height};
   });
   if(!canvas || canvas.width<=0 || canvas.height<=0) throw new Error("canvas DOM rectangle unavailable");
+  // The old proof accidentally counted the DOM badge at the top and touch
+  // controls at the bottom. That made an entirely black WebGL canvas report
+  // ~95.7% "coverage". Hide every DOM sibling of the canvas path before the
+  // screenshot so this gate measures only pixels produced by Krieger.
+  await page.evaluate(()=>{
+    const canvas=document.querySelector("canvas");
+    const keep=new Set();
+    for(let n=canvas;n;n=n.parentElement) keep.add(n);
+    for(const n of document.querySelectorAll("body *")){
+      if(n===canvas || keep.has(n) || n.contains(canvas)) continue;
+      n.style.visibility="hidden";
+    }
+  });
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+
   const cdp=await context.newCDPSession(page);
   const cap=await cdp.send("Page.captureScreenshot",{
     format:"png",fromSurface:true,captureBeyondViewport:false,
@@ -117,8 +134,11 @@ try{
   });
   const png=Buffer.from(cap.data,"base64");
   fs.writeFileSync(shot,png);
-  const coverage=texturedCoverage(png);
-  if(coverage < 0.72) throw new Error("custom 3D level visual coverage too small: "+coverage);
+  const visual=canvasVisualMetrics(png);
+  if(visual.heightCoverage < 0.85)
+    throw new Error("real canvas visual height coverage below 85%: "+JSON.stringify(visual));
+  if(visual.visiblePixelRatio < 0.20)
+    throw new Error("real canvas is still effectively black: "+JSON.stringify(visual));
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
   if(realErrors.length) throw new Error(realErrors.join(" | "));
@@ -132,7 +152,8 @@ try{
     playerAfter:after.player,
     moved,
     playerLooked:looked,
-    texturedHeightCoverage:coverage,
+    canvasVisualHeightCoverage:visual.heightCoverage,
+    canvasVisiblePixelRatio:visual.visiblePixelRatio,
     errors:realErrors
   },null,2));
   await context.close();
