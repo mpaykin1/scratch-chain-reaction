@@ -75,15 +75,32 @@ try{
   const moved=Math.hypot(dx,dz);
   if(moved < 0.08) throw new Error("real Krieger player did not move inside custom level: "+moved);
 
-  // Keep W held while proving mouse-look, so movement telemetry is emitted on
-  // every real simulation tick even on very slow software WebGL runners.
-  const dir0=after.player.dir, look0=after.player.look;
-  await page.evaluate(()=>Module.ccall("kkLabLook",null,["number","number"],[90,-45]));
-  await page.waitForFunction(({d,l})=>{
-    const p=window.__kkLab?.player;
-    return p && (Math.abs(p.dir-d)>=0.001 || Math.abs(p.look-l)>=0.001);
-  },{d:dir0,l:look0},{timeout:45000});
-  const looked=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab.player)));
+  // Read the real KKriegerGame pose directly instead of waiting for a sampled
+  // log line. Re-send look deltas if a software-rendered frame is very slow.
+  const pose0=await page.evaluate(()=>[
+    Module.ccall("kkLabPose","number",["number"],[0]),
+    Module.ccall("kkLabPose","number",["number"],[1])
+  ]);
+  let pose1=pose0;
+  for(let attempt=0;attempt<6;attempt++){
+    await page.evaluate(()=>Module.ccall("kkLabLook",null,["number","number"],[45,-24]));
+    await page.waitForTimeout(900);
+    pose1=await page.evaluate(()=>[
+      Module.ccall("kkLabPose","number",["number"],[0]),
+      Module.ccall("kkLabPose","number",["number"],[1])
+    ]);
+    if(Math.abs(pose1[0]-pose0[0])>=0.001 || Math.abs(pose1[1]-pose0[1])>=0.001) break;
+  }
+  if(Math.abs(pose1[0]-pose0[0])<0.001 && Math.abs(pose1[1]-pose0[1])<0.001)
+    throw new Error("camera look did not change live KKriegerGame pose: "+JSON.stringify({pose0,pose1}));
+  const looked=await page.evaluate(()=>({
+    dir:Module.ccall("kkLabPose","number",["number"],[0]),
+    look:Module.ccall("kkLabPose","number",["number"],[1]),
+    x:Module.ccall("kkLabPose","number",["number"],[2]),
+    y:Module.ccall("kkLabPose","number",["number"],[3]),
+    z:Module.ccall("kkLabPose","number",["number"],[4]),
+    cell:Module.ccall("kkLabPose","number",["number"],[5])
+  }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
 
   const canvas=await page.locator("canvas").evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}});
