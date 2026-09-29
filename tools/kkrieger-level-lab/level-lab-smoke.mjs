@@ -31,8 +31,8 @@ const browser=await chromium.launch({
 });
 
 try{
-  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844}});
-  const page=await context.newPage();
+  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844},deviceScaleFactor:1});
+  // CI uses the exact iPhone portrait CSS viewport at DPR 1 so SwiftShader can\n  // prove real 3D pixels instead of stalling on a 2048x4096 software RT.\n  const page=await context.newPage();
   const errors=[];
   page.on("pageerror",e=>{ errors.push(String(e)); console.log("PAGEERROR",String(e)); });
   page.on("console",m=>{
