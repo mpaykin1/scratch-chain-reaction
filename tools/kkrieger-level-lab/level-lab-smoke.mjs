@@ -202,18 +202,28 @@ try{
   // that a meaningful part of the framebuffer changes. A flat clear colour,
   // DOM overlay, or a single wall cannot satisfy this by itself.
   console.log("FRAMEBUFFER_BASE "+JSON.stringify(visual));
-  const dirBefore=await page.evaluate(()=>Module.ccall("kkLabPose","number",["number"],[0]));
-  await page.evaluate(()=>Module.ccall("kkLabDirectLook",null,["number","number"],[120,0]));
-  // Module.ccall is safe in page.evaluate but repeatedly invoking it from
-  // Playwright's waitForFunction can starve this very slow SwiftShader build.
-  // Wait on the sampled C++ telemetry instead; it is emitted from real ticks.
-  await page.waitForFunction((d)=>Math.abs((window.__kkLab?.player?.dir ?? d)-d)>0.20,dirBefore,{timeout:45000});
-  await page.waitForTimeout(500);
-  const pngTurned=await capture();
-  const turned=sceneStats(pngTurned);
-  const viewDeltaRatio=frameDelta(png,pngTurned);
+  const turn=await page.evaluate(()=>{
+    const before=Module.ccall("kkLabPose","number",["number"],[0]);
+    Module.ccall("kkLabDirectLook",null,["number","number"],[120,0]);
+    const after=Module.ccall("kkLabPose","number",["number"],[0]);
+    return {before,after};
+  });
+  if(Math.abs(turn.after-turn.before)<0.20)
+    throw new Error("direct C++ camera rotation did not change PlayerDir: "+JSON.stringify(turn));
+
+  // Do not depend on sampled log timing: under SwiftShader a real Krieger
+  // frame can take tens of seconds. Poll the actual compositor until the
+  // changed C++ pose becomes visible, and judge only the framebuffer delta.
+  let pngTurned=null, turned=null, viewDeltaRatio=0;
+  for(let attempt=0;attempt<12;attempt++){
+    await page.waitForTimeout(3000);
+    pngTurned=await capture();
+    turned=sceneStats(pngTurned);
+    viewDeltaRatio=frameDelta(png,pngTurned);
+    if(viewDeltaRatio>=0.035) break;
+  }
   if(viewDeltaRatio < 0.035)
-    throw new Error("3D view did not respond visually to camera rotation: "+JSON.stringify({viewDeltaRatio,visual,turned}));
+    throw new Error("3D view did not respond visually to camera rotation: "+JSON.stringify({turn,viewDeltaRatio,visual,turned}));
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
   if(realErrors.length) throw new Error(realErrors.join(" | "));
