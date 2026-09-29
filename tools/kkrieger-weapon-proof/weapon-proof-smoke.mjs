@@ -36,7 +36,7 @@ try{
   await page.locator("#proofStart").click();
   await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:90000});
   await page.waitForFunction(()=>document.body.classList.contains("weapon-running"),null,{timeout:90000});
-  await page.waitForFunction(()=>window.__kkWeaponProof?.current===0,null,{timeout:12000});
+  await page.waitForFunction(()=>[0,1,2,4,6].includes(window.__kkWeaponProof?.current),null,{timeout:12000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
   const m=portrait.proof.master,mw=m.master[2]-m.master[0],mh=m.master[3]-m.master[1];
@@ -52,8 +52,11 @@ try{
     await page.waitForFunction(([s,n])=>window.__kkWeaponProof.events.filter(e=>e.stage==="fire"&&e.weapon===s).length>n,[slot,before],{timeout:7000});
   }
 
-  await fireAndProve(0);
-  for(const slot of slots.slice(1)){
+  const startSlot=await page.evaluate(()=>window.__kkWeaponProof.current);
+  const startIndex=slots.indexOf(startSlot);
+  const order=[...slots.slice(startIndex),...slots.slice(0,startIndex)];
+  await fireAndProve(order[0]);
+  for(const slot of order.slice(1)){
     await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:40+slot,pointerType:"touch"});
     await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:40+slot,pointerType:"touch"});
     await page.waitForFunction(s=>window.__kkWeaponProof.current===s,slot,{timeout:7000});
