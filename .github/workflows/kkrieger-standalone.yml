@@ -76,6 +76,13 @@ jobs:
           KK_SCREENSHOT: work/kkrieger-singlefile/kkrieger-smoke.png
         run: node tools/kkrieger-wasm/browser-smoke.mjs
 
+      - name: Mobile portrait and landscape smoke
+        env:
+          KK_URL: http://127.0.0.1:8765/kkrieger_standalone.html
+          KK_PORTRAIT_SHOT: work/kkrieger-singlefile/kkrieger-mobile-portrait.png
+          KK_LANDSCAPE_SHOT: work/kkrieger-singlefile/kkrieger-mobile-landscape.png
+        run: node tools/kkrieger-wasm/mobile-smoke.mjs
+
       - name: Upload verified standalone artifact
         uses: actions/upload-artifact@v4
         with:
@@ -84,6 +91,8 @@ jobs:
             work/kkrieger-singlefile/kkrieger_standalone.html
             work/kkrieger-singlefile/kkrieger-smoke.png
             work/kkrieger-singlefile/kkrieger-file-smoke.png
+            work/kkrieger-singlefile/kkrieger-mobile-portrait.png
+            work/kkrieger-singlefile/kkrieger-mobile-landscape.png
           retention-days: 7
 
       - name: Publish verified single file into GitHub Pages source
@@ -126,10 +135,21 @@ jobs:
           KK_SCREENSHOT: work/kkrieger-singlefile/kkrieger-live.png
         run: node tools/kkrieger-wasm/browser-smoke.mjs
 
+      - name: Live mobile portrait and landscape smoke
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          KK_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/
+          KK_PORTRAIT_SHOT: work/kkrieger-singlefile/kkrieger-live-mobile-portrait.png
+          KK_LANDSCAPE_SHOT: work/kkrieger-singlefile/kkrieger-live-mobile-landscape.png
+        run: node tools/kkrieger-wasm/mobile-smoke.mjs
+
       - name: Upload live proof
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: kkrieger-live-proof-${{ github.sha }}
-          path: work/kkrieger-singlefile/kkrieger-live.png
+          path: |
+            work/kkrieger-singlefile/kkrieger-live.png
+            work/kkrieger-singlefile/kkrieger-live-mobile-portrait.png
+            work/kkrieger-singlefile/kkrieger-live-mobile-landscape.png
           if-no-files-found: ignore
