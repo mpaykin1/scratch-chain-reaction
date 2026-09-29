@@ -72,6 +72,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOwned(int weapon)
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
 {
   if(!Game) return -1;
+  kkWeaponProofGrantArsenal();
   static const sInt slots[5] = {0,1,2,4,6};
   sInt pos = 0;
   for(sInt i=0;i<5;i++)
