@@ -48,8 +48,20 @@ try {
 
   const afterInput=await page.evaluate(()=>window.__kkMobileEvents);
   if(afterInput < 4) throw new Error("mobile controls did not reach wasm bridge");
+  const fullscreenState=await page.evaluate(()=>({
+    supported:!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen),
+    active:!!(document.fullscreenElement||document.webkitFullscreenElement)
+  }));
+  if(fullscreenState.supported && !fullscreenState.active) throw new Error("mobile auto-fullscreen did not engage");
   await page.screenshot({path:process.env.KK_PORTRAIT_SHOT||"kkrieger-mobile-portrait.png"});
 
+  // Chromium cannot resize a fullscreen OS window. Exit only for the synthetic
+  // orientation switch; real phones rotate the fullscreen surface themselves.
+  await page.evaluate(async()=>{
+    const active=document.fullscreenElement||document.webkitFullscreenElement;
+    const exit=document.exitFullscreen||document.webkitExitFullscreen;
+    if(active&&exit){ const p=exit.call(document); if(p&&p.then) await p; }
+  });
   await page.setViewportSize({width:844,height:390});
   await page.waitForTimeout(700);
   const land=await page.evaluate(()=>({
@@ -65,7 +77,7 @@ try {
   await page.screenshot({path:process.env.KK_LANDSCAPE_SHOT||"kkrieger-mobile-landscape.png"});
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
-  console.log(JSON.stringify({portrait:{width:390,height:844},landscape:land,mobileEvents:afterInput,errors:realErrors},null,2));
+  console.log(JSON.stringify({portrait:{width:390,height:844},fullscreen:fullscreenState,landscape:land,mobileEvents:afterInput,errors:realErrors},null,2));
   if(realErrors.length) throw new Error(realErrors.join(" | "));
   await context.close();
 } finally {
