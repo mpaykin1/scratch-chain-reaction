@@ -9,27 +9,70 @@ function sceneStats(buffer){
   const png=PNG.sync.read(buffer);
   const x0=Math.floor(png.width*0.08), x1=Math.ceil(png.width*0.92);
   const y0=Math.floor(png.height*0.08), y1=Math.ceil(png.height*0.92);
-  let n=0,nonBlack=0,bright=0,sum=0,sum2=0,min=255,max=0;
-  for(let y=y0;y<y1;y++){
+  const bins=new Map();
+  let n=0,nonBlack=0,bright=0,sum=0,sum2=0,min=255,max=0,edges=0,edgeTests=0;
+  for(let y=y0;y<y1;y+=2){
     for(let x=x0;x<x1;x+=2){
       const i=(y*png.width+x)*4;
-      const v=(png.data[i]+png.data[i+1]+png.data[i+2])/3;
+      const r=png.data[i], g=png.data[i+1], b=png.data[i+2];
+      const v=(r+g+b)/3;
       min=Math.min(min,v); max=Math.max(max,v);
       if(v>12) nonBlack++;
       if(v>28) bright++;
       sum+=v; sum2+=v*v; n++;
+
+      // 4-bit/channel bins are intentionally coarse: antialiasing cannot turn
+      // a single flat wall into dozens of supposedly distinct scene colours.
+      const key=((r>>4)<<8)|((g>>4)<<4)|(b>>4);
+      bins.set(key,(bins.get(key)||0)+1);
+
+      if(x+2<x1){
+        const j=(y*png.width+x+2)*4;
+        const v2=(png.data[j]+png.data[j+1]+png.data[j+2])/3;
+        if(Math.abs(v-v2)>8) edges++;
+        edgeTests++;
+      }
+      if(y+2<y1){
+        const j=((y+2)*png.width+x)*4;
+        const v2=(png.data[j]+png.data[j+1]+png.data[j+2])/3;
+        if(Math.abs(v-v2)>8) edges++;
+        edgeTests++;
+      }
     }
   }
   const mean=sum/Math.max(1,n);
   const variance=Math.max(0,sum2/Math.max(1,n)-mean*mean);
+  const dominant=Math.max(0,...bins.values());
   return {
     width:png.width,height:png.height,
     nonBlackRatio:nonBlack/Math.max(1,n),
     brightRatio:bright/Math.max(1,n),
     meanLuma:mean,
     lumaStdDev:Math.sqrt(variance),
-    minLuma:min,maxLuma:max
+    minLuma:min,maxLuma:max,
+    quantizedColorBins:bins.size,
+    dominantBinRatio:dominant/Math.max(1,n),
+    edgeDensity:edges/Math.max(1,edgeTests)
   };
+}
+
+function frameDelta(aBuffer,bBuffer){
+  const a=PNG.sync.read(aBuffer), b=PNG.sync.read(bBuffer);
+  if(a.width!==b.width || a.height!==b.height) return 1;
+  const x0=Math.floor(a.width*0.08), x1=Math.ceil(a.width*0.92);
+  const y0=Math.floor(a.height*0.08), y1=Math.ceil(a.height*0.92);
+  let changed=0,n=0;
+  for(let y=y0;y<y1;y+=2){
+    for(let x=x0;x<x1;x+=2){
+      const i=(y*a.width+x)*4;
+      const d=(Math.abs(a.data[i]-b.data[i])+
+               Math.abs(a.data[i+1]-b.data[i+1])+
+               Math.abs(a.data[i+2]-b.data[i+2]))/3;
+      if(d>14) changed++;
+      n++;
+    }
+  }
+  return changed/Math.max(1,n);
 }
 
 const browser=await chromium.launch({
@@ -55,15 +98,15 @@ try{
 
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="bridge-chamber-v1",null,{timeout:90000});
   await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
-  await page.waitForFunction(()=>window.__kkLab?.render?.basePasses===1 && window.__kkLab?.render?.lightPasses===1,null,{timeout:30000});
+  await page.waitForFunction(()=>window.__kkLab?.render?.basePasses===1 && window.__kkLab?.render?.lightPasses===1 && window.__kkLab?.render?.vertexColor===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
   await page.waitForTimeout(1200);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   if(before.built.visualCubes!==29) throw new Error("unexpected procedural cube count "+before.built.visualCubes);
   if(before.built.collisionCells < 5) throw new Error("custom collision graph was not built");
-  if(before.render?.basePasses!==1 || before.render?.lightPasses!==1)
-    throw new Error("2004 renderer contract missing base/depth + light passes: "+JSON.stringify(before.render));
+  if(before.render?.basePasses!==1 || before.render?.lightPasses!==1 || before.render?.vertexColor!==1)
+    throw new Error("2004 renderer contract missing base/depth/light/vertex-colour path: "+JSON.stringify(before.render));
   if(Math.abs(before.built.origin[0]-1000)>0.01) throw new Error("custom level is not isolated from original world coordinates");
   if(before.player.pos[0] < 980) throw new Error("player did not spawn in custom level");
 
@@ -132,17 +175,45 @@ try{
   });
   if(!canvas || canvas.width<=0 || canvas.height<=0) throw new Error("canvas DOM rectangle unavailable");
   const cdp=await context.newCDPSession(page);
-  const cap=await cdp.send("Page.captureScreenshot",{
-    format:"png",fromSurface:true,captureBeyondViewport:false,
-    clip:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,scale:1}
-  });
-  const png=Buffer.from(cap.data,"base64");
+  async function capture(){
+    const cap=await cdp.send("Page.captureScreenshot",{
+      format:"png",fromSurface:true,captureBeyondViewport:false,
+      clip:{x:canvas.x,y:canvas.y,width:canvas.width,height:canvas.height,scale:1}
+    });
+    return Buffer.from(cap.data,"base64");
+  }
+
+  const png=await capture();
   fs.writeFileSync(shot,png);
   const visual=sceneStats(png);
-  // User-visible scene gate: do not publish a test link unless real 3D
-  // content occupies more than 85% of the measured central framebuffer.
-  if(visual.nonBlackRatio <= 0.85 || visual.maxLuma < 24 || visual.lumaStdDev < 3)
-    throw new Error("custom 3D framebuffer visibility must exceed 85%: "+JSON.stringify(visual));
+
+  // A large flat coloured rectangle is NOT a visible level. The user's
+  // physical iPhone exposed this exact false positive after the old >85%
+  // non-black gate. Require occupancy plus actual scene structure.
+  if(visual.nonBlackRatio <= 0.85 ||
+     visual.maxLuma < 24 ||
+     visual.lumaStdDev < 5 ||
+     visual.dominantBinRatio >= 0.78 ||
+     visual.quantizedColorBins < 6 ||
+     visual.edgeDensity < 0.004)
+    throw new Error("custom 3D framebuffer is occupied but not structurally visible: "+JSON.stringify(visual));
+
+  // Parallax/view-response proof: rotate the real C++ player camera and demand
+  // that a meaningful part of the framebuffer changes. A flat clear colour,
+  // DOM overlay, or a single wall cannot satisfy this by itself.
+  console.log("FRAMEBUFFER_BASE "+JSON.stringify(visual));
+  const dirBefore=await page.evaluate(()=>Module.ccall("kkLabPose","number",["number"],[0]));
+  await page.evaluate(()=>Module.ccall("kkLabDirectLook",null,["number","number"],[120,0]));
+  // Module.ccall is safe in page.evaluate but repeatedly invoking it from
+  // Playwright's waitForFunction can starve this very slow SwiftShader build.
+  // Wait on the sampled C++ telemetry instead; it is emitted from real ticks.
+  await page.waitForFunction((d)=>Math.abs((window.__kkLab?.player?.dir ?? d)-d)>0.20,dirBefore,{timeout:45000});
+  await page.waitForTimeout(500);
+  const pngTurned=await capture();
+  const turned=sceneStats(pngTurned);
+  const viewDeltaRatio=frameDelta(png,pngTurned);
+  if(viewDeltaRatio < 0.035)
+    throw new Error("3D view did not respond visually to camera rotation: "+JSON.stringify({viewDeltaRatio,visual,turned}));
 
   const realErrors=errors.filter(x=>!/pointer lock|AudioContext|favicon/i.test(x));
   if(realErrors.length) throw new Error(realErrors.join(" | "));
@@ -158,6 +229,8 @@ try{
     playerLooked:looked,
     renderer:before.render,
     framebuffer:visual,
+    framebufferTurned:turned,
+    viewDeltaRatio,
     errors:realErrors
   },null,2));
   await context.close();

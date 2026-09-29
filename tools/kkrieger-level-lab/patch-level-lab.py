@@ -139,8 +139,9 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
   base->BaseFlags = sMBF_ZON|sMBF_NONORMAL;
-  base->Color[0] = 0x0026303a;
+  base->Color[0] = 0x00080808;
   base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
   base->AlphaCombiner = sMCA_ZERO;
   sBool baseOk = base->Compile();
   sVERIFY(baseOk);
@@ -168,7 +169,7 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
   kkLevelLabMesh = new EngMesh;
   kkLevelLabMesh->FromGenMesh(mesh);
   kkLevelLabLightPos = lightPos;
-  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d,\\\"basePasses\\\":1,\\\"lightPasses\\\":1}\\n",
+  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d,\\\"basePasses\\\":1,\\\"lightPasses\\\":1,\\\"vertexColor\\\":1}\\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
 }
 #endif
@@ -279,13 +280,21 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkLabDirectLook(int dx,int dy)
 
 static const sF32 KKLAB_X = 1000.0f;
 
-static void kkLabAddCube(GenMesh *&dst,sF32 sx,sF32 sy,sF32 sz,sF32 tx,sF32 ty,sF32 tz)
+static void kkLabAddCube(GenMesh *&dst,sF32 sx,sF32 sy,sF32 sz,sF32 tx,sF32 ty,sF32 tz,sU32 color=0xff52616a)
 {
   sFSRT srt;
   srt.s.Init(sx,sy,sz);
   srt.r.Init(0,0,0);
   srt.t.Init(tx,ty,tz);
   GenMesh *cube = Mesh_Cube(1,1,1,0,srt);
+
+  // sGMF_DEFAULT contains COLOR0. Feed semantic room colours through the real
+  // GenMesh vertex stream and the native-style base material combiner.
+  sInt colorSlot = cube->VertMap(sGMI_COLOR0);
+  if(colorSlot >= 0)
+    for(sInt i=0;i<cube->Vert.Count;i++)
+      cube->VertBuf[i*cube->VertSize()+colorSlot].InitColor(color);
+
   if(!dst)
     dst = cube;
   else
@@ -302,44 +311,44 @@ static GenMesh *kkLabBuildMesh()
     return mesh;
 
   // Room A: asymmetric walls with a deliberate eastern portal.
-  kkLabAddCube(mesh,24.0f,0.50f,24.0f,KKLAB_X,-0.25f,0.0f);
-  kkLabAddCube(mesh,24.0f,4.5f,0.50f,KKLAB_X,2.0f,-12.0f);
-  kkLabAddCube(mesh,24.0f,4.5f,0.50f,KKLAB_X,2.0f, 12.0f);
-  kkLabAddCube(mesh,0.50f,4.5f,24.0f,KKLAB_X-12.0f,2.0f,0.0f);
-  kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f,-8.25f);
-  kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f, 8.25f);
+  kkLabAddCube(mesh,24.0f,0.50f,24.0f,KKLAB_X,-0.25f,0.0f,0xff34464f);
+  kkLabAddCube(mesh,24.0f,4.5f,0.50f,KKLAB_X,2.0f,-12.0f,0xff5a4a3d);
+  kkLabAddCube(mesh,24.0f,4.5f,0.50f,KKLAB_X,2.0f, 12.0f,0xff5a4a3d);
+  kkLabAddCube(mesh,0.50f,4.5f,24.0f,KKLAB_X-12.0f,2.0f,0.0f,0xff665244);
+  kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f,-8.25f,0xff665244);
+  kkLabAddCube(mesh,0.50f,4.5f,7.5f,KKLAB_X+12.0f,2.0f, 8.25f,0xff665244);
   // Close the first chamber overhead. Portrait cameras have a very tall
   // vertical field of view; without a ceiling the upper ~15% of the frame was
   // empty black even though the renderer was fixed.
-  kkLabAddCube(mesh,24.0f,0.50f,24.0f,KKLAB_X,5.75f,0.0f);
+  kkLabAddCube(mesh,24.0f,0.50f,24.0f,KKLAB_X,4.50f,0.0f,0xff2d3946);
 
   // Signature central arch + four pillars.
-  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X-5.5f,2.5f,-4.5f);
-  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X-5.5f,2.5f, 4.5f);
-  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X+5.5f,2.5f,-4.5f);
-  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X+5.5f,2.5f, 4.5f);
-  kkLabAddCube(mesh,8.0f,1.0f,1.2f,KKLAB_X,5.0f,-4.5f);
-  kkLabAddCube(mesh,8.0f,1.0f,1.2f,KKLAB_X,5.0f, 4.5f);
-  kkLabAddCube(mesh,5.0f,0.7f,5.0f,KKLAB_X,0.35f,0.0f);
-  kkLabAddCube(mesh,1.5f,4.0f,1.5f,KKLAB_X,2.0f,0.0f);
+  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X-5.5f,2.5f,-4.5f,0xff796449);
+  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X-5.5f,2.5f, 4.5f,0xff796449);
+  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X+5.5f,2.5f,-4.5f,0xff796449);
+  kkLabAddCube(mesh,1.2f,5.0f,1.2f,KKLAB_X+5.5f,2.5f, 4.5f,0xff796449);
+  kkLabAddCube(mesh,8.0f,1.0f,1.2f,KKLAB_X,5.0f,-4.5f,0xff8a704e);
+  kkLabAddCube(mesh,8.0f,1.0f,1.2f,KKLAB_X,5.0f, 4.5f,0xff8a704e);
+  kkLabAddCube(mesh,5.0f,0.7f,5.0f,KKLAB_X,0.35f,0.0f,0xff3f6570);
+  kkLabAddCube(mesh,1.5f,4.0f,1.5f,KKLAB_X,2.0f,0.0f,0xff3f6570);
 
   // Corridor.
-  kkLabAddCube(mesh,16.0f,0.50f,8.0f,KKLAB_X+20.0f,-0.25f,0.0f);
-  kkLabAddCube(mesh,16.0f,4.0f,0.45f,KKLAB_X+20.0f,2.0f,-4.0f);
-  kkLabAddCube(mesh,16.0f,4.0f,0.45f,KKLAB_X+20.0f,2.0f, 4.0f);
-  kkLabAddCube(mesh,0.8f,1.0f,8.0f,KKLAB_X+16.0f,4.0f,0.0f);
-  kkLabAddCube(mesh,0.8f,1.0f,8.0f,KKLAB_X+24.0f,4.0f,0.0f);
+  kkLabAddCube(mesh,16.0f,0.50f,8.0f,KKLAB_X+20.0f,-0.25f,0.0f,0xff3d4d3a);
+  kkLabAddCube(mesh,16.0f,4.0f,0.45f,KKLAB_X+20.0f,2.0f,-4.0f,0xff4b5b43);
+  kkLabAddCube(mesh,16.0f,4.0f,0.45f,KKLAB_X+20.0f,2.0f, 4.0f,0xff4b5b43);
+  kkLabAddCube(mesh,0.8f,1.0f,8.0f,KKLAB_X+16.0f,4.0f,0.0f,0xff68704d);
+  kkLabAddCube(mesh,0.8f,1.0f,8.0f,KKLAB_X+24.0f,4.0f,0.0f,0xff68704d);
 
   // Room B: taller chamber and a three-tower signature.
-  kkLabAddCube(mesh,18.0f,0.50f,20.0f,KKLAB_X+33.0f,-0.25f,0.0f);
-  kkLabAddCube(mesh,18.0f,5.5f,0.50f,KKLAB_X+33.0f,2.5f,-10.0f);
-  kkLabAddCube(mesh,18.0f,5.5f,0.50f,KKLAB_X+33.0f,2.5f, 10.0f);
-  kkLabAddCube(mesh,0.50f,5.5f,20.0f,KKLAB_X+42.0f,2.5f,0.0f);
-  kkLabAddCube(mesh,0.50f,5.5f,6.0f,KKLAB_X+24.0f,2.5f,-7.0f);
-  kkLabAddCube(mesh,0.50f,5.5f,6.0f,KKLAB_X+24.0f,2.5f, 7.0f);
-  kkLabAddCube(mesh,2.0f,7.0f,2.0f,KKLAB_X+29.0f,3.5f,-4.0f);
-  kkLabAddCube(mesh,2.0f,9.0f,2.0f,KKLAB_X+33.0f,4.5f, 0.0f);
-  kkLabAddCube(mesh,2.0f,6.0f,2.0f,KKLAB_X+37.0f,3.0f, 4.0f);
+  kkLabAddCube(mesh,18.0f,0.50f,20.0f,KKLAB_X+33.0f,-0.25f,0.0f,0xff39374d);
+  kkLabAddCube(mesh,18.0f,5.5f,0.50f,KKLAB_X+33.0f,2.5f,-10.0f,0xff51455f);
+  kkLabAddCube(mesh,18.0f,5.5f,0.50f,KKLAB_X+33.0f,2.5f, 10.0f,0xff51455f);
+  kkLabAddCube(mesh,0.50f,5.5f,20.0f,KKLAB_X+42.0f,2.5f,0.0f,0xff5e4967);
+  kkLabAddCube(mesh,0.50f,5.5f,6.0f,KKLAB_X+24.0f,2.5f,-7.0f,0xff5e4967);
+  kkLabAddCube(mesh,0.50f,5.5f,6.0f,KKLAB_X+24.0f,2.5f, 7.0f,0xff5e4967);
+  kkLabAddCube(mesh,2.0f,7.0f,2.0f,KKLAB_X+29.0f,3.5f,-4.0f,0xff704442);
+  kkLabAddCube(mesh,2.0f,9.0f,2.0f,KKLAB_X+33.0f,4.5f, 0.0f,0xff824d46);
+  kkLabAddCube(mesh,2.0f,6.0f,2.0f,KKLAB_X+37.0f,3.0f, 4.0f,0xff704442);
 
   // Three connected walkable ADD cells and two SUB obstacles.
   mesh = Mesh_CollisionCube(mesh,0,0,KKLAB_X-12.0f,KKLAB_X+12.5f,-1.0f,6.0f,-12.5f,12.5f,KCM_ADD,1,1,1);
@@ -371,8 +380,8 @@ static void kkLabInstallCollision(KKriegerGame *game)
   game->CellConnect();
   game->CellList.Exit();
 
-  game->PlayerStartPos.Init(KKLAB_X-5.0f,1.0f,6.0f,1.0f);
-  fprintf(stderr,"[level-lab] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,6.0]}\n",
+  game->PlayerStartPos.Init(KKLAB_X-5.0f,1.0f,8.0f,1.0f);
+  fprintf(stderr,"[level-lab] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,8.0],\"startDir\":2.582993,\"startLook\":-0.08}\n",
           game->CellAdd.Count,game->CellSub.Count,game->CellZone.Count,KKLAB_X-5.0f);
 }
 #endif
@@ -428,10 +437,13 @@ static void kkLabInstallCollision(KKriegerGame *game)
   ResetByOp = 1;
 #if defined(__EMSCRIPTEN__)
   if(kkJsFlag("__kkLevelLab"))
-    PlayerStartPos.Init(KKLAB_X-5.0f,1.0f,6.0f,1.0f);
+  {
+    PlayerStartPos.Init(KKLAB_X-5.0f,1.0f,8.0f,1.0f);
+    SetPlayer(PlayerStartPos,2.582993f,-0.08f);
+  }
+  else
 #endif
-
-  SetPlayer(PlayerStartPos,0,0);
+    SetPlayer(PlayerStartPos,0,0);
 '''
     s=one(s,old2,new2,"level lab restart")
 
