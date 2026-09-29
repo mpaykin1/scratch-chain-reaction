@@ -73,7 +73,14 @@ try{
   }));
   const box={x:state.canvasCss[0],y:state.canvasCss[1],width:state.canvasCss[2],height:state.canvasCss[3]};
   if(box.width<=0 || box.height<=0) throw new Error("canvas has no visible DOM rectangle");
-  const png=await page.screenshot({clip:box,animations:"allow",timeout:30000});
+  const cdp=await context.newCDPSession(page);
+  const captured=await cdp.send("Page.captureScreenshot",{
+    format:"png",
+    fromSurface:true,
+    captureBeyondViewport:false,
+    clip:{x:box.x,y:box.y,width:box.width,height:box.height,scale:1}
+  });
+  const png=Buffer.from(captured.data,"base64");
   fs.writeFileSync(shot,png);
   const texture=texturedCoverage(png);
   if(texture.coverage < 0.85){
