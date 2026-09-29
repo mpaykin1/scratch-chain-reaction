@@ -3,10 +3,12 @@
 ## .kkrieger browser port — handoff for other chats
 
 Canonical handoff: [KRIEGER_HANDOFF.md](KRIEGER_HANDOFF.md)  
-Open user-reproduced bugs: [KRIEGER_KNOWN_ISSUES.md](KRIEGER_KNOWN_ISSUES.md)  
-Public game: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/
+Known mobile status: [KRIEGER_KNOWN_ISSUES.md](KRIEGER_KNOWN_ISSUES.md)  
+Portrait fullscreen solved recipe: [KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md](KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md)  
+Public game: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/  
+Portrait proof: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-portrait-proof/
 
-**Important:** as of 2026-09-29 the user still reproduces three mobile issues on a physical iPhone even though synthetic Chromium gates may pass: USE does not reliably change the real weapon, START GAME works intermittently, and the portrait 3D scene is still not truly full-screen. Do not describe these as fixed until the user confirms them on-device.
+**Important:** portrait fullscreen is now solved and confirmed by the user on the physical iPhone. The remaining open mobile issues are real USE weapon switching and intermittent START GAME. Do not treat synthetic DOM/UI state as proof for those two.
 
 
 Полностью самостоятельный проект Scratch 3 с реальными PNG/SVG-костюмами, **не картинка и не HTML-имитация**. Запускается в официальном Scratch через импорт `.sb3`, а на GitHub Pages через совместимый проигрыватель TurboWarp.

@@ -23,9 +23,14 @@ The build is based on:
 
 Do not replace this with a JavaScript imitation or a new engine unless explicitly requested.
 
-## USER-REPRODUCED OPEN BUGS — treat as NOT FIXED
+## Mobile status — physical-device truth
 
-These three issues were reproduced by the user on a real iPhone after automated Chromium tests reported PASS. They remain OPEN until the user confirms them fixed on the physical device.
+The user's physical iPhone result overrides synthetic Chromium evidence.
+
+Portrait fullscreen is now **SOLVED AND USER-CONFIRMED**. The canonical recipe and proof are in:
+`KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md`
+
+Two issues remain OPEN:
 
 1. **USE does not reliably change the actual in-game weapon.**
    - Reproduced in portrait and landscape.
@@ -39,13 +44,15 @@ These three issues were reproduced by the user on a real iPhone after automated 
    - Do not treat a headless Chromium click as sufficient proof.
    - Acceptance requires deterministic one-tap start after the button becomes ready on real iOS Safari / standalone PWA.
 
-3. **Portrait mode is still not truly full-screen.**
-   - User still sees the 3D game rendered as a horizontal band with large black regions above and below.
-   - This persists even though automated image metrics previously reported high canvas/content coverage.
-   - Therefore the current automated portrait coverage gate is known to be insufficient.
-   - Acceptance requires the actual 3D scene itself to visibly occupy the portrait gameplay area on a real iPhone, not merely a full-size canvas containing black pixels.
+3. **Portrait fullscreen — SOLVED / USER CONFIRMED.**
+   - Root cause: the WASM player forced a centered 2:1 master viewport and `Environment->Aspect = 2.0f`; full-size postprocess allocation also followed the 2:1 assumption.
+   - Correct fix: in portrait, use the full `ConfigX × ConfigY` master viewport, derive projection aspect from that viewport, and allow the full-size postprocess target to hold portrait dimensions.
+   - Public proof: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-portrait-proof/
+   - CI measured 1170×2532 engine + master viewport, aspect 0.46208531 and 100% textured scene height coverage.
+   - The user then tested the public proof on the physical iPhone and confirmed it works.
+   - Full technical recipe: `KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md`
 
-These user reports take precedence over the existing smoke-test PASS results.
+The remaining USE and START reports take precedence over synthetic smoke-test PASS results.
 
 ## What currently works according to the user
 
@@ -255,7 +262,7 @@ CURRENTLY UNRELIABLE / NOT ACCEPTED BY USER:
 
 - real USE weapon switching on physical iPhone
 - deterministic START GAME on physical iPhone
-- true portrait full-screen scene fill on physical iPhone
+- portrait fullscreen technique is solved and user-confirmed; porting that exact policy into the main /kkrieger/ build must preserve landscape
 
 Do not describe those three as fixed until the user personally confirms them.
 
@@ -266,8 +273,8 @@ When continuing this work:
 1. Fetch the repository and this file first.
 2. Inspect the current `main`, because it may be newer than the baseline SHA written here.
 3. Preserve the working landscape mode and graphics.
-4. Reproduce the three user-reported bugs on a physical-iOS-equivalent path before declaring success.
+4. Read `KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md` before touching aspect-ratio/fullscreen code.
 5. Do not accept DOM-only or synthetic-event-only evidence for USE/START.
-6. Do not accept canvas size alone as proof of portrait full-screen; inspect the actual rendered 3D scene.
+6. For portrait regressions, compare master viewport, projection aspect, RT dimensions and actual textured scene coverage; canvas size alone is not enough.
 7. Keep the public URL permanent.
-8. Update this handoff and the open known-issues record when behavior changes.
+8. Update this handoff and the known-issues record when behavior changes.
