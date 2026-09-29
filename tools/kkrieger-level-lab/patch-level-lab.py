@@ -69,9 +69,9 @@ def patch_mainplayer(s):
 """
     s=one(s,old2,new2,"mainplayer dynamic aspect")
     # mainplayer already includes stdio in wasm build; declare flag helper.
-    marker='#include "mainplayer.hpp"'
-    if marker in s and 'extern "C" int kkJsFlag' not in s:
-        s=s.replace(marker,marker+'\n#if defined(__EMSCRIPTEN__)\nextern "C" int kkJsFlag(const char *name);\n#endif',1)
+    marker='extern sInt CV2MPlayerNextLength;   // see wasm/v2_shim.cpp\n'
+    if 'extern "C" int kkJsFlag' not in s:
+        s=one(s,marker,marker+'extern "C" int kkJsFlag(const char *name);\n',"mainplayer kkJsFlag declaration")
     return s
 
 def patch_overlay(s):
@@ -106,8 +106,11 @@ def patch_overlay(s):
               bw,bh,1<<lx,1<<ly);
   }
 """
-    # genoverlay already declares kkJsFlag in the upstream wasm path.
-    return one(s,old,new,"level lab full-size RT")
+    s=one(s,old,new,"level lab full-size RT")
+    if 'extern "C" int kkJsFlag' not in s:
+        marker='#include <stdio.h>\n'
+        s=one(s,marker,marker+'extern "C" int kkJsFlag(const char *name);\n',"genoverlay kkJsFlag declaration")
+    return s
 
 def patch_engine_hpp(s):
     old='extern Engine_ *Engine;\n'
