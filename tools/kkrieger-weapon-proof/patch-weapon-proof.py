@@ -40,6 +40,20 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofNext()
 {
   return Game ? Game->Player.NextWeapon : -1;
 }
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofEnterRun()
+{
+  if(!Game) return 0;
+  Game->Switches[KGS_GAME] = KGS_GAME_RUN;
+  return 1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofPlayerReady()
+{
+  return Game && Game->PlayerCell && Game->Switches[KGS_GAME] == KGS_GAME_RUN ? 1 : 0;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGameState()
+{
+  return Game ? Game->Switches[KGS_GAME] : -1;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
 {
   return weapon>=0 && weapon<8 ? kkWeaponProofShotCount[weapon] : -1;
@@ -265,6 +279,12 @@ def patch_shell(s):
     kkWeaponRender();
   }
   setInterval(kkSyncWeaponProof,180);
+  function kkForceGameplay(){
+    if(!document.body.classList.contains("weapon-running")) return;
+    if(kkReadNumber("kkWeaponProofPlayerReady",[])===1) return;
+    if(kkReadNumber("kkWeaponProofCurrent",[])>=0) kkReadNumber("kkWeaponProofEnterRun",[]);
+    setTimeout(kkForceGameplay,220);
+  }
   function kkNextWeapon(){
     var cur=kkReadNumber("kkWeaponProofCurrent",[]);
     var pos=kkWeaponSlots.indexOf(cur);
