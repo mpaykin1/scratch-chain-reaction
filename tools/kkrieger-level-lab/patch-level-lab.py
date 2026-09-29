@@ -107,6 +107,25 @@ def patch_overlay(s):
   }
 """
     s=one(s,old,new,"level lab full-size RT")
+
+    # The converted 2004 beta normally replaces GameCam with the camera
+    # authored inside its viewport scene (flag 0x80). Level Lab lives at
+    # X~=1000 while that authored camera remains around the original map.
+    # Keep the real player's GameCam for this independent level.
+    cam_old="""        if(flags & 0x80)
+        {
+          kkSceneCamEntry *sc = kkFindSceneCam(parent,sFALSE);
+          if(sc) env.CameraSpace = sc->Cam;
+        }
+"""
+    cam_new="""        if((flags & 0x80) && !kkJsFlag("__kkLevelLab"))
+        {
+          kkSceneCamEntry *sc = kkFindSceneCam(parent,sFALSE);
+          if(sc) env.CameraSpace = sc->Cam;
+        }
+"""
+    s=one(s,cam_old,cam_new,"level lab must use player GameCam")
+
     if 'extern "C" int kkJsFlag' not in s:
         marker='#include <stdio.h>\n'
         s=one(s,marker,marker+'extern "C" int kkJsFlag(const char *name);\n',"genoverlay kkJsFlag declaration")
@@ -126,15 +145,62 @@ def patch_engine(s):
     inject='''#include "materials/material11.hpp"
 
 static EngMesh *kkLevelLabMesh = 0;
+static GenMaterial *kkLevelLabMaterial = 0;
 static sVector kkLevelLabLightPos;
+
+static GenMaterial *kkLevelLabMakeMaterial()
+{
+  // The 2004 renderer draws light passes with ZFUNC=EQUAL and ZWRITE=off.
+  // Mesh_Cube's DefaultMat only has ENGU_LIGHT, so it can never seed depth:
+  // the result is a perfectly running game behind a black framebuffer.
+  // Mirror the real Krieger multi-pass material contract: base writes depth,
+  // then light adds the lit surface at the same depth.
+  GenMaterial *gm = new GenMaterial;
+
+  sMaterial11 *base = new sMaterial11;
+  base->ShaderLevel = sPS_11;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
+  base->Color[0] = 0x00324458;
+  base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
+  base->AlphaCombiner = sMCA_ZERO;
+  sVERIFY(base->Compile());
+  gm->AddPass(base,ENGU_BASE,MPP_STATIC,0);
+
+  sMaterial11 *light = new sMaterial11;
+  light->ShaderLevel = sPS_11;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|
+                     sMBF_BLENDADD|sMBF_DOUBLESIDED;
+  light->LightFlags = sMLF_BUMPX;
+  light->SpecPower = 16.0f;
+  light->Color[0] = 0x00d9e5ff;
+  light->Combiner[sMCS_LIGHT] = sMCOA_SET;
+  light->Combiner[sMCS_COLOR0] = sMCOA_MUL;
+  light->AlphaCombiner = sMCA_ZERO;
+  light->SpecialFlags |= sMSF_NOSPECULAR;
+  sVERIFY(light->Compile());
+  gm->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
+
+  return gm;
+}
 
 void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
 {
+  if(!kkLevelLabMaterial)
+    kkLevelLabMaterial = kkLevelLabMakeMaterial();
+
+  if(mesh->Mtrl.Count > 1)
+  {
+    mesh->Mtrl[1].Material->Release();
+    mesh->Mtrl[1].Material = kkLevelLabMaterial;
+    kkLevelLabMaterial->AddRef();
+  }
+
   sRelease(kkLevelLabMesh);
   kkLevelLabMesh = new EngMesh;
   kkLevelLabMesh->FromGenMesh(mesh);
   kkLevelLabLightPos = lightPos;
-  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d}\\n",
+  fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_mesh\\\",\\\"vertices\\\":%d,\\\"faces\\\":%d,\\\"collisions\\\":%d,\\\"material\\\":\\\"base+light\\\"}\\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
 }
 #endif
@@ -149,6 +215,7 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
 {
 #if defined(__EMSCRIPTEN__)
   sRelease(kkLevelLabMesh);
+  sRelease(kkLevelLabMaterial);
 #endif
   Matrices.Exit();
 '''
@@ -197,6 +264,11 @@ void KriegerLevelLabInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     labLight.Id = 7002;
     AddLightJob(labLight);
     AddAmbientLight(0x202028);
+
+    static sInt kkLabCamLog;
+    if(kkLabCamLog++ < 6 || (kkLabCamLog % 30)==0)
+      fprintf(stderr,"[level-lab] {\\\"stage\\\":\\\"render_camera\\\",\\\"pos\\\":[%.5f,%.5f,%.5f]}\\n",
+              Env.CameraSpace.l.x,Env.CameraSpace.l.y,Env.CameraSpace.l.z);
   }
 #endif
 
@@ -521,7 +593,7 @@ def patch_shell(s):
     printErr: function(t){
 '''
     new='''  window.__kkLevelLab = 1;
-  window.__kkLab = {events:[],built:null,collision:null,player:null,viewport:null,fullRT:null};
+  window.__kkLab = {events:[],built:null,collision:null,player:null,viewport:null,fullRT:null,renderCamera:null};
   function kkLabLine(t){
     if(typeof t!=='string') return;
     var p=t.indexOf('[level-lab] ');
@@ -534,6 +606,7 @@ def patch_shell(s):
       if(e.stage==='player') window.__kkLab.player=e;
       if(e.stage==='viewport') window.__kkLab.viewport=e;
       if(e.stage==='full_rt') window.__kkLab.fullRT=e;
+      if(e.stage==='render_camera') window.__kkLab.renderCamera=e;
       var b=document.getElementById('labBadge');
       if(b){
         var p0=window.__kkLab.player;
