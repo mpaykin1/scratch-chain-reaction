@@ -201,10 +201,14 @@ try{
   // Parallax/view-response proof: rotate the real C++ player camera and demand
   // that a meaningful part of the framebuffer changes. A flat clear colour,
   // DOM overlay, or a single wall cannot satisfy this by itself.
+  console.log("FRAMEBUFFER_BASE "+JSON.stringify(visual));
   const dirBefore=await page.evaluate(()=>Module.ccall("kkLabPose","number",["number"],[0]));
   await page.evaluate(()=>Module.ccall("kkLabDirectLook",null,["number","number"],[120,0]));
-  await page.waitForFunction((d)=>Math.abs(Module.ccall("kkLabPose","number",["number"],[0])-d)>0.20,dirBefore,{timeout:10000});
-  await page.waitForTimeout(1600);
+  // Module.ccall is safe in page.evaluate but repeatedly invoking it from
+  // Playwright's waitForFunction can starve this very slow SwiftShader build.
+  // Wait on the sampled C++ telemetry instead; it is emitted from real ticks.
+  await page.waitForFunction((d)=>Math.abs((window.__kkLab?.player?.dir ?? d)-d)>0.20,dirBefore,{timeout:45000});
+  await page.waitForTimeout(500);
   const pngTurned=await capture();
   const turned=sceneStats(pngTurned);
   const viewDeltaRatio=frameDelta(png,pngTurned);
