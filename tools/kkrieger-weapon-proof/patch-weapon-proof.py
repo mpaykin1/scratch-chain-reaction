@@ -80,6 +80,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
   sInt next = slots[(pos+1)%5];
   Game->Player.Weapon[next] = 1;
   Game->Player.NextWeapon = next;
+  // Mobile proof must not depend on the old keyboard/holster timing race.
+  // The normal AddEvents path still performs the actual model swap.
+  if(Game->WeaponTimer < 1.0f) Game->WeaponTimer = 1.0f;
   return next;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
