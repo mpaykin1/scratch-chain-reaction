@@ -7,6 +7,7 @@ if len(sys.argv) != 2:
 root = Path(sys.argv[1])
 start = root / "wasm" / "_start_wasm.cpp"
 shell = root / "wasm" / "shell.html"
+overlay = root / "genoverlay.cpp"
 
 cpp = start.read_text(encoding="utf-8")
 cpp_anchor = "void sSystem_::WaitForKey() {}"
@@ -75,6 +76,48 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkMobileResize(int w,int h)
 cpp = cpp.replace(cpp_anchor, cpp_inject + "\n" + cpp_anchor, 1)
 start.write_text(cpp, encoding="utf-8")
 
+ov = overlay.read_text(encoding="utf-8")
+old_rt = """    sInt bh = sMin(sSystem->ConfigX/2,sSystem->ConfigY), bw = 2*bh;
+    sInt lx = 10, ly = 9;
+"""
+new_rt = """    // Keep the original 2:1 target in landscape, but in portrait allocate
+    // the full visible surface so the 2004 post-process does not letterbox
+    // the game into a narrow horizontal strip.
+    sInt bw,bh;
+    if(sSystem->ConfigY > sSystem->ConfigX)
+    {
+      bw = sSystem->ConfigX;
+      bh = sSystem->ConfigY;
+    }
+    else
+    {
+      bh = sMin(sSystem->ConfigX/2,sSystem->ConfigY);
+      bw = 2*bh;
+    }
+    sInt lx = 10, ly = 9;
+"""
+if ov.count(old_rt) != 1:
+    raise SystemExit("portrait render-target anchor missing")
+ov = ov.replace(old_rt,new_rt,1)
+
+old_zoom = """      if(!(flags & 0x1000))
+        env.ZoomY *= kenv->Aspect;
+"""
+new_zoom = """      if(!(flags & 0x1000))
+        env.ZoomY *= kenv->Aspect;
+#if defined(__EMSCRIPTEN__)
+      // The beta camera was authored for a 2:1 render surface. In portrait,
+      // compensate the projection instead of stretching the world vertically:
+      // desired ZoomY/ZoomX tracks the actual viewport aspect.
+      if(sSystem->ConfigY > sSystem->ConfigX)
+        env.ZoomY *= (0.5f * sSystem->ConfigX) / sSystem->ConfigY;
+#endif
+"""
+if ov.count(old_zoom) != 1:
+    raise SystemExit("portrait camera anchor missing")
+ov = ov.replace(old_zoom,new_zoom,1)
+overlay.write_text(ov, encoding="utf-8")
+
 doc = shell.read_text(encoding="utf-8")
 doc = doc.replace(
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
@@ -103,13 +146,13 @@ mobile_css = r'''
   #mobile-ui{display:none;position:fixed;inset:0;z-index:7;pointer-events:none;touch-action:none}
   #movePad{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(20px,env(safe-area-inset-bottom));
            width:132px;height:132px;border:2px solid rgba(255,255,255,.28);border-radius:50%;
-           background:rgba(10,10,10,.18);pointer-events:auto;touch-action:none}
+           background:rgba(10,10,10,.18);pointer-events:auto;touch-action:none;z-index:2}
   #moveKnob{position:absolute;left:41px;top:41px;width:50px;height:50px;border-radius:50%;
             background:rgba(255,255,255,.32);border:1px solid rgba(255,255,255,.55);transform:translate(0,0)}
-  #lookPad{position:absolute;right:0;top:0;width:58%;height:100%;pointer-events:auto;touch-action:none}
+  #lookPad{position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:none;z-index:0}
   .mBtn{position:absolute;pointer-events:auto;touch-action:none;min-width:56px;min-height:56px;border-radius:50%;
         border:1px solid rgba(255,255,255,.45);background:rgba(12,12,12,.42);color:#fff;
-        font:700 12px/1 monospace;backdrop-filter:blur(4px)}
+        font:700 12px/1 monospace;backdrop-filter:blur(4px);z-index:2}
   #mFire{right:max(22px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:86px;height:86px;font-size:13px}
   #mUse{right:max(114px,calc(env(safe-area-inset-right) + 104px));bottom:max(38px,calc(env(safe-area-inset-bottom) + 14px))}
   #mMenu{right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top))}
@@ -151,6 +194,8 @@ script_anchor = "  document.getElementById('start').addEventListener('click', fu
 mobile_js = r'''
   var kkRunning = false;
   window.__kkMobileEvents = 0;
+  window.__kkMobileLookEvents = 0;
+  window.__kkWeapon = 1;
   function kkCall(name,args){
     if(!kkRunning || !Module || !Module.ccall) return;
     try {
@@ -165,7 +210,8 @@ mobile_js = r'''
     var cssW = vv ? vv.width : window.innerWidth;
     var cssH = vv ? vv.height : window.innerHeight;
     var d = Math.min(window.devicePixelRatio || 1, 2);
-    return [Math.max(240,Math.round(cssW*d)) & ~1, Math.max(240,Math.round(cssH*d)) & ~1];
+    return [Math.min(4094,Math.max(240,Math.round(cssW*d))) & ~1,
+            Math.min(4094,Math.max(240,Math.round(cssH*d))) & ~1];
   }
   var resizeTimer = 0;
   function kkResizeRunning(){
@@ -216,6 +262,7 @@ mobile_js = r'''
   lookPad.addEventListener('pointermove',function(e){
     if(e.pointerId!==lookPointer) return;
     var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+    window.__kkMobileLookEvents++;
     kkCall('kkMobileLook',[Math.round(dx*2.2),Math.round(dy*2.2)]);e.preventDefault();
   });
   function stopLook(e){if(e.pointerId===lookPointer) lookPointer=null;}
@@ -227,11 +274,19 @@ mobile_js = r'''
     ['pointerup','pointercancel'].forEach(function(ev){el.addEventListener(ev,function(e){up();e.preventDefault();});});
   }
   holdButton('mFire',function(){kkCall('kkMobileFire',[1]);},function(){kkCall('kkMobileFire',[0]);});
-  holdButton('mUse',function(){kkKey(1001,true);},function(){kkKey(1001,false);});
   document.getElementById('mMenu').addEventListener('click',function(e){kkPulse(1002);e.preventDefault();});
   var weapon=1;
-  document.getElementById('mWeapon').addEventListener('click',function(e){
-    weapon=weapon%4+1; this.textContent='W'+weapon; kkPulse(48+weapon); e.preventDefault();
+  function cycleWeapon(){
+    weapon=weapon%9+1;
+    window.__kkWeapon=weapon;
+    document.getElementById('mWeapon').textContent='W'+weapon;
+    kkPulse(48+weapon);
+  }
+  document.getElementById('mUse').addEventListener('pointerdown',function(e){
+    kkCapture(this,e.pointerId); cycleWeapon(); e.preventDefault();
+  });
+  document.getElementById('mWeapon').addEventListener('pointerdown',function(e){
+    kkCapture(this,e.pointerId); cycleWeapon(); e.preventDefault();
   });
 '''
 if script_anchor not in doc:
