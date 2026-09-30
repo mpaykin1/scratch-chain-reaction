@@ -170,8 +170,11 @@ def patch_shell(s):
   window.addEventListener('scroll',function(){if(window.scrollX||window.scrollY)window.scrollTo(0,0);},{passive:true});
   window.addEventListener('resize',kkLockGameViewport,{passive:true});
   if(window.visualViewport){
+    // visualViewport "scroll" can fire while browser chrome animates on iOS.
+    // Do not write layout state from that event: doing so can create a
+    // scroll/layout feedback loop. Resize is sufficient for the visible
+    // height contract; document scrolling itself is locked separately.
     window.visualViewport.addEventListener('resize',kkLockGameViewport,{passive:true});
-    window.visualViewport.addEventListener('scroll',kkLockGameViewport,{passive:true});
   }
   kkLockGameViewport();
 
