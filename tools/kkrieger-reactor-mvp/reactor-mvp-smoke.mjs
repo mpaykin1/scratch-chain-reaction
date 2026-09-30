@@ -98,7 +98,7 @@ try{
 
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="dark-reactor-v2",null,{timeout:90000});
   await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
-  await page.waitForFunction(()=>window.__kkLab?.render?.basePasses===1 && window.__kkLab?.render?.lightPasses===1 && window.__kkLab?.render?.vertexColor===1,null,{timeout:30000});
+  await page.waitForFunction(()=>window.__kkLab?.render?.proceduralTextures>=4 && window.__kkLab?.render?.materialCategories>=3 && window.__kkLab?.render?.bumpMapped===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
   await page.waitForTimeout(1200);
 
