@@ -124,6 +124,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkSurgeryStat(int which)
   case 10:return Game->Player.Ammo[2];
   case 11:return Game->Player.Ammo[3];
   case 12:return kkSurgeryPlayerFireCount;
+  case 13:return Game->Switches[KGS_GAME];
+  case 14:return Game->Player.Weapon[0];
   default:return -1;
   }
 }
@@ -164,23 +166,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkSurgeryDirectLook(int dx,int dy)
 
   shot = Shots.Add();
 """
-    s=one(s,needle,repl,"surgery fire counter")
-    old_reset="""  SetPainter(root,env);
-  Restart();
-  if(firsttime)
-    Switches[KGS_GAME] = KGS_GAME_INTRO;
-"""
-    new_reset="""  SetPainter(root,env);
-  Restart();
-#if defined(__EMSCRIPTEN__)
-  if(firsttime && kkJsFlag("__kkSurgeryLab"))
-    Switches[KGS_GAME] = KGS_GAME_RUN;
-  else
-#endif
-  if(firsttime)
-    Switches[KGS_GAME] = KGS_GAME_INTRO;
-"""
-    return one(s,old_reset,new_reset,"surgery enter native game root")
+    return one(s,needle,repl,"surgery fire counter")
 
 def patch_wasm(s):
     old="static sInt gMouseDX, gMouseDY;\n"
@@ -249,7 +235,7 @@ def patch_shell(s):
 
     s=s.replace(
       "window.__kkPortraitProof = {events:[]};",
-      "window.__kkPortraitProof = {events:[]};\n  window.__kkSurgeryLab=1;\n  window.__kkSurgery={mode:0,targetOp:219,fireCount:0};"
+      "window.__kkPortraitProof = {events:[]};\n  window.__kkSurgery={mode:0,targetOp:219,fireCount:0};"
     )
     s=s.replace(
       "        startEl.remove();\n        statusEl=null;",
