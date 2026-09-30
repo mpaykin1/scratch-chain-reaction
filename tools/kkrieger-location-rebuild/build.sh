@@ -55,7 +55,7 @@ doc=hp.read_text(encoding="utf-8")
 notice=f"""<template id="third-party-license-notices">
 Krieger Location Rebuild provenance: https://github.com/MasonDye/kkrieger-wasm
 Pinned source commit: {sha}
-Native rebuild target: Scene_Transform KOps in architecture band 2400..3908.
+Native rebuild target: KX-derived whitelist of 31 architecture Scene_Transform KOps; Sector/Portal topology transforms excluded.
 farbrausch/.theprodukkt:
 {html.escape(bp.read_text(encoding="utf-8"))}
 MojoShader:
