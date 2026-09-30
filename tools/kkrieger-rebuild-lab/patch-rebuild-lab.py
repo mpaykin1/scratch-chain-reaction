@@ -98,14 +98,13 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkRebuildTouched()
     // different corridor composition while retaining the original assets.
     const sInt band=id%7;
     const sF32 side = (band<3) ? -1.0f : 1.0f;
-    s.x *= 0.78f + 0.10f*(band%4);
-    s.y *= 0.86f + 0.08f*((band+1)%4);
-    s.z *= 0.92f + 0.09f*((band+2)%3);
-    r.y += side*(0.035f + 0.012f*(band%3));
-    r.z += ((id&1)?1.0f:-1.0f)*(0.012f + 0.006f*(band%4));
-    t.x += side*(0.38f + 0.14f*(band%4));
-    t.y += ((id%3)-1)*0.16f;
-    t.z += ((id%5)-2)*0.22f;
+    // Keep the vertical envelope intact so portrait composition remains
+    // full-height. Rebuild the plan/layout through X/Z rhythm + yaw instead.
+    s.x *= 0.88f + 0.06f*(band%4);
+    s.z *= 0.91f + 0.055f*((band+2)%3);
+    r.y += side*(0.026f + 0.010f*(band%3));
+    t.x += side*(0.26f + 0.09f*(band%4));
+    t.z += ((id%5)-2)*0.16f;
 
     if(id>=0 && id<4818 && !kkRebuildSeen[id])
     {
