@@ -31,6 +31,7 @@ def patch_start(s):
 // the original desktop game; the HTML buttons do not mutate weapon state.
 extern KKriegerGame *Game;
 extern sInt kkWeaponProofShotCount[8];
+extern KEnvironment *kkWeaponProofEnv;
 
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofCurrent()
 {
@@ -103,7 +104,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOpticsEffect(int weapon)
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireReady()
 {
-  return Game && Game->Environment && Game->PlayerCell &&
+  return Game && kkWeaponProofEnv && Game->PlayerCell &&
     Game->Switches[KGS_GAME] == KGS_GAME_RUN &&
     Game->Player.CurrentWeapon == Game->Player.NextWeapon ? 1 : 0;
 }
@@ -114,7 +115,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireOnce()
   if(weapon<0 || weapon>=8 || !Game->WeaponShot[weapon]) return -2;
   // Use the original Krieger projectile constructor itself. This creates the
   // real weapon-specific KEvent/ShotInfo object; no DOM/canvas imitation.
-  Game->FireShot(Game->Environment,weapon,0,0);
+  Game->FireShot(kkWeaponProofEnv,weapon,0,0);
   return kkWeaponProofShotCount[weapon];
 }
 
@@ -153,7 +154,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofFire(int down)
 def patch_game(s):
     s=one(s,
       '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\n',
-      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\nsInt kkWeaponProofShotCount[8] = {0,0,0,0,0,0,0,0};\n',
+      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\nsInt kkWeaponProofShotCount[8] = {0,0,0,0,0,0,0,0};\nKEnvironment *kkWeaponProofEnv = 0;\n',
       "weapon proof FireShot counter")
     old="""  Ammo[0] = 100;
   Ammo[1] = 50;
@@ -237,6 +238,17 @@ def patch_game(s):
 
   TickCount += slices;
 """
+    s=one(s,
+      """  Environment = kenv;
+
+#if DOUBLECHECK""",
+      """  Environment = kenv;
+#if defined(__EMSCRIPTEN__)
+  kkWeaponProofEnv = kenv;
+#endif
+
+#if DOUBLECHECK""",
+      "weapon proof stable tick environment")
     return one(s,old_state,new_state,"current weapon state telemetry")
 
 def patch_shell(s):
