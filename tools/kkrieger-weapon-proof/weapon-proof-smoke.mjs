@@ -61,7 +61,8 @@ try{
   const order=[...slots.slice(startIndex),...slots.slice(0,startIndex)];
   await fireAndProve(order[0]);
   for(const slot of order.slice(1)){
-    await page.locator("#weaponUse").click();
+    await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:60+slot,pointerType:"touch"});
+    await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:60+slot,pointerType:"touch"});
     await page.waitForFunction(s=>window.__kkLastUseTarget===s,slot,{timeout:2000});
     await page.waitForFunction(s=>Module.ccall("kkWeaponProofNext","number",[],[])===s,slot,{timeout:2000});
     await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,slot,{timeout:7000});
