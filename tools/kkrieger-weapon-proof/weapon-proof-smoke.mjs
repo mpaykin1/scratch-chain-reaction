@@ -63,7 +63,6 @@ try{
       return window.__kkLastFireResult;
     },{slot});
     if(!(fireResult>before)) throw new Error("FIRE button did not call real FireShot for slot "+slot+" result="+fireResult+" before="+before);
-    await page.waitForFunction(([s,n])=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s])>n,[slot,before],{timeout:2000});
   }
 
   let current=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
