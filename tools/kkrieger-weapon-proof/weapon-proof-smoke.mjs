@@ -54,11 +54,16 @@ try{
 
   async function fireAndProve(slot){
     console.log("PROVING_FIRE_SLOT",slot);
+    await page.waitForFunction(()=>Module.ccall("kkWeaponProofFireReady","number",[],[])===1,null,{timeout:7000});
     const before=await page.evaluate(s=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s]),slot);
-    await page.locator("#weaponFire").dispatchEvent("pointerdown",{pointerId:80+slot,pointerType:"touch"});
-    await page.waitForTimeout(700);
-    await page.locator("#weaponFire").dispatchEvent("pointerup",{pointerId:80+slot,pointerType:"touch"});
-    await page.waitForFunction(([s,n])=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s])>n,[slot,before],{timeout:7000});
+    const fireResult=await page.evaluate(({slot})=>{
+      const b=document.getElementById("weaponFire");
+      b.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:80+slot,pointerType:"touch",isPrimary:true}));
+      b.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:80+slot,pointerType:"touch",isPrimary:true}));
+      return window.__kkLastFireResult;
+    },{slot});
+    if(!(fireResult>before)) throw new Error("FIRE button did not call real FireShot for slot "+slot+" result="+fireResult+" before="+before);
+    await page.waitForFunction(([s,n])=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s])>n,[slot,before],{timeout:2000});
   }
 
   let current=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
