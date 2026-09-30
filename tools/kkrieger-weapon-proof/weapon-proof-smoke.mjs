@@ -49,6 +49,7 @@ try{
     throw new Error("master viewport not full portrait: "+JSON.stringify(m));
 
   async function fireAndProve(slot){
+    console.log("PROVING_FIRE_SLOT",slot);
     const before=await page.evaluate(s=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s]),slot);
     await page.locator("#weaponFire").dispatchEvent("pointerdown",{pointerId:80+slot,pointerType:"touch"});
     await page.waitForTimeout(700);
