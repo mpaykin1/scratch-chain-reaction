@@ -677,7 +677,7 @@ static void kkLabUpdateObjective(KKriegerGame *game)
     kkLabUpdateObjective(this);
     static sInt labtick;
     if(labtick++ < 6 || (labtick % 20)==0 || AccelForw!=0 || AccelSide!=0)
-      fprintf(stderr,"[reactor-mvp] {\\\\\\\"stage\\\\\\\":\\\\\\\"player\\\\\\\",\\\\\\\"pos\\\\\\\":[%.5f,%.5f,%.5f],\\\\\\\"dir\\\\\\\":%.6f,\\\\\\\"look\\\\\\\":%.6f,\\\\\\\"cell\\\\\\\":%d,\\\\\\\"cores\\\\\\\":%d,\\\\\\\"weapon\\\\\\\":%d,\\\\\\\"optics\\\\\\\":%d,\\\\\\\"shot\\\\\\\":%d}\\n",
+      fprintf(stderr,"[reactor-mvp] {\\\"stage\\\":\\\"player\\\",\\\"pos\\\":[%.5f,%.5f,%.5f],\\\"dir\\\":%.6f,\\\"look\\\":%.6f,\\\"cell\\\":%d,\\\"cores\\\":%d,\\\"weapon\\\":%d,\\\"optics\\\":%d,\\\"shot\\\":%d}\\n",
               PlayerPos.x,PlayerPos.y,PlayerPos.z,PlayerDir,PlayerLook,PlayerCell?1:0,
               kkLabCoreMask,Player.CurrentWeapon,
               WeaponOptics[Player.CurrentWeapon]?1:0,
@@ -710,7 +710,7 @@ static void kkLabUpdateObjective(KKriegerGame *game)
     new_key='''  LastKey = key&0x8001ffff;
 #if defined(__EMSCRIPTEN__)
   if(kkJsFlag("__kkReactorMvp"))
-    fprintf(stderr,"[reactor-mvp] {\\\\\\\"stage\\\\\\\":\\\\\\\"input_key\\\\\\\",\\\\\\\"key\\\\\\\":%u,\\\\\\\"break\\\\\\\":%d}\\n",
+    fprintf(stderr,"[reactor-mvp] {\\\"stage\\\":\\\"input_key\\\",\\\"key\\\":%u,\\\"break\\\":%d}\\n",
             (unsigned)(key&0x1ffff),(key&sKEYQ_BREAK)?1:0);
 #endif
 
