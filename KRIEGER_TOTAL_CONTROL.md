@@ -169,3 +169,20 @@ New invariant: custom-level work must preserve `WeaponOptics`, `WeaponShot`, `We
 The converted real beta has now been parsed as a graph: **4,817 operators, 77 classes and 38 splines**. It contains hundreds of transforms/material links and substantial bitmap/material/scene/sector/portal machinery. First-person weapon optics alone reach 224–362 operators depending on slot.
 
 See [KRIEGER_KX_ARCHAEOLOGY_BASELINE.md](KRIEGER_KX_ARCHAEOLOGY_BASELINE.md). This is now the factual baseline for Native Level Lab v2.
+
+
+## Fidelity map from the real packed graphs
+
+The next step beyond aggregate KX counts is now mapped in [KRIEGER_GRAPHICS_FIDELITY_MAP.md](KRIEGER_GRAPHICS_FIDELITY_MAP.md).
+
+Key direct findings:
+
+- a representative beta world mesh root reaches **722 operators** with **317 mesh operators** and **11 materials**;
+- a large beta sector reaches **796 operators**;
+- a representative rich material reaches **159 operators**, **158** of them bitmap-processing nodes;
+- first-person optics subgraphs reach **224–362 operators**;
+- the actual final look includes explicit IPP `Viewport -> Color -> Blur -> Merge -> Mask` branches.
+
+The permanent unit of authoring/reuse is therefore the **operator recipe/subgraph**. A future `WorldRecipe` compiler must generate or parameterize those recipe classes rather than bypass them with one injected `EngMesh`.
+
+Reproducible auditor: `tools/kkrieger-kx-audit.py`.
