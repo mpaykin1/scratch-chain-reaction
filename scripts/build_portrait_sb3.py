@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a genuinely portrait Scratch project from our existing animated .sb3.
-Uses the *same* sprite scripts, variables and assets; only stage art and
-initial layout change. No network dependencies or new game engine.
-"""
+"""Build validated portrait/wide Scratch variants from one native .sb3 source."""
 from __future__ import annotations
 import hashlib
 import io
@@ -13,129 +10,135 @@ from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "chain-reaction-animated.sb3"
-PORTRAIT_IMAGE = ROOT / "cinematic/assets/world_portrait.webp"
-OUT = ROOT / "player/chain-reaction-portrait.sb3"
+OUT_DIR = ROOT / "player"
+CARDS = ["Выбор Город", "Выбор Лес", "Выбор Энергия", "Выбор Вулкан", "Выбор Идея"]
+METERS = ["Население", "Энергия", "Вода", "Еда", "Экология", "Бюджет"]
+
 
 def resize_native_card_animation(project, base, pulse):
-    """Keep Scratch's own size pulse within the responsive card spacing.
-
-    Runtime-side setSize alone would be overwritten by the original native
-    Scratch 'set size to 100/104' animation loop every 0.96 seconds.
-    """
+    """Prevent Scratch's native pulse loop from undoing responsive card sizing."""
     changed = 0
-    for t in project["targets"]:
-        if not t["name"].startswith("Выбор "):
+    for target in project["targets"]:
+        if target["name"] not in CARDS:
             continue
-        t["size"] = base
-        for block in t["blocks"].values():
+        target["size"] = base
+        for block in target["blocks"].values():
             if block["opcode"] != "looks_setsizeto":
                 continue
             size = block["inputs"].get("SIZE")
             if not (isinstance(size, list) and len(size) > 1 and
                     isinstance(size[1], list) and len(size[1]) > 1):
                 continue
-            number = str(size[1][1])
-            if number in ("100", "104"):
-                size[1][1] = str(base if number == "100" else pulse)
+            value = str(size[1][1])
+            if value in ("100", "104"):
+                size[1][1] = str(base if value == "100" else pulse)
                 changed += 1
     if changed < 15:
-        raise ValueError("Native Scratch choice animation could not be resized: " + str(changed))
-    print("NATIVE_CARD_ANIM_PASS", base, pulse, "size blocks", changed)
+        raise ValueError(f"Expected >=15 native card size blocks, got {changed}")
+    return changed
 
-def main():
-    if not SRC.is_file() or not PORTRAIT_IMAGE.is_file():
-        raise FileNotFoundError("Animated .sb3 or portrait world artwork missing")
-    with zipfile.ZipFile(SRC) as source:
-        project = json.loads(source.read("project.json"))
-        assets = {n: source.read(n) for n in source.namelist() if n != "project.json"}
-    targets = project["targets"]
-    stage = next(t for t in targets if t["isStage"])
-    # Large image deliberately extends beyond the dynamic viewport: portrait
-    # resizing clips artwork rather than exposing empty strips of stage.
-    with Image.open(PORTRAIT_IMAGE) as original:
-        backdrop = ImageOps.fit(original.convert("RGB"), (480, 1300),
-                                method=Image.Resampling.LANCZOS, centering=(.5, .5))
+
+def verify_zip(path, expected_targets, image_name):
+    """Fail under python -O too; validate archive integrity and native sprites."""
+    with zipfile.ZipFile(path) as archive:
+        corrupt = archive.testzip()
+        if corrupt:
+            raise ValueError(f"Corrupt ZIP entry: {path}: {corrupt}")
+        names = set(archive.namelist())
+        if "project.json" not in names or image_name not in names:
+            raise ValueError(f"Missing project/stage art in {path}")
+        project = json.loads(archive.read("project.json"))
+        targets = project["targets"]
+        if len(targets) != expected_targets:
+            raise ValueError(f"{path}: {len(targets)} != {expected_targets} targets")
+        byname = {t["name"]: t for t in targets}
+        if any(name not in byname for name in CARDS + ["Stage"]):
+            raise ValueError(f"Missing native Scratch choices or stage in {path}")
+        if byname["Stage"]["costumes"][0]["md5ext"] != image_name:
+            raise ValueError(f"Unexpected stage art in {path}")
+        referenced = {c["md5ext"] for t in targets for c in t["costumes"]}
+        if any(name not in names for name in referenced):
+            raise ValueError(f"Missing costume binaries in {path}")
+        if names - {"project.json"} != referenced:
+            raise ValueError(f"Unused/extra costume binaries in {path}")
+    return len(targets)
+
+
+def build_variant(src, image_path, canvas_size, out_path, card_base, card_pulse,
+                  *, portrait=False):
+    """Build one complete native Scratch project, independently of other variants."""
+    if not src.is_file() or not image_path.is_file():
+        raise FileNotFoundError(f"Missing source project or artwork: {src}, {image_path}")
+    with zipfile.ZipFile(src) as archive:
+        if archive.testzip():
+            raise ValueError(f"Corrupt source archive: {src}")
+        project = json.loads(archive.read("project.json"))
+        assets = {name: archive.read(name) for name in archive.namelist()
+                  if name != "project.json"}
+    with Image.open(image_path) as original:
+        backdrop = ImageOps.fit(original.convert("RGB"), canvas_size,
+                                method=Image.Resampling.LANCZOS)
     buffer = io.BytesIO()
     backdrop.save(buffer, "PNG", optimize=True)
     art = buffer.getvalue()
-    asset_hash = hashlib.md5(art).hexdigest()
-    filename = asset_hash + ".png"
-    assets[filename] = art
-    stage["costumes"][0] = dict(assetId=asset_hash, name="Вертикальная пустошь",
-        md5ext=filename, dataFormat="png", bitmapResolution=1,
-        rotationCenterX=240, rotationCenterY=650)
+    art_hash = hashlib.md5(art).hexdigest()
+    art_name = art_hash + ".png"
+    assets[art_name] = art
+    stage = next(t for t in project["targets"] if t["isStage"])
+    stage["costumes"][0] = {
+        "assetId": art_hash, "name": "Вертикальная пустошь" if portrait else "Широкая пустошь",
+        "md5ext": art_name, "dataFormat": "png", "bitmapResolution": 1,
+        "rotationCenterX": canvas_size[0] // 2,
+        "rotationCenterY": canvas_size[1] // 2,
+    }
+    byname = {t["name"]: t for t in project["targets"]}
+    if portrait:
+        for i, name in enumerate(CARDS):
+            if name not in byname:
+                raise ValueError("Missing native choice: " + name)
+            byname[name].update(x=-192 + i * 96, y=-432, size=100, visible=True)
+        for i, name in enumerate(METERS):
+            byname["HUD " + name].update(
+                x=(-155, 0, 155)[i % 3], y=446 - (i // 3) * 48,
+                size=135, visible=True)
+        byname["HUD Ход"].update(x=164, y=350, size=130)
+        byname["Диалог Джинна"].update(x=36, y=-323, size=100, visible=True)
+        byname["Злой Джинн"].update(x=-180, y=-333, size=88, visible=True)
+        byname["Помощь"].update(x=-205, y=350, size=125)
+        byname["Начать заново"].update(x=-166, y=350, size=125)
+    count = resize_native_card_animation(project, card_base, card_pulse)
+    project["meta"]["portraitSource" if portrait else "wideSource"] = "world-server-self-hosted-player"
+    out_path.parent.mkdir(exist_ok=True)
+    with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as archive:
+        referenced = {c["md5ext"] for t in project["targets"] for c in t["costumes"]}
+        payloads = {"project.json": json.dumps(project, ensure_ascii=False,
+                    separators=(",", ":")).encode("utf-8"),
+                    **{n: assets[n] for n in referenced}}
+        # Fixed entry times and order ensure unchanged inputs produce identical bytes.
+        for name, data in sorted(payloads.items()):
+            entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            archive.writestr(entry, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=7)
+    total = verify_zip(out_path, len(project["targets"]), art_name)
+    print("VARIANT_PASS", out_path.name, out_path.stat().st_size,
+          "targets", total, "card_blocks", count, "canvas", canvas_size)
+    return out_path
 
-    # 960 is the reference portrait canvas size. JS relocates every fixed UI
-    # target after load to match the actual viewport/stage height.
-    byname = {t["name"]: t for t in targets}
-    cards = ["Выбор Город", "Выбор Лес", "Выбор Энергия",
-             "Выбор Вулкан", "Выбор Идея"]
-    for i, name in enumerate(cards):
-        if name not in byname:
-            raise ValueError("Missing native Scratch choice: " + name)
-        byname[name].update(x=-192 + i * 96, y=-432, size=100, visible=True)
-    counters = ["Население","Энергия","Вода","Еда","Экология","Бюджет"]
-    for i, label in enumerate(counters):
-        t = byname["HUD " + label]
-        t.update(x=(-155, 0, 155)[i % 3],
-                 y=446 - (i // 3) * 48, size=135, visible=True)
-    byname["HUD Ход"].update(x=164, y=350, size=130)
-    byname["Диалог Джинна"].update(x=36, y=-323, size=100, visible=True)
-    byname["Злой Джинн"].update(x=-180, y=-333, size=88, visible=True)
-    byname["Помощь"].update(x=-205, y=350, size=125)
-    byname["Начать заново"].update(x=-166, y=350, size=125)
-    # Leave world objects around the center so forest, city, power and volcano
-    # actually appear on the rebuilt 1300px high landscape after each action.
-    resize_native_card_animation(project, 82, 86)
-    project["meta"]["portraitSource"] = "world-server-self-hosted-player"
-    OUT.parent.mkdir(exist_ok=True)
-    with zipfile.ZipFile(OUT, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as dst:
-        dst.writestr("project.json", json.dumps(project, ensure_ascii=False, separators=(",",":")))
-        for name, content in assets.items():
-            dst.writestr(name, content)
-    with zipfile.ZipFile(OUT) as check:
-        assert len(check.testzip() or "") == 0
-        doc = json.loads(check.read("project.json"))
-        assert len(doc["targets"]) == len(targets)
-        assert all(any(t["name"] == n for t in doc["targets"]) for n in cards)
-        assert filename in check.namelist()
-    print("PORTRAIT_PASS", str(OUT), OUT.stat().st_size,
-          "targets", len(targets), "choices", len(cards), "stage", "480x1300")
 
-    # Dynamic resize on landscape phones and desktop needs a true wide stage,
-    # not a 480x360 image surrounded by empty renderer background.
-    with zipfile.ZipFile(SRC) as source:
-        wide_project = json.loads(source.read("project.json"))
-        wide_assets = {n: source.read(n) for n in source.namelist() if n != "project.json"}
-    wide_image = ROOT / "cinematic/assets/world_landscape.webp"
-    if not wide_image.is_file():
-        raise FileNotFoundError(str(wide_image))
-    with Image.open(wide_image) as original:
-        wide = ImageOps.fit(original.convert("RGB"), (1920, 1080),
-                            method=Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    wide.save(buffer, "PNG", optimize=True)
-    wide_blob = buffer.getvalue()
-    wide_hash = hashlib.md5(wide_blob).hexdigest()
-    wide_name = wide_hash + ".png"
-    wide_assets[wide_name] = wide_blob
-    wide_stage = next(t for t in wide_project["targets"] if t["isStage"])
-    wide_stage["costumes"][0] = dict(assetId=wide_hash, name="Широкая пустошь",
-        md5ext=wide_name, dataFormat="png", bitmapResolution=1,
-        rotationCenterX=960, rotationCenterY=540)
-    resize_native_card_animation(wide_project, 175, 181)
-    wide_project["meta"]["wideSource"] = "world-server-self-hosted-player"
-    wide_out = ROOT / "player/chain-reaction-wide.sb3"
-    with zipfile.ZipFile(wide_out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=7) as dst:
-        dst.writestr("project.json", json.dumps(wide_project, ensure_ascii=False, separators=(",",":")))
-        for name, content in wide_assets.items():
-            dst.writestr(name, content)
-    with zipfile.ZipFile(wide_out) as check:
-        assert check.testzip() is None
-        assert wide_name in check.namelist()
-        assert len(json.loads(check.read("project.json"))["targets"]) == len(targets)
-    print("WIDE_PASS", str(wide_out), wide_out.stat().st_size,
-          "targets", len(targets), "stage", "1920x1080")
+def main():
+    outputs = [
+        build_variant(SRC, ROOT / "cinematic/assets/world_portrait.webp",
+                      (480, 1300), OUT_DIR / "chain-reaction-portrait.sb3", 82, 86,
+                      portrait=True),
+        build_variant(SRC, ROOT / "cinematic/assets/world_landscape.webp",
+                      (1920, 1080), OUT_DIR / "chain-reaction-wide.sb3", 175, 181),
+    ]
+    hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in outputs}
+    version = hashlib.sha256("".join(hashes.values()).encode()).hexdigest()[:16]
+    (OUT_DIR / "build-manifest.json").write_text(
+        json.dumps({"version": version, "sha256": hashes}, indent=2) + "\n",
+        encoding="utf-8")
+    print("BUILD_MANIFEST_PASS", version)
+
 
 if __name__ == "__main__":
     main()

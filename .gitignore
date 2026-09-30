@@ -1,0 +1,9 @@
+/assets/
+/node_modules/
+/player/screenshots/
+/qa-artifacts/
+/scenario-qa/
+**/__pycache__/
+*.py[cod]
+.asset-prep.log
+.hardening_patch.py
