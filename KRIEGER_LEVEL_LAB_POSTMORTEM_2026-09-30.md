@@ -125,7 +125,7 @@ WeaponOptics[current]
 
 ## New invariants
 
-1. Never call destructive `KKriegerGame::Flush()` after weapon bindings are loaded unless every required binding is restored.
+1. Treat `KKriegerGame::Flush()` as destructive to weapon bindings; after any such reset, prove that `Exec_KKrieger_Events` has rebound every required weapon link before declaring PASS.
 2. Never globally clear `MeshJobs/EffectJobs` as the product custom-level strategy if weapons, creatures, particles or event effects must remain visible.
 3. FIRE is not PASS because a button or `FireKey` changes. PASS requires non-null weapon resources, real shot/event creation and visible rendered evidence.
 4. A non-black or >85%-occupied framebuffer is not evidence of Krieger visual fidelity.
