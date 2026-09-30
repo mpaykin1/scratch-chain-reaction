@@ -117,17 +117,19 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireReady()
 {
   if(!Game || !kkWeaponProofEnv) return 0;
   sInt weapon = Game->Player.CurrentWeapon;
-  return weapon>=0 && weapon<8 &&
-    Game->Player.CurrentWeapon == Game->Player.NextWeapon &&
-    Game->WeaponShot[weapon] ? 1 : 0;
+  return weapon>=0 && weapon<8 && Game->WeaponShot[weapon] ? 1 : 0;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireOnce()
 {
   if(!Game || !kkWeaponProofEnv) return -1;
   kkWeaponProofGrantArsenal();
   sInt weapon = Game->Player.CurrentWeapon;
-  if(weapon<0 || weapon>=8 || Game->Player.NextWeapon!=weapon) return -2;
+  if(weapon<0 || weapon>=8) return -2;
   if(!Game->WeaponShot[weapon]) return -3;
+  // The original game may alter NextWeapon asynchronously (pickups/logic).
+  // For this isolated touch proof, keep the already-visible real weapon
+  // selected while invoking the original FireShot implementation.
+  Game->Player.NextWeapon = weapon;
   // Use the original Krieger projectile constructor itself. This creates the
   // real weapon-specific KEvent/ShotInfo object; no DOM/canvas imitation.
   // Re-arm gameplay state first so the proof remains deterministic even if
