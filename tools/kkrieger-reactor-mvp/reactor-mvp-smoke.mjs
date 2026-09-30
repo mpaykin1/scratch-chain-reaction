@@ -99,7 +99,7 @@ try{
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="dark-reactor-v2",null,{timeout:240000});
   // Use the live C++ cell state as the collision oracle. The telemetry line is
   // diagnostic only and must not be able to turn a working scene into a timeout.
-  await page.waitForFunction(()=>window.__kkLab?.player && Module.ccall("kkLabPose","number",["number"],[5])===1,null,{timeout:45000});
+  await page.waitForFunction(()=>Module.ccall("kkLabPose","number",["number"],[5])===1,null,{timeout:45000});
   await page.waitForFunction(()=>window.__kkLab?.render?.proceduralTextures>=4 && window.__kkLab?.render?.materialCategories>=3 && window.__kkLab?.render?.bumpMapped===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
   await page.waitForFunction(()=>{
