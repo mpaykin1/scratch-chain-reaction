@@ -32,7 +32,14 @@ function diff(aBuf,bBuf,reg={x0:0,y0:0,x1:1,y1:1}){
   return {ratio:changed/Math.max(1,total),meanDelta:sum/Math.max(1,total)};
 }
 
+console.log("REBUILD_PHASE launch");
 const browser=await chromium.launch({headless:true,args:["--use-angle=swiftshader","--enable-unsafe-swiftshader","--ignore-gpu-blocklist","--autoplay-policy=no-user-gesture-required"]});
+async function boundedClose(){
+  await Promise.race([
+    browser.close().catch(()=>{}),
+    new Promise(resolve=>setTimeout(resolve,3000))
+  ]);
+}
 try{
   fs.mkdirSync(outDir,{recursive:true});
   const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844}});
@@ -41,17 +48,24 @@ try{
   page.on("pageerror",e=>errors.push(String(e)));
   page.on("console",m=>{const t=m.text(); if(t.includes("[rebuild]")||t.includes("[portrait-proof]"))logs.push(t); if(m.type()==="error")errors.push(t);});
 
-  await page.goto(url,{waitUntil:"domcontentloaded",timeout:120000});
-  await page.waitForFunction(()=>window.__kkRuntimeReady===true,null,{timeout:60000});
+  console.log("REBUILD_PHASE goto");
+  await page.goto(url,{waitUntil:"domcontentloaded",timeout:45000});
+  console.log("REBUILD_PHASE wait-runtime");
+  await page.waitForFunction(()=>window.__kkRuntimeReady===true,null,{timeout:45000});
+  console.log("REBUILD_PHASE click-start");
   await page.locator("#rebuildStart").click();
-  await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:90000});
+  console.log("REBUILD_PHASE wait-master");
+  await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:60000});
+  console.log("REBUILD_PHASE master-ready");
 
   const stat=i=>page.evaluate(x=>Module.ccall("kkRebuildGameStat","number",["number"],[x]),i);
+  console.log("REBUILD_PHASE settle-game");
   await page.waitForTimeout(3200);
   await page.evaluate(()=>{
     Module.ccall("kkRebuildKey",null,["number","number"],["1".charCodeAt(0),1]);
     Module.ccall("kkRebuildKey",null,["number","number"],["1".charCodeAt(0),0]);
   });
+  console.log("REBUILD_PHASE wait-weapon");
   await page.waitForFunction(()=>{
     try{return Module.ccall("kkRebuildGameStat","number",["number"],[0])===0 &&
                Module.ccall("kkRebuildGameStat","number",["number"],[2])===1 &&
@@ -59,6 +73,7 @@ try{
     catch(e){return false;}
   },null,{timeout:30000});
 
+  console.log("REBUILD_PHASE weapon-ready");
   const layout=await page.evaluate(()=>({
     inner:[innerWidth,innerHeight],
     scroll:[scrollX,scrollY],
@@ -101,12 +116,14 @@ try{
     const buf=Buffer.from(cap.data,"base64");fs.writeFileSync(`${outDir}/${name}.png`,buf);return buf;
   }
 
+  console.log("REBUILD_PHASE capture-original");
   await page.evaluate(()=>Module.ccall("kkRebuildSetMode",null,["number"],[0]));
   await page.waitForTimeout(120);
   const original=await shot("original");
   const om=metrics(original);
   if(om.heightCoverage<.85||om.nonBlackRatio<.35) throw new Error("original visibility below gate: "+JSON.stringify(om));
 
+  console.log("REBUILD_PHASE capture-rebuilt");
   await page.evaluate(()=>{Module.ccall("kkRebuildSetMode",null,["number"],[1]);window.__kkRebuild.mode=1;});
   await page.waitForTimeout(180);
   const rebuilt=await shot("rebuilt");
@@ -120,6 +137,7 @@ try{
   if(full.ratio<.18||full.meanDelta<8) throw new Error("location rebuild not obvious enough full-frame: "+JSON.stringify(full));
   if(architecture.ratio<.20||architecture.meanDelta<9) throw new Error("architecture region rebuild not obvious enough: "+JSON.stringify(architecture));
 
+  console.log("REBUILD_PHASE fire");
   const beforeFire=await stat(7),ammoBefore=await stat(6);
   await page.evaluate(()=>Module.ccall("kkRebuildFire",null,["number"],[1]));
   await page.waitForTimeout(150);
@@ -145,6 +163,10 @@ try{
   },null,2));
 
   await context.close();
+  console.log("REBUILD_PHASE pass");
+} catch (error) {
+  console.error("LOCATION_REBUILD_ERROR", error && (error.stack || error.message || String(error)));
+  process.exitCode=1;
 } finally {
-  await browser.close();
+  await boundedClose();
 }
