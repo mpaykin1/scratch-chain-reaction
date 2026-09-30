@@ -739,7 +739,7 @@ def patch_shell(s):
     var p=t.indexOf('[reactor-mvp] ');
     if(p<0) return;
     try{
-      var e=JSON.parse(t.slice(p+12));
+      var e=JSON.parse(t.slice(p+'[reactor-mvp] '.length));
       window.__kkLab.events.push(e);
       if(e.stage==='built') window.__kkLab.built=e;
       if(e.stage==='collision_ready') window.__kkLab.collision=e;
@@ -750,8 +750,9 @@ def patch_shell(s):
       var b=document.getElementById('labBadge');
       if(b){
         var p0=window.__kkLab.player;
+        var cores=p0?((p0.cores&1?1:0)+(p0.cores&2?1:0)+(p0.cores&4?1:0)):0;
         b.textContent='KRIEGER REACTOR · dark-reactor-v2'+
-          (p0?'\\npos '+p0.pos.map(function(x){return x.toFixed(1)}).join(' / '):'\\nreactor compiling');
+          (p0?'\\npos '+p0.pos.map(function(x){return x.toFixed(1)}).join(' / ')+'\\nCORES '+cores+'/3'+(cores===3?' · EXIT OPEN':''):'\\nreactor compiling');
       }
     }catch(e){}
   }
