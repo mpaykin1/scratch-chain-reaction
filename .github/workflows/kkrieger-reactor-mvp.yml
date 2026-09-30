@@ -56,6 +56,13 @@ jobs:
           npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.63.0 pngjs@7.0.0
           node node_modules/playwright/cli.js install chromium
 
+      - name: Upload compiled reactor before visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-reactor-build-${{ github.sha }}
+          path: work/kkrieger-reactor-mvp/index.html
+          retention-days: 7
+
       - name: Serve Reactor MVP
         run: |
           python3 -m http.server 8767 --bind 127.0.0.1 --directory work/kkrieger-reactor-mvp >/tmp/kkrieger-reactor-mvp-http.log 2>&1 &
@@ -71,6 +78,7 @@ jobs:
         run: node tools/kkrieger-reactor-mvp/reactor-mvp-smoke.mjs
 
       - name: Upload Reactor MVP evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kkrieger-reactor-mvp-${{ github.sha }}
