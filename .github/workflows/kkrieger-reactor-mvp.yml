@@ -2,7 +2,7 @@ name: Kkrieger Reactor MVP
 
 on:
   push:
-    branches: ["feat/kkrieger-reactor-mvp-20260929", main]
+    branches: ["feat/kkrieger-reactor-mvp-20260930", main]
     paths:
       - "tools/kkrieger-reactor-mvp/**"
       - ".github/workflows/kkrieger-reactor-mvp.yml"
@@ -123,7 +123,7 @@ jobs:
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: kkrieger-live-level-lab-${{ github.sha }}
+          name: kkrieger-live-reactor-mvp-${{ github.sha }}
           path: work/kkrieger-reactor-mvp/live-reactor-mvp.png
           if-no-files-found: ignore
           retention-days: 14
