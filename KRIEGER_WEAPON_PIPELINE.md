@@ -201,3 +201,10 @@ Preferred direction:
 - let the same normal Engine/Paint2004 path render level + weapon + effects.
 
 This is the path toward actual full control rather than a visually isolated demo.
+
+
+## Quantified weapon graph evidence
+
+The actual converted beta binds optics and shot events through four `KKrieger_Events` operators. Optics subgraphs reach **224–362 operators**; shot subgraphs reach **19–63 operators** and include particles/lights/scene transforms/physics depending on weapon.
+
+Exact indices and counts: [KRIEGER_KX_ARCHAEOLOGY_BASELINE.md](KRIEGER_KX_ARCHAEOLOGY_BASELINE.md).
