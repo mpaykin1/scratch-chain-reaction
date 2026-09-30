@@ -115,17 +115,26 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOpticsEffect(int weapon)
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireReady()
 {
-  return Game && kkWeaponProofEnv && Game->PlayerCell &&
-    Game->Switches[KGS_GAME] == KGS_GAME_RUN &&
-    Game->Player.CurrentWeapon == Game->Player.NextWeapon ? 1 : 0;
+  if(!Game || !kkWeaponProofEnv) return 0;
+  sInt weapon = Game->Player.CurrentWeapon;
+  return weapon>=0 && weapon<8 &&
+    Game->Player.CurrentWeapon == Game->Player.NextWeapon &&
+    Game->WeaponShot[weapon] ? 1 : 0;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireOnce()
 {
-  if(!kkWeaponProofFireReady()) return -1;
+  if(!Game || !kkWeaponProofEnv) return -1;
+  kkWeaponProofGrantArsenal();
   sInt weapon = Game->Player.CurrentWeapon;
-  if(weapon<0 || weapon>=8 || !Game->WeaponShot[weapon]) return -2;
+  if(weapon<0 || weapon>=8 || Game->Player.NextWeapon!=weapon) return -2;
+  if(!Game->WeaponShot[weapon]) return -3;
   // Use the original Krieger projectile constructor itself. This creates the
   // real weapon-specific KEvent/ShotInfo object; no DOM/canvas imitation.
+  // Re-arm gameplay state first so the proof remains deterministic even if
+  // monsters altered the player's transient state during the previous shot.
+  Game->Switches[KGS_GAME] = KGS_GAME_RUN;
+  Game->Player.Life = Game->Player.LifeMax;
+  Game->Player.Armor = Game->Player.ArmorMax;
   Game->FireShot(kkWeaponProofEnv,weapon,0,0);
   return kkWeaponProofShotCount[weapon];
 }
