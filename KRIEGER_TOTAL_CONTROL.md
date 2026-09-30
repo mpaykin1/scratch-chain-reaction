@@ -169,3 +169,14 @@ New invariant: custom-level work must preserve `WeaponOptics`, `WeaponShot`, `We
 The converted real beta has now been parsed as a graph: **4,817 operators, 77 classes and 38 splines**. It contains hundreds of transforms/material links and substantial bitmap/material/scene/sector/portal machinery. First-person weapon optics alone reach 224–362 operators depending on slot.
 
 See [KRIEGER_KX_ARCHAEOLOGY_BASELINE.md](KRIEGER_KX_ARCHAEOLOGY_BASELINE.md). This is now the factual baseline for Native Level Lab v2.
+
+
+## 2026-09-30 physical-iPhone milestone: Location Rebuild is visibly changing the level
+
+The user tested the published Location Rebuild MVP on a physical iPhone and confirmed that the **location visibly changes**. The user described the change as small, so this is a partial authoring-control success rather than full graphics control.
+
+This is a stronger milestone than Surgery Lab v1 because the difference is now human-visible, not only detectable by framebuffer statistics.
+
+Canonical record: [KRIEGER_LOCATION_REBUILD_PHYSICAL_IPHONE_SUCCESS_2026-09-30.md](KRIEGER_LOCATION_REBUILD_PHYSICAL_IPHONE_SUCCESS_2026-09-30.md)
+
+Next target: move from modest transform deformation to an unmistakably new authored room/corridor composition while keeping the native Krieger material, lighting, weapon and effect pipelines.
