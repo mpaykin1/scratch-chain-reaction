@@ -1,0 +1,133 @@
+name: Kkrieger Location Rebuild Lab
+
+on:
+  push:
+    branches: ["feat/kkrieger-location-rebuild-lab-20260930", main]
+    paths:
+      - "tools/kkrieger-rebuild-lab/**"
+      - "tools/kkrieger-portrait-proof/**"
+      - ".github/workflows/kkrieger-rebuild-lab.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/kkrieger-rebuild-lab/**"
+      - "tools/kkrieger-portrait-proof/**"
+      - ".github/workflows/kkrieger-rebuild-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kkrieger-rebuild-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout exact Krieger source
+        uses: actions/checkout@v4
+        with:
+          repository: MasonDye/kkrieger-wasm
+          ref: 3bf0ff017372e640e966c2785a4d95a998cec242
+          path: .upstream/kkrieger-wasm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.9
+          actions-cache-folder: emsdk-cache
+
+      - name: Build autonomous rebuild lab
+        run: bash tools/kkrieger-rebuild-lab/build.sh .upstream/kkrieger-wasm
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.63.0 pngjs@7.0.0
+          node node_modules/playwright/cli.js install chromium
+
+      - name: Serve rebuild lab
+        run: |
+          python3 -m http.server 8767 --bind 127.0.0.1 --directory work/kkrieger-rebuild-lab >/tmp/rebuild-http.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:8767/index.html >/dev/null && break
+            sleep 1
+          done
+
+      - name: Prove native operator rebuild, visibility and firing
+        env:
+          KK_URL: http://127.0.0.1:8767/index.html
+          KK_OUTDIR: work/kkrieger-rebuild-lab
+        run: node tools/kkrieger-rebuild-lab/rebuild-smoke.mjs
+
+      - name: Upload rebuild evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-rebuild-lab-${{ github.sha }}
+          path: |
+            work/kkrieger-rebuild-lab/index.html
+            work/kkrieger-rebuild-lab/original.png
+            work/kkrieger-rebuild-lab/rebuilt.png
+            work/kkrieger-rebuild-lab/fired.png
+          retention-days: 14
+
+      - name: Publish permanent rebuild lab
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p kkrieger-rebuild-lab
+          cp work/kkrieger-rebuild-lab/index.html kkrieger-rebuild-lab/index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kkrieger-rebuild-lab/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "build(kkrieger): publish rebuild lab [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Wait for exact public bytes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          LIVE_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-rebuild-lab/
+        run: |
+          local_sha="$(sha256sum work/kkrieger-rebuild-lab/index.html | awk '{print $1}')"
+          ok=0
+          for attempt in $(seq 1 36); do
+            if curl -fLsS --max-time 30 "$LIVE_URL?build=$GITHUB_SHA" -o /tmp/live-rebuild.html; then
+              live_sha="$(sha256sum /tmp/live-rebuild.html | awk '{print $1}')"
+              if [ "$live_sha" = "$local_sha" ]; then
+                echo "REBUILD_LAB_LIVE_EXACT_BYTES_PASS attempt=$attempt"
+                ok=1
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test "$ok" -eq 1
+
+      - name: Re-prove public rebuild lab
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          KK_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-rebuild-lab/
+          KK_OUTDIR: work/kkrieger-rebuild-lab/live
+        run: node tools/kkrieger-rebuild-lab/rebuild-smoke.mjs
+
+      - name: Upload public evidence
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-rebuild-live-${{ github.sha }}
+          path: work/kkrieger-rebuild-lab/live
+          if-no-files-found: ignore
+          retention-days: 14
