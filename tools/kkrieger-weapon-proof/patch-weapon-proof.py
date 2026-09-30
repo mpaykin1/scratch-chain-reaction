@@ -83,9 +83,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofUse()
   sInt next = slots[(pos+1)%5];
   Game->Player.Weapon[next] = 1;
   Game->Player.NextWeapon = next;
-  // Mobile proof must not depend on the old keyboard/holster timing race.
-  // The normal AddEvents path still performs the actual model swap.
-  if(Game->WeaponTimer < 1.0f) Game->WeaponTimer = 1.0f;
+  // Perform the exact real model swap used by KKriegerGame::AddEvents, but
+  // synchronously for the touch proof so iOS input is not coupled to the
+  // historical holster-timer race.
+  if(Game->Player.CurrentWeapon != next)
+  {
+    Game->Player.CurrentWeapon = next;
+    Game->WeaponEvent.Exit();
+    Game->WeaponEvent.Init();
+    Game->WeaponEvent.Op = Game->WeaponOptics[next];
+    Game->WeaponTimer = 0.25f;
+  }
   return next;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofShotCountGet(int weapon)
