@@ -63,6 +63,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
   Game->Player.Ammo[1] = sMax(Game->Player.Ammo[1],160);
   Game->Player.Ammo[2] = sMax(Game->Player.Ammo[2],80);
   Game->Player.Ammo[3] = sMax(Game->Player.Ammo[3],400);
+  // Start the proof from a stable, fireable real weapon state.
+  Game->Player.NextWeapon = Game->Player.CurrentWeapon;
+  if(Game->WeaponTimer < 0.25f) Game->WeaponTimer = 0.25f;
+  Game->Player.CoolTimer = 0;
   return 1;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOwned(int weapon)
@@ -111,6 +115,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofKey(int code,int down)
 
 extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofFire(int down)
 {
+  // Drive the real game FireKey directly as well as the normal mouse bridge.
+  // The actual shot is still created only by KKriegerGame::OnTick -> FireShot.
+  if(Game)
+  {
+    Game->Player.FireKey = down ? 1 : 0;
+    if(down && Game->Player.CurrentWeapon == Game->Player.NextWeapon)
+    {
+      if(Game->WeaponTimer < 0.25f) Game->WeaponTimer = 0.25f;
+      if(Game->Player.CoolTimer > 0) Game->Player.CoolTimer = 0;
+    }
+  }
   if(!sSystem) return;
   if(down) sSystem->MouseButtons |= 1;
   else sSystem->MouseButtons &= ~1;
