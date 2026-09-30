@@ -201,8 +201,8 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
   base->TScale[0] = 2.5f;
   base->Color[0] = tint;
   base->Combiner[sMCS_TEX0] = sMCOA_SET;
-  base->Combiner[sMCS_COLOR0] = sMCOA_MUL2;
-  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
+  base->Combiner[sMCS_COLOR0] = sMCOA_MUL;
+  base->Combiner[sMCS_VERTEX] = sMCOA_MUL2;
   base->AlphaCombiner = sMCA_ZERO;
   sVERIFY(base->Compile());
   gm->AddPass(base,ENGU_BASE,MPP_STATIC,0);
@@ -215,9 +215,11 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
   light->TFlags[1] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
   light->TScale[1] = 2.5f;
   light->SpecPower = spec;
-  light->Color[0] = 0x00ffffff;
+  light->Color[0] = 0x00808080;
   light->Combiner[sMCS_LIGHT] = sMCOA_SET;
   light->Combiner[sMCS_COLOR0] = sMCOA_MUL;
+  if(spec < 24.0f)
+    light->SpecialFlags |= sMSF_NOSPECULAR;
   light->AlphaCombiner = sMCA_ZERO;
   sVERIFY(light->Compile());
   gm->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
@@ -232,7 +234,7 @@ static GenMaterial *kkReactorGlowMaterial()
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
   base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  base->Color[0] = 0x00ffb04a;
+  base->Color[0] = 0x00704018;
   base->Combiner[sMCS_COLOR0] = sMCOA_SET;
   base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
   base->AlphaCombiner = sMCA_ZERO;
@@ -242,7 +244,7 @@ static GenMaterial *kkReactorGlowMaterial()
   sMaterial11 *glow = new sMaterial11;
   glow->ShaderLevel = sPS_11;
   glow->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  glow->Color[0] = 0x00402008;
+  glow->Color[0] = 0x00100802;
   glow->Combiner[sMCS_COLOR0] = sMCOA_SET;
   glow->AlphaCombiner = sMCA_ZERO;
   sVERIFY(glow->Compile());
@@ -268,8 +270,8 @@ static void kkReactorInitMaterials()
                               0xff303030,0xffc8c8c8);
   kkMetalBump = Bitmap_Normals(kkMetalBump,1.45f,0);
 
-  kkStoneMat = kkReactorTexturedMaterial(kkStoneTex,kkStoneBump,0x00d3b89a,18.0f);
-  kkMetalMat = kkReactorTexturedMaterial(kkMetalTex,kkMetalBump,0x00c8d9e8,56.0f);
+  kkStoneMat = kkReactorTexturedMaterial(kkStoneTex,kkStoneBump,0x00483a30,18.0f);
+  kkMetalMat = kkReactorTexturedMaterial(kkMetalTex,kkMetalBump,0x00384858,42.0f);
   kkGlowMat = kkReactorGlowMaterial();
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"materials_done\"}\n");
 }
@@ -368,7 +370,7 @@ void KriegerReactorInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     labLight.Range = 18.0f;
     labLight.Id = 7104;
     AddLightJob(labLight);
-    AddAmbientLight(0x08090b);
+    AddAmbientLight(0x16181c);
   }
 #endif
 
