@@ -39,12 +39,17 @@ try{
   await page.waitForFunction(()=>typeof Module!=="undefined"&&Module.ccall&&Module.ccall("kkWeaponProofCurrent","number",[],[])>=0,null,{timeout:12000});
   await page.evaluate(()=>Module.ccall("kkWeaponProofEnterRun","number",[],[]));
   await page.waitForFunction(()=>Module.ccall("kkWeaponProofPlayerReady","number",[],[])===1,null,{timeout:30000});
-  await page.evaluate(()=>Module.ccall("kkWeaponProofGrantArsenal","number",[],[]));
+  await page.waitForFunction(()=>Module.ccall("kkWeaponProofFireReady","number",[],[])===1,null,{timeout:12000});
+  await page.evaluate(()=>{
+    Module.ccall("kkWeaponProofGrantArsenal","number",[],[]);
+    return Module.ccall("kkWeaponProofPauseLab","number",[],[]);
+  });
+  await page.waitForFunction(()=>Module.ccall("kkWeaponProofGameState","number",[],[])===1,null,{timeout:3000});
   await page.waitForFunction(()=>{
     const c=Module.ccall("kkWeaponProofCurrent","number",[],[]);
     const n=Module.ccall("kkWeaponProofNext","number",[],[]);
     return [0,1,2,4,6].includes(c) && c===n;
-  },null,{timeout:12000});
+  },null,{timeout:3000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
   const m=portrait.proof.master,mw=m.master[2]-m.master[0],mh=m.master[3]-m.master[1];
