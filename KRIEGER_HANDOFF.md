@@ -33,6 +33,9 @@ These documents separate the current renderer-isolation Level Lab from the targe
 Renderer forensics and permanent invariants learned from the Level Lab black-screen failure:
 `KRIEGER_RENDERER_FORENSICS.md`
 
+Physical-iPhone fidelity/weapon failure ledger (mandatory before any new custom-level claim):
+`KRIEGER_FAILURE_LEDGER.md`
+
 ## Mobile status — physical-device truth
 
 The user's physical iPhone result overrides synthetic Chromium evidence.
