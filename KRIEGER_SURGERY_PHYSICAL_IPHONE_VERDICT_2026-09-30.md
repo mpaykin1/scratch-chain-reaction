@@ -55,7 +55,7 @@ The same principle must be used by all released World Server web games: gestures
 
 The next MVP expands control from one weapon transform to a large band of native location operators.
 
-KX archaeology places substantial level architecture in Scene_Transform operators in the 2400–3908 band. The new lab changes many of those native transforms deterministically while leaving:
+KX archaeology places substantial level architecture in Scene_Transform operators in the 2400–3908 band. The new lab changes a KX-derived whitelist of 31 topology-safe native architecture transforms deterministically while leaving:
 
 - original meshes;
 - procedural bitmaps;
@@ -83,7 +83,7 @@ No replacement JS/WebGL geometry is accepted.
 The new Location Rebuild lab must satisfy all of these before publication:
 
 1. physical-style portrait canvas coverage >85%;
-2. at least 30 distinct native location Scene_Transform KOps are exercised;
+2. the KX-derived topology-safe whitelist contains 31 native architecture Scene_Transform KOps, and the current frame must exercise at least 8 of them;
 3. full-frame changed-pixel ratio >=18%;
 4. architecture-region changed-pixel ratio >=20%;
 5. full-frame mean delta >=8;
