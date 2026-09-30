@@ -25,8 +25,11 @@ Do not replace this with a JavaScript imitation or a new engine unless explicitl
 
 Highest-priority Krieger Total Control program:
 - `KRIEGER_TOTAL_CONTROL.md`
+- `KRIEGER_GRAPHICS_CONTROL_LESSONS.md`
 - `KRIEGER_LEVEL_AUTHORING_CONTRACT.md`
 - `KRIEGER_RENDERER_FORENSICS.md`
+
+The user-confirmed portrait success is not only a solved mobile bug; it is the canonical example of the Krieger research method: instrument the entire render chain, locate the first divergent stage, fix the owning subsystem, then prove both intermediate engine invariants and final framebuffer pixels. Future chats must reuse this method for geometry, materials, lights, scene/portal visibility and postprocess.
 
 These documents separate the current renderer-isolation Level Lab from the target native `GenScene -> Sector -> Portal -> Light -> Engine jobs` authoring path.
 
