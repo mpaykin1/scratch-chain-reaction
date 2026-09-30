@@ -79,6 +79,8 @@ jobs:
           git add kkrieger-weapon-proof/index.html
           if ! git diff --cached --quiet; then
             git commit -m "build(kkrieger): publish weapon proof [skip ci]"
+            git fetch origin main
+            git rebase origin/main
             git push origin HEAD:main
           fi
       - name: Wait for exact public bytes
