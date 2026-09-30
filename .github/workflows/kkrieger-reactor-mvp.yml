@@ -6,18 +6,13 @@ on:
     paths:
       - "tools/kkrieger-reactor-mvp/**"
       - ".github/workflows/kkrieger-reactor-mvp.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "tools/kkrieger-reactor-mvp/**"
-      - ".github/workflows/kkrieger-reactor-mvp.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: kkrieger-reactor-mvp-${{ github.ref }}
+  group: kkrieger-reactor-mvp
   cancel-in-progress: true
 
 jobs:
