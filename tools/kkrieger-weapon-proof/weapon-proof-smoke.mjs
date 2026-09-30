@@ -82,12 +82,18 @@ try{
       return window.__kkUseSeq||0;
     },{cycle});
     if(afterSeq<=beforeSeq) throw new Error("USE pointerdown handler did not run");
-    const useState=await page.evaluate(()=>({target:window.__kkLastUseTarget,nextAtTouch:window.__kkLastUseEngineNext}));
+    const useState=await page.evaluate(()=>({
+      target:window.__kkLastUseTarget,
+      nextAtTouch:window.__kkLastUseEngineNext,
+      currentAtTouch:window.__kkLastUseEngineCurrent,
+      opticsAtTouch:window.__kkLastUseOptics
+    }));
     const target=useState.target;
     if(!slots.includes(target)) throw new Error("USE returned invalid target "+target);
     if(target===current) throw new Error("USE did not choose a different weapon "+target);
     if(useState.nextAtTouch!==target) throw new Error("USE did not set real Player.NextWeapon: "+JSON.stringify(useState));
-    await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,target,{timeout:7000});
+    if(useState.currentAtTouch!==target) throw new Error("USE did not set real Player.CurrentWeapon: "+JSON.stringify(useState));
+    if(!useState.opticsAtTouch) throw new Error("USE did not bind real WeaponOptics model: "+JSON.stringify(useState));
     current=target;
   }
   if(visited.size!==slots.length) throw new Error("USE did not cycle through all five player weapons: "+JSON.stringify([...visited]));
