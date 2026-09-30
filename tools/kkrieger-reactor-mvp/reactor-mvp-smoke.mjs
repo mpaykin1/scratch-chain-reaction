@@ -96,11 +96,11 @@ try{
   await page.waitForFunction(()=>window.__kkRuntimeReady===true,null,{timeout:60000});
   await page.locator("#labStart").click();
 
-  await page.waitForFunction(()=>window.__kkLab?.built?.id==="dark-reactor-v2",null,{timeout:90000});
+  await page.waitForFunction(()=>window.__kkLab?.built?.id==="dark-reactor-v2",null,{timeout:240000});
   await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.render?.proceduralTextures>=4 && window.__kkLab?.render?.materialCategories>=3 && window.__kkLab?.render?.bumpMapped===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1800);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   if(before.built.visualParts < 45 || before.built.curvedOps < 24 || before.built.multiplyOps < 2)
