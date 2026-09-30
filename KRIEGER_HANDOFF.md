@@ -27,8 +27,10 @@ Highest-priority Krieger Total Control program:
 - `KRIEGER_TOTAL_CONTROL.md`
 - `KRIEGER_LEVEL_AUTHORING_CONTRACT.md`
 - `KRIEGER_RENDERER_FORENSICS.md`
+- `KRIEGER_KX_ARCHAEOLOGY_BASELINE.md`
+- `KRIEGER_GRAPHICS_FIDELITY_MAP.md`
 
-These documents separate the current renderer-isolation Level Lab from the target native `GenScene -> Sector -> Portal -> Light -> Engine jobs` authoring path.
+These documents separate the current renderer-isolation Level Lab from the target native `GenScene -> Sector -> Portal -> Light -> Engine jobs` authoring path. `KRIEGER_GRAPHICS_FIDELITY_MAP.md` adds direct packed-KX evidence for real world/material/weapon/postprocess recipe depth; future custom graphics work must treat operator subgraphs, not isolated meshes, as the reusable unit.
 
 Renderer forensics and permanent invariants learned from the Level Lab black-screen failure:
 `KRIEGER_RENDERER_FORENSICS.md`
