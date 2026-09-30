@@ -221,6 +221,18 @@ try{
   }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
 
+  // Return to the exact authored hero view before judging visibility. Movement
+  // and look have already been proven above; the public user's first frame is
+  // the thing this visual gate must represent.
+  await page.evaluate(()=>Module.ccall("kkLabHeroView",null,[],[]));
+  await page.waitForFunction(()=>{
+    const x=Module.ccall("kkLabPose","number",["number"],[2]);
+    const z=Module.ccall("kkLabPose","number",["number"],[4]);
+    const d=Module.ccall("kkLabPose","number",["number"],[0]);
+    return Math.abs(x-986.8)<0.2 && Math.abs(z-6.3)<0.2 && Math.abs(d-1.95)<0.03;
+  },null,{timeout:15000});
+  await page.waitForTimeout(1800);
+
   // Visual proof must measure the 3D framebuffer, not HTML controls. The old
   // oracle accidentally counted the cyan badge + joystick/buttons as scene
   // pixels, so an entirely black WebGL canvas could pass with ~96% "coverage".
