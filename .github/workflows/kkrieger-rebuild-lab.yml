@@ -93,7 +93,22 @@ jobs:
           git add kkrieger-rebuild-lab/index.html
           if ! git diff --cached --quiet; then
             git commit -m "build(kkrieger): publish rebuild lab [skip ci]"
-            git push origin HEAD:main
+            # Several Krieger proof workflows can finish at the same time and
+            # all publish a different generated page. Rebase our one-file
+            # publish commit onto the latest main before pushing so one proof
+            # does not make another fail with a non-fast-forward race.
+            ok=0
+            for attempt in 1 2 3 4; do
+              git fetch origin main
+              git rebase origin/main
+              if git push origin HEAD:main; then
+                echo "REBUILD_LAB_PUBLISH_PASS attempt=$attempt"
+                ok=1
+                break
+              fi
+              sleep $((attempt*2))
+            done
+            test "$ok" -eq 1
           fi
 
       - name: Wait for exact public bytes
