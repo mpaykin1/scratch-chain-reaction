@@ -115,3 +115,19 @@ The automated oracle must require all of these:
 5. **Postprocess/Viewport Lab:** capture pre-post and final output over 16:9, 19.5:9, 4:3, 1:1, 9:16 and narrow portrait.
 
 When all five are deterministic, Level Lab can grow into a recipe-driven native level compiler instead of more one-off patches.
+
+
+## 2026-09-30: v1 isolation boundary must not become the product architecture
+
+Physical-iPhone evidence showed that v1's isolation strategy destroys important native content.
+
+Forbidden shortcuts for Native Level Lab v2:
+
+1. do not call `KKriegerGame::Flush()` after the .kx graph has bound `WeaponOptics[]`, `WeaponShot[]` and `WeaponExplode[][]` unless those bindings are explicitly restored;
+2. do not zero native `MeshJobs/EffectJobs` globally merely to hide the old world, because that also removes the first-person weapon, projectile/effect events and other authored content.
+
+A custom level must replace world/scene content at the correct scene/operator boundary while preserving player/weapon/effect systems.
+
+Visual fidelity also requires more than `Mesh_Cube + Add`: future recipes must deliberately exercise real mesh operators, procedural bitmap/material dependencies, UV/material links, authored lighting and effects.
+
+Full failure analysis: [KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md](KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md)
