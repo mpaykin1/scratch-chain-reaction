@@ -81,7 +81,7 @@ const browser=await chromium.launch({
 });
 
 try{
-  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844}});
+  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844},deviceScaleFactor:1});
   const page=await context.newPage();
   const errors=[];
   page.on("pageerror",e=>{ errors.push(String(e)); console.log("PAGEERROR",String(e)); });
