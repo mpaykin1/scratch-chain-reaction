@@ -40,3 +40,19 @@ The public proof passed live CI with a 1170×2532 engine/master viewport and 100
 
 Canonical handoff: `KRIEGER_HANDOFF.md`
 Canonical public game: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/
+
+
+## 4. Custom Level Lab v1 fidelity + weapon path — OPEN / ARCHITECTURAL
+
+Physical iPhone, 2026-09-30:
+
+- black framebuffer solved;
+- scene still primitive cuboid test geometry, not accepted as Krieger-quality graphics;
+- first-person weapon absent;
+- FIRE has no visible shot/effect.
+
+Confirmed causes: `Mesh_Cube + GenMesh::Add` dominates the lab content; the material is minimal; `KKriegerGame::Flush()` clears `WeaponShot/WeaponOptics/WeaponExplode`; the isolated paint path clears native `MeshJobs/EffectJobs`.
+
+This cannot be declared solved by a non-black framebuffer or FIRE input telemetry. Required successor: Native Level Lab v2 + Weapon Lab.
+
+Canonical postmortem: `KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md`.
