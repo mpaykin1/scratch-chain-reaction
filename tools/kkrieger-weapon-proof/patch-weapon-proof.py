@@ -63,8 +63,6 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
   Game->Player.Ammo[1] = sMax(Game->Player.Ammo[1],160);
   Game->Player.Ammo[2] = sMax(Game->Player.Ammo[2],80);
   Game->Player.Ammo[3] = sMax(Game->Player.Ammo[3],400);
-  // Start the proof from a stable, fireable real weapon state.
-  Game->Player.NextWeapon = Game->Player.CurrentWeapon;
   if(Game->WeaponTimer < 0.25f) Game->WeaponTimer = 0.25f;
   Game->Player.CoolTimer = 0;
   return 1;
@@ -338,6 +336,7 @@ def patch_shell(s):
   function kkNextWeapon(){
     var target=kkReadNumber("kkWeaponProofUse",[]);
     window.__kkLastUseTarget=target;
+    window.__kkLastUseEngineNext=kkReadNumber("kkWeaponProofNext",[]);
     window.__kkUseSeq++;
     return target;
   }
