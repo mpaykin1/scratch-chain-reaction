@@ -326,7 +326,7 @@ def patch_shell(s):
   }
   var useBtn=document.getElementById("weaponUse");
   var fireBtn=document.getElementById("weaponFire");
-  useBtn.addEventListener("click",function(e){kkNextWeapon();e.preventDefault();});
+  useBtn.addEventListener("pointerdown",function(e){kkNextWeapon();e.preventDefault();});
   fireBtn.addEventListener("pointerdown",function(e){kkCall("kkWeaponProofFire",[1]);e.preventDefault();});
   function kkStopFire(e){kkCall("kkWeaponProofFire",[0]);e.preventDefault();}
   fireBtn.addEventListener("pointerup",kkStopFire);
