@@ -56,18 +56,27 @@ try{
     await page.waitForFunction(([s,n])=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s])>n,[slot,before],{timeout:7000});
   }
 
-  const startSlot=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
-  const startIndex=slots.indexOf(startSlot);
-  const order=[...slots.slice(startIndex),...slots.slice(0,startIndex)];
-  await fireAndProve(order[0]);
-  for(const slot of order.slice(1)){
-    await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:60+slot,pointerType:"touch"});
-    await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:60+slot,pointerType:"touch"});
-    await page.waitForFunction(s=>window.__kkLastUseTarget===s,slot,{timeout:2000});
-    await page.waitForFunction(s=>Module.ccall("kkWeaponProofNext","number",[],[])===s,slot,{timeout:2000});
-    await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,slot,{timeout:7000});
-    await fireAndProve(slot);
+  let current=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
+  const visited=new Set();
+  for(let cycle=0;cycle<10 && visited.size<slots.length;cycle++){
+    if(!slots.includes(current)) throw new Error("unexpected player weapon slot "+current);
+    if(!visited.has(current)){
+      await fireAndProve(current);
+      visited.add(current);
+    }
+    if(visited.size===slots.length) break;
+    const beforeSeq=await page.evaluate(()=>window.__kkUseSeq||0);
+    await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:60+cycle,pointerType:"touch"});
+    await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:60+cycle,pointerType:"touch"});
+    await page.waitForFunction(n=>(window.__kkUseSeq||0)>n,beforeSeq,{timeout:2000});
+    const target=await page.evaluate(()=>window.__kkLastUseTarget);
+    if(!slots.includes(target)) throw new Error("USE returned invalid target "+target);
+    if(target===current) throw new Error("USE did not choose a different weapon "+target);
+    await page.waitForFunction(s=>Module.ccall("kkWeaponProofNext","number",[],[])===s,target,{timeout:2000});
+    await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,target,{timeout:7000});
+    current=target;
   }
+  if(visited.size!==slots.length) throw new Error("USE did not cycle through all five player weapons: "+JSON.stringify([...visited]));
 
   const engineProof=await page.evaluate(slots=>Object.fromEntries(slots.map(slot=>[slot,{
     shots:Module.ccall("kkWeaponProofShotCountGet","number",["number"],[slot]),
