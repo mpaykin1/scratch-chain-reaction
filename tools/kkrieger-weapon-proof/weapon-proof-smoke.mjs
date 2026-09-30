@@ -40,7 +40,11 @@ try{
   await page.evaluate(()=>Module.ccall("kkWeaponProofEnterRun","number",[],[]));
   await page.waitForFunction(()=>Module.ccall("kkWeaponProofPlayerReady","number",[],[])===1,null,{timeout:30000});
   await page.evaluate(()=>Module.ccall("kkWeaponProofGrantArsenal","number",[],[]));
-  await page.waitForFunction(()=>[0,1,2,4,6].includes(Module.ccall("kkWeaponProofCurrent","number",[],[])),null,{timeout:12000});
+  await page.waitForFunction(()=>{
+    const c=Module.ccall("kkWeaponProofCurrent","number",[],[]);
+    const n=Module.ccall("kkWeaponProofNext","number",[],[]);
+    return [0,1,2,4,6].includes(c) && c===n;
+  },null,{timeout:12000});
 
   const portrait=await page.evaluate(()=>({inner:[innerWidth,innerHeight],proof:window.__kkPortraitProof}));
   const m=portrait.proof.master,mw=m.master[2]-m.master[0],mh=m.master[3]-m.master[1];
@@ -74,10 +78,11 @@ try{
       return window.__kkUseSeq||0;
     },{cycle});
     if(afterSeq<=beforeSeq) throw new Error("USE pointerdown handler did not run");
-    const target=await page.evaluate(()=>window.__kkLastUseTarget);
+    const useState=await page.evaluate(()=>({target:window.__kkLastUseTarget,nextAtTouch:window.__kkLastUseEngineNext}));
+    const target=useState.target;
     if(!slots.includes(target)) throw new Error("USE returned invalid target "+target);
     if(target===current) throw new Error("USE did not choose a different weapon "+target);
-    await page.waitForFunction(s=>Module.ccall("kkWeaponProofNext","number",[],[])===s,target,{timeout:2000});
+    if(useState.nextAtTouch!==target) throw new Error("USE did not set real Player.NextWeapon: "+JSON.stringify(useState));
     await page.waitForFunction(s=>Module.ccall("kkWeaponProofCurrent","number",[],[])===s,target,{timeout:7000});
     current=target;
   }
