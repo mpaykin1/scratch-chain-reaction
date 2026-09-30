@@ -57,7 +57,11 @@ const browser=await chromium.launch({
 
 try{
   fs.mkdirSync(outDir,{recursive:true});
-  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844}});
+  // Use phone CSS dimensions but DPR=1 in CI: the full native game scene is
+  // expensive under software SwiftShader at iPhone DPR=3. Physical iPhone
+  // still runs its real DPR; this gate measures composition/visibility and
+  // native gameplay behavior, not GPU throughput.
+  const context=await browser.newContext({...devices["iPhone 13"],viewport:{width:390,height:844},deviceScaleFactor:1});
   const page=await context.newPage();
   const errors=[];
   const logs=[];
