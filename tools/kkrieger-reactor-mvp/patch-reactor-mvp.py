@@ -428,6 +428,14 @@ extern "C" EMSCRIPTEN_KEEPALIVE double kkLabPose(int which)
   }
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void kkLabHeroView()
+{
+  if(!Game) return;
+  sVector p;
+  p.Init(KKLAB_X-13.2f,1.0f,6.3f,1.0f);
+  Game->SetPlayer(p,1.950000f,-0.06f);
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE void kkLabDirectLook(int dx,int dy)
 {
   if(!Game) return;
