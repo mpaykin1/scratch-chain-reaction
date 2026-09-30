@@ -75,23 +75,36 @@ try{
 
   const stat=idx=>page.evaluate(i=>Module.ccall("kkSurgeryStat","number",["number"],[i]),idx);
 
-  // The native beta Reset/weapon animation can initially sit on slot 1 while
-  // NextWeapon is slot 0. Drive the *real* game input path with key "1"
-  // (weaponswap -> slot 0) rather than assuming the transient state.
-  await page.waitForTimeout(3500);
-  const preSelect=await Promise.all(Array.from({length:13},(_,i)=>stat(i)));
+  // Preserve the native beta state machine. The converted beta starts in
+  // INTRO and automatically reaches START; Enter selects the default "start
+  // game" state through the real Exec_Misc_State operator. We intentionally
+  // drive that authored path instead of forcing KGS_GAME from C++.
+  await page.waitForTimeout(2500);
+  const preSelect=await Promise.all(Array.from({length:15},(_,i)=>stat(i)));
   console.log("SURGERY_PRESELECT",JSON.stringify(preSelect));
-  await page.evaluate(()=>{
-    Module.ccall("kkSurgeryKey",null,["number","number"],["1".charCodeAt(0),1]);
-    Module.ccall("kkSurgeryKey",null,["number","number"],["1".charCodeAt(0),0]);
-  });
+
+  for(let attempt=0;attempt<12;attempt++){
+    const gameState=await stat(13);
+    if(gameState===0) break;
+    await page.evaluate(()=>Module.ccall("kkSurgeryKey",null,["number","number"],[10,1]));
+    await page.waitForTimeout(700);
+  }
+  const afterMenu=await Promise.all(Array.from({length:15},(_,i)=>stat(i)));
+  console.log("SURGERY_AFTER_MENU",JSON.stringify(afterMenu));
+  if(afterMenu[13]!==0) throw new Error("native menu did not enter game: "+JSON.stringify(afterMenu));
+
+  // Slot 0 is the shotgun/first visible optics recipe we surgically modify.
+  // Key '1' is the real Krieger weapon-select path.
+  await page.evaluate(()=>Module.ccall("kkSurgeryKey",null,["number","number"],[49,1]));
   await page.waitForFunction(()=>{
     try{
-      return Module.ccall("kkSurgeryStat","number",["number"],[0])===0 &&
+      return Module.ccall("kkSurgeryStat","number",["number"],[13])===0 &&
+             Module.ccall("kkSurgeryStat","number",["number"],[0])===0 &&
              Module.ccall("kkSurgeryStat","number",["number"],[2])===1 &&
              Module.ccall("kkSurgeryStat","number",["number"],[3])===1;
     }catch(e){ return false; }
-  },null,{timeout:30000});
+  },null,{timeout:45000});
+
 
   const state=await page.evaluate(()=>({
     inner:[innerWidth,innerHeight],
