@@ -94,6 +94,27 @@ The reason is now mapped: the test measured occupancy, not authored 3D structure
 
 Permanent rule: a Level Lab visual gate must prove structure and view response, not just non-black pixels.
 
+## Canonical graphics-control lesson from the portrait success
+
+Read `KRIEGER_GRAPHICS_CONTROL_LESSONS.md`.
+
+The physical-iPhone-confirmed portrait proof established the working research pattern for Krieger:
+
+```text
+measure all stages
+→ find the first divergence
+→ change the subsystem that owns it
+→ assert intermediate engine state
+→ assert final framebuffer structure
+→ verify on the physical target
+```
+
+The next graphics-control progression is now fixed:
+
+`Mesh Lab → Material Lab → Light Lab → native Scene/Sector/Portal Lab → Postprocess Lab`.
+
+Do not jump directly to a full custom level and infer understanding from the result. Each lab must have both a structural oracle and a visual framebuffer oracle.
+
 ## Observatory target
 
 Krieger Observatory should expose at runtime:

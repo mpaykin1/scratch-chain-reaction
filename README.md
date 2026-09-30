@@ -5,6 +5,7 @@
 Canonical handoff: [KRIEGER_HANDOFF.md](KRIEGER_HANDOFF.md)  
 Known mobile status: [KRIEGER_KNOWN_ISSUES.md](KRIEGER_KNOWN_ISSUES.md)  
 Portrait fullscreen solved recipe: [KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md](KRIEGER_PORTRAIT_FULLSCREEN_PROOF.md)  
+Graphics-control lessons learned from that success: [KRIEGER_GRAPHICS_CONTROL_LESSONS.md](KRIEGER_GRAPHICS_CONTROL_LESSONS.md)  
 Public game: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger/  
 Portrait proof: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-portrait-proof/
 
