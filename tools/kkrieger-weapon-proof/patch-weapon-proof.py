@@ -64,6 +64,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
   Game->Player.Ammo[1] = sMax(Game->Player.Ammo[1],160);
   Game->Player.Ammo[2] = sMax(Game->Player.Ammo[2],80);
   Game->Player.Ammo[3] = sMax(Game->Player.Ammo[3],400);
+  Game->Player.Life = Game->Player.LifeMax;
+  Game->Player.Armor = Game->Player.ArmorMax;
+  Game->Switches[KGS_GAME] = KGS_GAME_RUN;
   if(Game->WeaponTimer < 0.25f) Game->WeaponTimer = 0.25f;
   Game->Player.CoolTimer = 0;
   return 1;
@@ -373,6 +376,8 @@ def patch_shell(s):
     var target=kkReadNumber("kkWeaponProofUse",[]);
     window.__kkLastUseTarget=target;
     window.__kkLastUseEngineNext=kkReadNumber("kkWeaponProofNext",[]);
+    window.__kkLastUseEngineCurrent=kkReadNumber("kkWeaponProofCurrent",[]);
+    window.__kkLastUseOptics=kkReadNumber("kkWeaponProofOpticsEffect",[target]);
     window.__kkUseSeq++;
     return target;
   }
