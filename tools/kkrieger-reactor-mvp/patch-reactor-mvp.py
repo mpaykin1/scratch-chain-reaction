@@ -136,27 +136,76 @@ static GenMaterial *kkStoneMat = 0;
 static GenMaterial *kkMetalMat = 0;
 static GenMaterial *kkGlowMat = 0;
 
+class KkReactorMaterial11Insert : public EngMaterialInsert
+{
+public:
+  sInt GetPriority() { return 0x10; }
+
+  void BeforeUsage(sInt pass,sInt usage,const EngLight *light)
+  {
+    if(usage==ENGU_POSTLIGHT)
+      sSystem->SetScissor(0);
+  }
+
+  void AfterUsage(sInt pass,sInt usage,const EngLight *light)
+  {
+    switch(usage)
+    {
+    case ENGU_BASE:
+      if(GenOverlayManager->CurrentShader >= sPS_11)
+      {
+        GenOverlayManager->FXQuad(GENOVER_CLRDESTALPHA);
+#if !sINTRO
+        if(GenOverlayManager->EnableShadows >= 2)
+          sSystem->Clear(sVCF_COLOR,0x00808080);
+#endif
+      }
+      Engine->ApplyViewProject();
+      break;
+    case ENGU_SHADOW:
+      sMaterial11::SetShadowStates(0);
+      break;
+    case ENGU_LIGHT:
+      sSystem->Clear(sVCF_STENCIL);
+      sSystem->SetScissor(0);
+      break;
+    case ENGU_POSTLIGHT:
+      if(GenOverlayManager->CurrentShader >= sPS_11)
+      {
+        GenOverlayManager->FXQuad(GENOVER_ADDDESTALPHA);
+        Engine->ApplyViewProject();
+      }
+      break;
+    }
+  }
+};
+
+static KkReactorMaterial11Insert kkReactorMaterialInsert;
+
 static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU32 tint,sF32 spec)
 {
+  // Match the native Krieger Material_Material 1.1 phase topology:
+  // BASE writes depth/ambient, LIGHT adds bump/specular response, POSTLIGHT
+  // multiplies the procedural diffuse texture into the lit result. Keeping
+  // diffuse in BASE (our earlier attempt) breaks the 2004 dest-alpha/specular
+  // contract and the final IPP chain can blow the frame to white.
   diff->MakeTexture();
   bump->MakeTexture();
   GenMaterial *gm = new GenMaterial;
 
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
-  base->BaseFlags = sMBF_ZON|sMBF_FOG;
-  base->SetTex(0,diff->Texture);
-  base->TFlags[0] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
-  base->TScale[0] = 3.0f;
-  base->Combiner[sMCS_TEX0] = sMCOA_SET;
-  base->Combiner[sMCS_VERTEX] = sMCOA_MUL2;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL;
+  base->Color[0] = 0x000b0b0b;
+  base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
   base->AlphaCombiner = sMCA_ZERO;
   sVERIFY(base->Compile());
   gm->AddPass(base,ENGU_BASE,MPP_STATIC,0);
 
   sMaterial11 *light = new sMaterial11;
   light->ShaderLevel = sPS_11;
-  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|sMBF_BLENDADD;
   light->LightFlags = sMLF_BUMPX;
   light->SetTex(1,bump->Texture);
   light->TFlags[1] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
@@ -168,6 +217,26 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
   light->AlphaCombiner = sMCA_ZERO;
   sVERIFY(light->Compile());
   gm->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
+
+  sMaterial11 *shadow = new sMaterial11;
+  shadow->ShaderLevel = sPS_11;
+  shadow->BaseFlags = sMBF_ZREAD|sMBF_SHADOWMASK|sMBF_ZONLY|sMBF_NOTEXTURE|sMBF_NONORMAL;
+  shadow->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  sVERIFY(shadow->Compile());
+  gm->AddPass(shadow,ENGU_SHADOW,MPP_SHADOW,0);
+
+  sMaterial11 *texture = new sMaterial11;
+  texture->ShaderLevel = sPS_11;
+  texture->BaseFlags = sMBF_BLENDMUL2|sMBF_ZREAD|sMBF_ZEQUAL;
+  texture->SetTex(0,diff->Texture);
+  texture->TFlags[0] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
+  texture->TScale[0] = 3.0f;
+  texture->Combiner[sMCS_TEX0] = sMCOA_SET;
+  texture->AlphaCombiner = sMCA_HALF;
+  sVERIFY(texture->Compile());
+  gm->AddPass(texture,ENGU_POSTLIGHT,MPP_STATIC,0);
+
+  gm->Insert = &kkReactorMaterialInsert;
   return gm;
 }
 
