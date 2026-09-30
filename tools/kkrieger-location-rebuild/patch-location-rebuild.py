@@ -43,6 +43,23 @@ static sInt kkRebuildMode = 0;
 static sInt kkRebuildTouched = 0;
 static sU8 kkRebuildSeen[5000];
 
+// KX-derived whitelist: 31 Scene_Transform operators whose immediate input
+// is scene-add/multiply or rendered mesh content. Sector/Portal/Physic and
+// Monster wrapper transforms are intentionally excluded so we rebuild the
+// architecture *inside* native topology rather than tearing topology apart.
+static sBool kkRebuildTarget(sInt id)
+{
+  static const sInt ids[] = {
+    2460,2542,2953,2969,3082,3142,3207,3341,3386,
+    3464,3506,3515,3526,3589,3591,3606,3608,3622,
+    3637,3639,3641,3652,3654,3656,3666,3668,3670,
+    3673,3707,3873,3903
+  };
+  for(sInt i=0;i<sCOUNTOF(ids);i++)
+    if(ids[i]==id) return sTRUE;
+  return sFALSE;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE void kkRebuildSetMode(int mode)
 {
   kkRebuildMode = mode ? 1 : 0;
@@ -68,28 +85,26 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkRebuildGetTouched()
     new="""void __stdcall Exec_Scene_Transform(KOp *op,KEnvironment *kenv,sF323 s,sF323 r,sF323 t)
 {
 #if defined(__EMSCRIPTEN__)
-  if(kkRebuildMode && op && op->OpId>=2400 && op->OpId<=3908)
+  if(kkRebuildMode && op && kkRebuildTarget(op->OpId))
   {
     const sInt id=op->OpId;
-    // Do not flatten the scene into replacement primitives. Instead rebuild
-    // the room by changing the transforms of many *existing* native scene
-    // recipes. Deterministic variation widens/narrows bays, changes vertical
-    // rhythm and offsets repeated architecture while keeping every original
-    // material/texture/normal/effect dependency attached.
+    // Rebuild actual native architecture, but keep sector/portal topology
+    // untouched. These deliberately large deltas must be obvious to a human
+    // at phone scale, not merely detectable by a pixel-diff algorithm.
     sF32 ox=t.x;
-    t.x = ox*1.42f;
+    t.x = ox*1.65f;
     if(sFAbs(ox)<0.45f)
-      t.x += (id&1) ? 1.15f : -1.15f;
+      t.x += (id&1) ? 2.30f : -2.30f;
     else
-      t.x += ((id%3)-1)*0.55f;
+      t.x += ((id%3)-1)*1.10f;
 
-    t.z += ((id%5)-2)*0.55f;
-    if(t.y>1.0f) t.y += ((id%4)-1.5f)*0.28f;
+    t.z += ((id%5)-2)*1.15f;
+    if(t.y>1.0f) t.y += ((id%4)-1.5f)*0.55f;
 
-    s.x *= 1.08f + (id%4)*0.055f;
-    if((id%5)==0) s.y *= 1.28f;
-    if((id%7)==0) s.z *= 0.84f;
-    r.y += ((id%7)-3)*0.018f;
+    s.x *= 1.18f + (id%4)*0.085f;
+    if((id%5)==0) s.y *= 1.42f;
+    if((id%7)==0) s.z *= 0.72f;
+    r.y += ((id%7)-3)*0.040f;
 
     if(id<5000 && !kkRebuildSeen[id])
     {
@@ -357,7 +372,7 @@ def patch_shell(s):
 """
     new="""        var mode=window.__kkRebuild&&window.__kkRebuild.mode?'REBUILT':'ORIGINAL';
         b.textContent='KRIEGER LOCATION REBUILD · '+mode+
-          '\\nnative Scene_Transform KOps 2400–3908'+
+          '\\n31 native architecture Scene_Transform KOps'+
           '\\nengine '+m.config[0]+'×'+m.config[1]+
           '\\nmaster '+(m.master[2]-m.master[0])+'×'+(m.master[3]-m.master[1])+
           '\\naspect '+m.aspect.toFixed(4);
