@@ -172,19 +172,26 @@ try{
   if(mw!==v.config[0] || mh!==v.config[1]) throw new Error("custom level lost full portrait master viewport");
   if(Math.abs(v.aspect-(v.config[0]/v.config[1]))>.002) throw new Error("custom level projection aspect mismatch");
 
-  // Real input boundary. Do not use fixed sleeps: software WebGL can render
-  // only a few frames per second. Wait for the C++ simulation state itself.
-  const p0=before.player.pos.slice();
+  // Real input boundary. Read movement directly from live KKriegerGame state.
+  // Telemetry is sampled and can lag behind under SwiftShader even while C++
+  // movement is already happening, which caused false timeouts.
+  const p0=await page.evaluate(()=>[
+    Module.ccall("kkLabPose","number",["number"],[2]),
+    Module.ccall("kkLabPose","number",["number"],[4])
+  ]);
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,1]));
-  await page.waitForFunction((p)=>{
-    const q=window.__kkLab?.player?.pos;
-    return q && Math.hypot(q[0]-p[0],q[2]-p[2])>0.08;
-  },p0,{timeout:45000});
+  let p1=p0;
+  for(let attempt=0;attempt<18;attempt++){
+    await page.waitForTimeout(700);
+    p1=await page.evaluate(()=>[
+      Module.ccall("kkLabPose","number",["number"],[2]),
+      Module.ccall("kkLabPose","number",["number"],[4])
+    ]);
+    if(Math.hypot(p1[0]-p0[0],p1[1]-p0[1])>0.08) break;
+  }
+  const moved=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
+  if(moved < 0.08) throw new Error("real Krieger player did not move inside custom level: "+JSON.stringify({p0,p1,moved}));
   const after=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
-  const dx=after.player.pos[0]-before.player.pos[0];
-  const dz=after.player.pos[2]-before.player.pos[2];
-  const moved=Math.hypot(dx,dz);
-  if(moved < 0.08) throw new Error("real Krieger player did not move inside custom level: "+moved);
 
   // Read the real KKriegerGame pose directly instead of waiting for a sampled
   // log line. Re-send look deltas if a software-rendered frame is very slow.
