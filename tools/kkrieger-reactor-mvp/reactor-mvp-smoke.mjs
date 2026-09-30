@@ -97,14 +97,27 @@ try{
   await page.locator("#labStart").click();
 
   await page.waitForFunction(()=>window.__kkLab?.built?.id==="dark-reactor-v2",null,{timeout:240000});
-  await page.waitForFunction(()=>window.__kkLab?.collision && window.__kkLab?.player?.cell===1,null,{timeout:30000});
+  // Use the live C++ cell state as the collision oracle. The telemetry line is
+  // diagnostic only and must not be able to turn a working scene into a timeout.
+  await page.waitForFunction(()=>window.__kkLab?.player && Module.ccall("kkLabPose","number",["number"],[5])===1,null,{timeout:45000});
   await page.waitForFunction(()=>window.__kkLab?.render?.proceduralTextures>=4 && window.__kkLab?.render?.materialCategories>=3 && window.__kkLab?.render?.bumpMapped===1,null,{timeout:30000});
   await page.waitForFunction(()=>window.__kkLab?.viewport && window.__kkLab?.fullRT,null,{timeout:30000});
+  await page.waitForFunction(()=>{
+    const current=Module.ccall("kkLabPose","number",["number"],[8]);
+    const next=Module.ccall("kkLabPose","number",["number"],[16]);
+    return current===next &&
+      Module.ccall("kkLabPose","number",["number"],[6])===1 &&
+      Module.ccall("kkLabPose","number",["number"],[7])===1 &&
+      Module.ccall("kkLabPose","number",["number"],[15])===1 &&
+      Module.ccall("kkLabPose","number",["number"],[13])>=0.25;
+  },null,{timeout:45000});
   await page.waitForTimeout(1800);
 
   const before=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__kkLab)));
   if(before.built.visualParts < 45 || before.built.curvedOps < 24 || before.built.multiplyOps < 2)
     throw new Error("reactor is not using enough native procedural geometry: "+JSON.stringify(before.built));
+  if(before.built.recipeAB!==1)
+    throw new Error("same-recipe A/B parameter-mutation proof is missing: "+JSON.stringify(before.built));
   if(before.built.collisionCells < 8) throw new Error("custom collision graph was not built");
   if(before.render?.basePasses < 3 || before.render?.lightPasses < 2 ||
      before.render?.materialCategories < 3 || before.render?.proceduralTextures < 4 ||
@@ -114,11 +127,17 @@ try{
   if(before.player.pos[0] < 980) throw new Error("player did not spawn in custom level");
   const weapon=await page.evaluate(()=>({
     current:Module.ccall("kkLabPose","number",["number"],[8]),
+    next:Module.ccall("kkLabPose","number",["number"],[16]),
     optics:Module.ccall("kkLabPose","number",["number"],[6]),
-    shot:Module.ccall("kkLabPose","number",["number"],[7])
+    shot:Module.ccall("kkLabPose","number",["number"],[7]),
+    event:Module.ccall("kkLabPose","number",["number"],[15]),
+    weaponTimer:Module.ccall("kkLabPose","number",["number"],[13]),
+    shots:Module.ccall("kkLabPose","number",["number"],[10]),
+    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
+    cool:Module.ccall("kkLabPose","number",["number"],[12])
   }));
-  if(weapon.optics!==1 || weapon.shot!==1)
-    throw new Error("native weapon resources were destroyed: "+JSON.stringify(weapon));
+  if(weapon.current!==weapon.next || weapon.optics!==1 || weapon.shot!==1 || weapon.event!==1)
+    throw new Error("native first-person weapon/event resources are not live: "+JSON.stringify(weapon));
 
   const v=before.viewport;
   const mw=v.master[2]-v.master[0], mh=v.master[3]-v.master[1];
@@ -167,6 +186,31 @@ try{
     cell:Module.ccall("kkLabPose","number",["number"],[5])
   }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
+
+  // Real FIRE proof: verify the input crosses into KKriegerGame and causes a
+  // gameplay-state transition, not merely a button event. Ammo/cooldown are
+  // persistent enough to avoid missing a short-lived projectile under SwiftShader.
+  const fireBefore=await page.evaluate(()=>({
+    shots:Module.ccall("kkLabPose","number",["number"],[10]),
+    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
+    cool:Module.ccall("kkLabPose","number",["number"],[12])
+  }));
+  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[1]));
+  await page.waitForFunction((b)=>{
+    const shots=Module.ccall("kkLabPose","number",["number"],[10]);
+    const ammo=Module.ccall("kkLabPose","number",["number"],[11]);
+    const cool=Module.ccall("kkLabPose","number",["number"],[12]);
+    return shots>b.shots || ammo<b.ammo || cool>b.cool+0.01;
+  },fireBefore,{timeout:30000});
+  const fireAfter=await page.evaluate(()=>({
+    shots:Module.ccall("kkLabPose","number",["number"],[10]),
+    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
+    cool:Module.ccall("kkLabPose","number",["number"],[12]),
+    fireKey:Module.ccall("kkLabPose","number",["number"],[14])
+  }));
+  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[0]));
+  if(!(fireAfter.shots>fireBefore.shots || fireAfter.ammo<fireBefore.ammo || fireAfter.cool>fireBefore.cool+0.01))
+    throw new Error("FIRE did not reach native Krieger gameplay state: "+JSON.stringify({fireBefore,fireAfter}));
 
   // Visual proof must measure the 3D framebuffer, not HTML controls. The old
   // oracle accidentally counted the cyan badge + joystick/buttons as scene
@@ -249,6 +293,7 @@ try{
     playerLooked:looked,
     renderer:before.render,
     nativeWeapon:weapon,
+    nativeFire:{before:fireBefore,after:fireAfter},
     framebuffer:visual,
     framebufferTurned:turned,
     viewDeltaRatio,
