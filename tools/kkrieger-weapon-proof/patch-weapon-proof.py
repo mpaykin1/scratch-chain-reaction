@@ -319,9 +319,11 @@ def patch_shell(s):
     if(kkReadNumber("kkWeaponProofCurrent",[])>=0) kkReadNumber("kkWeaponProofEnterRun",[]);
     setTimeout(kkForceGameplay,220);
   }
+  window.__kkUseSeq=0;
   function kkNextWeapon(){
     var target=kkReadNumber("kkWeaponProofUse",[]);
     window.__kkLastUseTarget=target;
+    window.__kkUseSeq++;
     return target;
   }
   var useBtn=document.getElementById("weaponUse");
