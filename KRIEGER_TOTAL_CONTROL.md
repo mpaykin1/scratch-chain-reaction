@@ -162,3 +162,10 @@ Root cause is concrete: v1 is mainly `Mesh_Cube + GenMesh::Add`, uses a minimal 
 Canonical postmortem: [KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md](KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md)
 
 New invariant: custom-level work must preserve `WeaponOptics`, `WeaponShot`, `WeaponExplode`, event/effect jobs and the native operator graph unless a verified replacement is installed. Next target: KX archaeology + Native Level Lab v2 + Weapon Lab.
+
+
+## Quantified KX baseline
+
+The converted real beta has now been parsed as a graph: **4,817 operators, 77 classes and 38 splines**. It contains hundreds of transforms/material links and substantial bitmap/material/scene/sector/portal machinery. First-person weapon optics alone reach 224–362 operators depending on slot.
+
+See [KRIEGER_KX_ARCHAEOLOGY_BASELINE.md](KRIEGER_KX_ARCHAEOLOGY_BASELINE.md). This is now the factual baseline for Native Level Lab v2.
