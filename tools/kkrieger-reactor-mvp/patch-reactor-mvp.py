@@ -419,6 +419,19 @@ static void kkLabTorus(GenMesh *&dst,sF32 ro,sF32 ri,sF32 arc,
                        sF32 rx,sF32 ry,sF32 rz,sF32 tx,sF32 ty,sF32 tz,
                        sInt material,sU32 color)
 {
+  // The original closed-Torus merge path is disproportionately expensive in
+  // the WASM authoring path. Preserve true curved Krieger geometry but build
+  // a full ring from two open half-tori, which use the proven fast path.
+  if(arc >= 0.999f)
+  {
+    GenMesh *a=Mesh_Torus(18,7,ro,ri,0.0f,0.5f,1);
+    a=kkLabXform(a,1,1,1,rx,ry,rz,tx,ty,tz);
+    kkLabAddPart(dst,a,material,color);
+    GenMesh *b=Mesh_Torus(18,7,ro,ri,0.0f,0.5f,1);
+    b=kkLabXform(b,1,1,1,rx,ry+0.5f,rz,tx,ty,tz);
+    kkLabAddPart(dst,b,material,color);
+    return;
+  }
   GenMesh *m=Mesh_Torus(18,7,ro,ri,0.0f,arc,1);
   m=kkLabXform(m,1,1,1,rx,ry,rz,tx,ty,tz);
   kkLabAddPart(dst,m,material,color);
@@ -477,6 +490,7 @@ static GenMesh *kkLabBuildMesh()
   // Overhead pipes with toroidal collars.
   kkLabCylinder(mesh,0.34f,24.0f,0.34f,0,0,0.25f,KKLAB_X,8.0f,-5.4f,2,0xff34414b);
   kkLabCylinder(mesh,0.46f,25.0f,0.46f,0,0,0.25f,KKLAB_X,8.5f, 5.2f,2,0xff48535e);
+  fprintf(stderr,"[reactor-mvp] {\\\"stage\\\":\\\"build_pipe_cyl_done\\\",\\\"faces\\\":%d}\\n",mesh->Face.Count);
   for(sInt x=-10;x<=10;x+=5)
   {
     kkLabTorus(mesh,0.72f,0.47f,1.0f,0.25f,0,0,KKLAB_X+x,8.0f,-5.4f,2,0xff78838c);
