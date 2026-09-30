@@ -121,9 +121,13 @@ def patch_shell(s):
     s=s.replace("if(!resWanted) resWanted = '1024x768';","if(!resWanted) resWanted = 'fit';")
     s=s.replace("object-fit:contain","object-fit:fill")
     s=one(s,"</style>","""
-  body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-  #wrap{position:fixed;inset:0;width:100dvw;height:100dvh}
-  canvas{position:absolute;inset:0;width:100dvw!important;height:100dvh!important;max-width:none!important;max-height:none!important;touch-action:none}
+  html,body{position:fixed;inset:0;margin:0;padding:0;width:100%;height:var(--kk-game-h,100dvh);
+    min-width:100%;max-width:100%;min-height:0;max-height:none;overflow:hidden!important;
+    overscroll-behavior:none!important;touch-action:none!important;-webkit-overflow-scrolling:auto;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #wrap{position:fixed;left:0;top:0;width:100%;height:var(--kk-game-h,100dvh);overflow:hidden;overscroll-behavior:none;touch-action:none}
+  canvas{position:absolute;left:0;top:0;width:100%!important;height:var(--kk-game-h,100dvh)!important;
+    max-width:none!important;max-height:none!important;touch-action:none!important;overscroll-behavior:none!important}
   #proofBadge{position:fixed;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top));z-index:9;
     padding:6px 8px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.55);color:#9ff;
     font:10px/1.25 monospace;pointer-events:none;white-space:pre}
@@ -143,6 +147,37 @@ def patch_shell(s):
     printErr: function(t){
 """
     new="""  window.__kkPortraitProof = {events:[]};
+
+  // Fixed-game viewport contract. A game surface must behave like a native
+  // fullscreen app: the page itself never scrolls or rubber-bands. Only the
+  // game camera/controls may react to a drag.
+  function kkLockGameViewport(){
+    var h=Math.round((window.visualViewport&&window.visualViewport.height)||window.innerHeight||document.documentElement.clientHeight||1);
+    document.documentElement.style.setProperty('--kk-game-h',h+'px');
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    if(window.scrollX||window.scrollY) window.scrollTo(0,0);
+    window.__kkViewportLock={
+      height:h,scrollX:window.scrollX,scrollY:window.scrollY,
+      bodyScrollHeight:document.body.scrollHeight,
+      rootScrollHeight:document.documentElement.scrollHeight
+    };
+  }
+  document.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false,capture:true});
+  ['gesturestart','gesturechange','gestureend'].forEach(function(type){
+    document.addEventListener(type,function(e){e.preventDefault();},{passive:false,capture:true});
+  });
+  window.addEventListener('scroll',function(){if(window.scrollX||window.scrollY)window.scrollTo(0,0);},{passive:true});
+  window.addEventListener('resize',kkLockGameViewport,{passive:true});
+  if(window.visualViewport){
+    // visualViewport "scroll" can fire while browser chrome animates on iOS.
+    // Do not write layout state from that event: doing so can create a
+    // scroll/layout feedback loop. Resize is sufficient for the visible
+    // height contract; document scrolling itself is locked separately.
+    window.visualViewport.addEventListener('resize',kkLockGameViewport,{passive:true});
+  }
+  kkLockGameViewport();
+
   function kkProofLine(t){
     if(typeof t!=='string') return;
     var p=t.indexOf('[portrait-proof] ');

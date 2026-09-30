@@ -49,6 +49,16 @@ try{
     canvasCss:(()=>{const r=document.querySelector("canvas").getBoundingClientRect();return [r.x,r.y,r.width,r.height]})(),
     backing:[document.querySelector("canvas").width,document.querySelector("canvas").height],
     proof:window.__kkPortraitProof,
+    pageLock:(()=>{
+      const html=getComputedStyle(document.documentElement), body=getComputedStyle(document.body);
+      return {
+        scroll:[scrollX,scrollY],
+        html:{position:html.position,overflow:html.overflow,touchAction:html.touchAction,overscroll:html.overscrollBehavior},
+        body:{position:body.position,overflow:body.overflow,touchAction:body.touchAction,overscroll:body.overscrollBehavior},
+        rootScroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],
+        bodyScroll:[document.body.scrollWidth,document.body.scrollHeight]
+      };
+    })()
   }));
   const m=state.proof.master;
   if(!m) throw new Error("missing engine master telemetry");
@@ -63,13 +73,38 @@ try{
     throw new Error("canvas CSS does not fill visible viewport");
   }
 
+  // Fixed-game viewport contract: the HTML document itself must never pan.
+  // This protects physical iPhone/Telegram/Safari controls from page
+  // rubber-band competing with the game camera.
+  for(const [name,style] of [["html",state.pageLock.html],["body",state.pageLock.body]]){
+    if(style.position!=="fixed") throw new Error(name+" is not fixed: "+JSON.stringify(style));
+    if(style.overflow!=="hidden") throw new Error(name+" overflow is not hidden: "+JSON.stringify(style));
+    if(style.touchAction!=="none") throw new Error(name+" touch-action is not none: "+JSON.stringify(style));
+  }
+  await page.evaluate(()=>window.scrollTo(0,500));
+  await page.waitForTimeout(80);
+  const scrollProof=await page.evaluate(()=>({
+    scroll:[scrollX,scrollY],
+    inner:[innerWidth,innerHeight],
+    rootScroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],
+    bodyScroll:[document.body.scrollWidth,document.body.scrollHeight],
+    lock:window.__kkViewportLock||null
+  }));
+  if(scrollProof.scroll[0]!==0 || scrollProof.scroll[1]!==0){
+    throw new Error("game page can scroll: "+JSON.stringify(scrollProof));
+  }
+  if(scrollProof.rootScroll[1] > scrollProof.inner[1]+2 || scrollProof.bodyScroll[1] > scrollProof.inner[1]+2){
+    throw new Error("game document remains vertically scrollable: "+JSON.stringify(scrollProof));
+  }
+
   console.log("ENGINE_PORTRAIT_STATE",JSON.stringify({
     inner:state.inner,
     backing:state.backing,
     master:m.master,
     config:m.config,
     aspect:m.aspect,
-    fullRT:state.proof.fullRT||null
+    fullRT:state.proof.fullRT||null,
+    pageLock:state.pageLock
   }));
   const box={x:state.canvasCss[0],y:state.canvasCss[1],width:state.canvasCss[2],height:state.canvasCss[3]};
   if(box.width<=0 || box.height<=0) throw new Error("canvas has no visible DOM rectangle");
@@ -103,6 +138,7 @@ try{
     texturedHeightCoverage:texture.coverage,
     texturedTop:texture.top,
     texturedBottom:texture.bottom,
+    pageFixed:true,
     errors:realErrors
   },null,2));
   await context.close();
