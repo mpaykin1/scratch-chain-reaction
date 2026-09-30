@@ -294,7 +294,7 @@ void KriegerReactorInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
   kkLevelLabMesh->FromGenMesh(mesh);
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"engmesh_done\"}\n");
   kkLevelLabLightPos = lightPos;
-  fprintf(stderr,"[reactor-mvp] {\"stage\":\"render_mesh\",\"vertices\":%d,\"faces\":%d,\"collisions\":%d,\"basePasses\":3,\"lightPasses\":2,\"materialCategories\":3,\"proceduralTextures\":4,\"bumpMapped\":1}\n",
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"render_mesh\",\"vertices\":%d,\"faces\":%d,\"collisions\":%d,\"basePasses\":3,\"lightPasses\":2,\"materialCategories\":3,\"proceduralTextures\":4,\"bumpMapped\":1,\"stableBaseLight\":1}\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
 }
 #endif
