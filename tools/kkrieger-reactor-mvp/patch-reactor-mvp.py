@@ -195,7 +195,7 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
 
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
-  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
   base->Color[0] = 0x000b0b0b;
   base->Combiner[sMCS_COLOR0] = sMCOA_SET;
   base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
@@ -205,7 +205,7 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
 
   sMaterial11 *light = new sMaterial11;
   light->ShaderLevel = sPS_11;
-  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|sMBF_BLENDADD;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|sMBF_BLENDADD|sMBF_DOUBLESIDED;
   light->LightFlags = sMLF_BUMPX;
   light->SetTex(1,bump->Texture);
   light->TFlags[1] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
@@ -220,14 +220,14 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
 
   sMaterial11 *shadow = new sMaterial11;
   shadow->ShaderLevel = sPS_11;
-  shadow->BaseFlags = sMBF_ZREAD|sMBF_SHADOWMASK|sMBF_ZONLY|sMBF_NOTEXTURE|sMBF_NONORMAL;
+  shadow->BaseFlags = sMBF_ZREAD|sMBF_SHADOWMASK|sMBF_ZONLY|sMBF_NOTEXTURE|sMBF_NONORMAL|sMBF_DOUBLESIDED;
   shadow->Combiner[sMCS_COLOR0] = sMCOA_SET;
   sVERIFY(shadow->Compile());
   gm->AddPass(shadow,ENGU_SHADOW,MPP_SHADOW,0);
 
   sMaterial11 *texture = new sMaterial11;
   texture->ShaderLevel = sPS_11;
-  texture->BaseFlags = sMBF_BLENDMUL2|sMBF_ZREAD|sMBF_ZEQUAL;
+  texture->BaseFlags = sMBF_BLENDMUL2|sMBF_ZREAD|sMBF_ZEQUAL|sMBF_DOUBLESIDED;
   texture->SetTex(0,diff->Texture);
   texture->TFlags[0] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
   texture->TScale[0] = 3.0f;
@@ -245,7 +245,7 @@ static GenMaterial *kkReactorGlowMaterial()
   GenMaterial *gm = new GenMaterial;
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
-  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL;
+  base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
   base->Color[0] = 0xffff9a32;
   base->Combiner[sMCS_COLOR0] = sMCOA_SET;
   base->Combiner[sMCS_VERTEX] = sMCOA_MUL2;
@@ -255,7 +255,7 @@ static GenMaterial *kkReactorGlowMaterial()
 
   sMaterial11 *glow = new sMaterial11;
   glow->ShaderLevel = sPS_11;
-  glow->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD|sMBF_NONORMAL;
+  glow->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD|sMBF_NONORMAL|sMBF_DOUBLESIDED;
   glow->Color[0] = 0xff5c2108;
   glow->Combiner[sMCS_COLOR0] = sMCOA_SET;
   glow->AlphaCombiner = sMCA_ZERO;
@@ -539,6 +539,10 @@ static GenMesh *kkLabBuildMesh()
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_begin\"}\n");
 
   // Heavy stone shell: real textured/bump-lit material category 1.
+  // The player is INSIDE this shell. The first reactor CI frame was black
+  // because one-sided materials culled the inward faces while the portrait
+  // camera also looked past the reactor. All reactor passes are double-sided
+  // and the authored start yaw now points at the reactor centre.
   kkLabCube(mesh,34.0f,0.55f,18.0f,KKLAB_X, -0.28f,0,1,0xff6d6256);
   kkLabCube(mesh,34.0f,0.55f,18.0f,KKLAB_X, 10.2f,0,1,0xff39342f);
   kkLabCube(mesh,0.65f,10.5f,18.0f,KKLAB_X-17.0f,5.0f,0,1,0xff554a40);
@@ -664,7 +668,7 @@ static void kkLabInstallCollision(KKriegerGame *game)
           game->CellSub.Count-oldSubs,game->CellZone.Count-oldZones);
 
   game->PlayerStartPos.Init(KKLAB_X-13.2f,1.0f,6.3f,1.0f);
-  fprintf(stderr,"[reactor-mvp] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,6.3],\"startDir\":2.582993,\"startLook\":-0.08}\n",
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,6.3],\"startDir\":1.950000,\"startLook\":-0.08}\n",
           game->CellAdd.Count,game->CellSub.Count,game->CellZone.Count,KKLAB_X-13.2f);
 }
 
@@ -732,7 +736,7 @@ static void kkLabUpdateObjective(KKriegerGame *game)
   if(kkJsFlag("__kkReactorMvp"))
   {
     PlayerStartPos.Init(KKLAB_X-13.2f,1.0f,6.3f,1.0f);
-    SetPlayer(PlayerStartPos,2.582993f,-0.08f);
+    SetPlayer(PlayerStartPos,1.950000f,-0.06f);
   }
   else
 #endif
