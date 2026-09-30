@@ -55,6 +55,17 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGameState()
 {
   return Game ? Game->Switches[KGS_GAME] : -1;
 }
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofPauseLab()
+{
+  if(!Game || !kkWeaponProofEnv || !Game->PlayerCell) return 0;
+  // Freeze the gameplay simulation after the real level/renderer have started.
+  // Rendering and the weapon event graph remain live, but pickups/AI can no
+  // longer race CurrentWeapon/NextWeapon while the proof is being exercised.
+  Game->Switches[KGS_GAME] = KGS_GAME_INGAME;
+  Game->Switches[KGS_INGAME_MENU] = 0;
+  Game->Player.FireKey = 0;
+  return 1;
+}
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
 {
   if(!Game) return 0;
@@ -66,7 +77,6 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
   Game->Player.Ammo[3] = sMax(Game->Player.Ammo[3],400);
   Game->Player.Life = Game->Player.LifeMax;
   Game->Player.Armor = Game->Player.ArmorMax;
-  Game->Switches[KGS_GAME] = KGS_GAME_RUN;
   if(Game->WeaponTimer < 0.25f) Game->WeaponTimer = 0.25f;
   Game->Player.CoolTimer = 0;
   return 1;
@@ -135,7 +145,6 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireSlot(int weapon)
   Game->WeaponEvent.Op = Game->WeaponOptics[weapon];
   Game->WeaponTimer = 0.25f;
   Game->Player.CoolTimer = 0;
-  Game->Switches[KGS_GAME] = KGS_GAME_RUN;
   Game->Player.Life = Game->Player.LifeMax;
   Game->Player.Armor = Game->Player.ArmorMax;
   // Original Krieger projectile constructor: real ShotInfo + WeaponShot event.
@@ -379,7 +388,10 @@ def patch_shell(s):
     if(!document.body.classList.contains("weapon-running")) return;
     if(kkReadNumber("kkWeaponProofPlayerReady",[])===1){
       kkReadNumber("kkWeaponProofGrantArsenal",[]);
-      return;
+      if(kkReadNumber("kkWeaponProofPauseLab",[])===1){
+        window.__kkWeaponLabReady=true;
+        return;
+      }
     }
     if(kkReadNumber("kkWeaponProofCurrent",[])>=0) kkReadNumber("kkWeaponProofEnterRun",[]);
     setTimeout(kkForceGameplay,220);
