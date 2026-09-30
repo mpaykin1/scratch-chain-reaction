@@ -31,6 +31,7 @@ def patch_start(s):
 // the original desktop game; the HTML buttons do not mutate weapon state.
 extern KKriegerGame *Game;
 extern sInt kkWeaponProofShotCount[8];
+extern sInt kkWeaponProofFrozen;
 extern KEnvironment *kkWeaponProofEnv;
 
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofCurrent()
@@ -44,6 +45,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofNext()
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofEnterRun()
 {
   if(!Game) return 0;
+  kkWeaponProofFrozen = 0;
   Game->Switches[KGS_GAME] = KGS_GAME_RUN;
   return 1;
 }
@@ -58,13 +60,15 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGameState()
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofPauseLab()
 {
   if(!Game || !kkWeaponProofEnv || !Game->PlayerCell) return 0;
-  // Freeze the gameplay simulation after the real level/renderer have started.
-  // Rendering and the weapon event graph remain live, but pickups/AI can no
-  // longer race CurrentWeapon/NextWeapon while the proof is being exercised.
-  Game->Switches[KGS_GAME] = KGS_GAME_INGAME;
-  Game->Switches[KGS_INGAME_MENU] = 0;
+  // Freeze only gameplay simulation. Keep KGS_GAME_RUN and the normal render
+  // path untouched so the true Krieger scene/weapon optics remain visible.
+  kkWeaponProofFrozen = 1;
   Game->Player.FireKey = 0;
   return 1;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFrozenGet()
+{
+  return kkWeaponProofFrozen;
 }
 extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofGrantArsenal()
 {
@@ -187,7 +191,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofFire(int down)
 def patch_game(s):
     s=one(s,
       '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\n',
-      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\nsInt kkWeaponProofShotCount[8] = {0,0,0,0,0,0,0,0};\nKEnvironment *kkWeaponProofEnv = 0;\n',
+      '#if defined(__EMSCRIPTEN__)\n#include <stdio.h>\nsInt kkWeaponProofShotCount[8] = {0,0,0,0,0,0,0,0};\nsInt kkWeaponProofFrozen = 0;\nKEnvironment *kkWeaponProofEnv = 0;\n',
       "weapon proof FireShot counter")
     old="""  Ammo[0] = 100;
   Ammo[1] = 50;
@@ -278,6 +282,8 @@ def patch_game(s):
       """  Environment = kenv;
 #if defined(__EMSCRIPTEN__)
   kkWeaponProofEnv = kenv;
+  if(kkWeaponProofFrozen)
+    return;
 #endif
 
 #if DOUBLECHECK""",
