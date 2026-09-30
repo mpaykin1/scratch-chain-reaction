@@ -280,39 +280,39 @@ void KriegerReactorInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     labMatrix.Init();
     AddPaintJob(kkLevelLabMesh,labMatrix,0,0);
 
-    sF32 pulse = 2.25f + 0.35f*sFSin(sSystem->GetTime()*0.0021f);
+    sF32 pulse = 0.32f + 0.06f*sFSin(sSystem->GetTime()*0.0021f);
     EngLight labLight;
     sSetMem(&labLight,0,sizeof(labLight));
     labLight.Position = kkLevelLabLightPos;
     labLight.Flags = 0;
     labLight.Color = 0xffa45a;
     labLight.Amplify = pulse;
-    labLight.Range = 27.0f;
+    labLight.Range = 14.0f;
     labLight.Event = 0;
     labLight.Id = 7101;
     AddLightJob(labLight);
 
     labLight.Position.Init(989.0f,5.8f,-6.0f,1.0f);
     labLight.Color = 0x6f8eff;
-    labLight.Amplify = 1.45f;
-    labLight.Range = 22.0f;
+    labLight.Amplify = 0.20f;
+    labLight.Range = 15.0f;
     labLight.Id = 7102;
     AddLightJob(labLight);
 
     labLight.Position.Init(989.0f,5.8f,6.0f,1.0f);
     labLight.Color = 0x80a0ff;
-    labLight.Amplify = 1.35f;
+    labLight.Amplify = 0.18f;
     labLight.Range = 22.0f;
     labLight.Id = 7103;
     AddLightJob(labLight);
 
     labLight.Position.Init(1014.0f,4.5f,0.0f,1.0f);
     labLight.Color = 0xff7040;
-    labLight.Amplify = 1.15f;
+    labLight.Amplify = 0.16f;
     labLight.Range = 18.0f;
     labLight.Id = 7104;
     AddLightJob(labLight);
-    AddAmbientLight(0x17191d);
+    AddAmbientLight(0x08090b);
   }
 #endif
 
