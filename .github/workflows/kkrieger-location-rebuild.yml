@@ -1,0 +1,133 @@
+name: Kkrieger Location Rebuild
+
+on:
+  push:
+    branches: ["feat/kkrieger-location-rebuild-20260930", main]
+    paths:
+      - "tools/kkrieger-location-rebuild/**"
+      - "tools/kkrieger-portrait-proof/**"
+      - ".github/workflows/kkrieger-location-rebuild.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/kkrieger-location-rebuild/**"
+      - "tools/kkrieger-portrait-proof/**"
+      - ".github/workflows/kkrieger-location-rebuild.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kkrieger-location-rebuild-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout exact Krieger source
+        uses: actions/checkout@v4
+        with:
+          repository: MasonDye/kkrieger-wasm
+          ref: 3bf0ff017372e640e966c2785a4d95a998cec242
+          path: .upstream/kkrieger-wasm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.9
+          actions-cache-folder: emsdk-cache
+
+      - name: Build autonomous native location rebuild
+        run: bash tools/kkrieger-location-rebuild/build.sh .upstream/kkrieger-wasm
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.63.0 pngjs@7.0.0
+          node node_modules/playwright/cli.js install chromium
+
+      - name: Serve location rebuild
+        run: |
+          python3 -m http.server 8777 --bind 127.0.0.1 --directory work/kkrieger-location-rebuild >/tmp/rebuild-http.log 2>&1 &
+          for i in {1..30}; do
+            curl -fsS http://127.0.0.1:8777/index.html >/dev/null && break
+            sleep 1
+          done
+
+      - name: Prove obvious native rebuild, weapons and fixed viewport
+        env:
+          KK_URL: http://127.0.0.1:8777/index.html
+          KK_OUTDIR: work/kkrieger-location-rebuild
+        run: node tools/kkrieger-location-rebuild/location-rebuild-smoke.mjs
+
+      - name: Upload rebuild evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-location-rebuild-${{ github.sha }}
+          path: |
+            work/kkrieger-location-rebuild/index.html
+            work/kkrieger-location-rebuild/original.png
+            work/kkrieger-location-rebuild/rebuilt.png
+            work/kkrieger-location-rebuild/fired.png
+          retention-days: 14
+
+      - name: Publish permanent location rebuild
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p kkrieger-location-rebuild
+          cp work/kkrieger-location-rebuild/index.html kkrieger-location-rebuild/index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kkrieger-location-rebuild/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "build(kkrieger): publish native location rebuild [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Wait for exact public bytes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          LIVE_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-location-rebuild/
+        run: |
+          local_sha="$(sha256sum work/kkrieger-location-rebuild/index.html | awk '{print $1}')"
+          ok=0
+          for attempt in $(seq 1 36); do
+            if curl -fLsS --max-time 30 "$LIVE_URL?build=$GITHUB_SHA" -o /tmp/live-rebuild.html; then
+              live_sha="$(sha256sum /tmp/live-rebuild.html | awk '{print $1}')"
+              if [ "$live_sha" = "$local_sha" ]; then
+                echo "LOCATION_REBUILD_LIVE_EXACT_BYTES_PASS attempt=$attempt"
+                ok=1
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test "$ok" -eq 1
+
+      - name: Re-prove public rebuild
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          KK_URL: https://mpaykin1.github.io/scratch-chain-reaction/kkrieger-location-rebuild/
+          KK_OUTDIR: work/kkrieger-location-rebuild/live
+        run: node tools/kkrieger-location-rebuild/location-rebuild-smoke.mjs
+
+      - name: Upload public evidence
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kkrieger-location-rebuild-live-${{ github.sha }}
+          path: work/kkrieger-location-rebuild/live
+          if-no-files-found: ignore
+          retention-days: 14
