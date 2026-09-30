@@ -184,11 +184,11 @@ static KkReactorMaterial11Insert kkReactorMaterialInsert;
 
 static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU32 tint,sF32 spec)
 {
-  // Match the native Krieger Material_Material 1.1 phase topology:
-  // BASE writes depth/ambient, LIGHT adds bump/specular response, POSTLIGHT
-  // multiplies the procedural diffuse texture into the lit result. Keeping
-  // diffuse in BASE (our earlier attempt) breaks the 2004 dest-alpha/specular
-  // contract and the final IPP chain can blow the frame to white.
+  // Reactor MVP material: keep the proven Krieger 1.1 BASE+LIGHT contract
+  // visible first, while still feeding real procedural bitmap textures into
+  // both phases. The earlier full Material11Insert/POSTLIGHT reproduction
+  // blacked the custom world under the live beta compositor; that path remains
+  // a separate fidelity experiment and must not block a playable recipe proof.
   diff->MakeTexture();
   bump->MakeTexture();
   GenMaterial *gm = new GenMaterial;
@@ -196,8 +196,12 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
   base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  base->Color[0] = 0x000b0b0b;
-  base->Combiner[sMCS_COLOR0] = sMCOA_SET;
+  base->SetTex(0,diff->Texture);
+  base->TFlags[0] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
+  base->TScale[0] = 2.5f;
+  base->Color[0] = tint;
+  base->Combiner[sMCS_TEX0] = sMCOA_SET;
+  base->Combiner[sMCS_COLOR0] = sMCOA_MUL2;
   base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
   base->AlphaCombiner = sMCA_ZERO;
   sVERIFY(base->Compile());
@@ -205,50 +209,32 @@ static GenMaterial *kkReactorTexturedMaterial(GenBitmap *diff,GenBitmap *bump,sU
 
   sMaterial11 *light = new sMaterial11;
   light->ShaderLevel = sPS_11;
-  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_STENCILTEST|sMBF_BLENDADD|sMBF_DOUBLESIDED;
+  light->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD|sMBF_DOUBLESIDED;
   light->LightFlags = sMLF_BUMPX;
   light->SetTex(1,bump->Texture);
   light->TFlags[1] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
-  light->TScale[1] = 3.0f;
+  light->TScale[1] = 2.5f;
   light->SpecPower = spec;
-  light->Color[0] = tint;
+  light->Color[0] = 0x00ffffff;
   light->Combiner[sMCS_LIGHT] = sMCOA_SET;
   light->Combiner[sMCS_COLOR0] = sMCOA_MUL;
   light->AlphaCombiner = sMCA_ZERO;
   sVERIFY(light->Compile());
   gm->AddPass(light,ENGU_LIGHT,MPP_STATIC,0);
 
-  sMaterial11 *shadow = new sMaterial11;
-  shadow->ShaderLevel = sPS_11;
-  shadow->BaseFlags = sMBF_ZREAD|sMBF_SHADOWMASK|sMBF_ZONLY|sMBF_NOTEXTURE|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  shadow->Combiner[sMCS_COLOR0] = sMCOA_SET;
-  sVERIFY(shadow->Compile());
-  gm->AddPass(shadow,ENGU_SHADOW,MPP_SHADOW,0);
-
-  sMaterial11 *texture = new sMaterial11;
-  texture->ShaderLevel = sPS_11;
-  texture->BaseFlags = sMBF_BLENDMUL2|sMBF_ZREAD|sMBF_ZEQUAL|sMBF_DOUBLESIDED;
-  texture->SetTex(0,diff->Texture);
-  texture->TFlags[0] = sMTF_FILTER|sMTF_MIPMAPS|sMTF_TILE;
-  texture->TScale[0] = 3.0f;
-  texture->Combiner[sMCS_TEX0] = sMCOA_SET;
-  texture->AlphaCombiner = sMCA_HALF;
-  sVERIFY(texture->Compile());
-  gm->AddPass(texture,ENGU_POSTLIGHT,MPP_STATIC,0);
-
-  gm->Insert = &kkReactorMaterialInsert;
   return gm;
 }
 
 static GenMaterial *kkReactorGlowMaterial()
 {
   GenMaterial *gm = new GenMaterial;
+
   sMaterial11 *base = new sMaterial11;
   base->ShaderLevel = sPS_11;
   base->BaseFlags = sMBF_ZON|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  base->Color[0] = 0xffff9a32;
+  base->Color[0] = 0x00ffb04a;
   base->Combiner[sMCS_COLOR0] = sMCOA_SET;
-  base->Combiner[sMCS_VERTEX] = sMCOA_MUL2;
+  base->Combiner[sMCS_VERTEX] = sMCOA_ADD;
   base->AlphaCombiner = sMCA_ZERO;
   sVERIFY(base->Compile());
   gm->AddPass(base,ENGU_BASE,MPP_STATIC,0);
@@ -256,11 +242,12 @@ static GenMaterial *kkReactorGlowMaterial()
   sMaterial11 *glow = new sMaterial11;
   glow->ShaderLevel = sPS_11;
   glow->BaseFlags = sMBF_ZREAD|sMBF_ZEQUAL|sMBF_BLENDADD|sMBF_NONORMAL|sMBF_DOUBLESIDED;
-  glow->Color[0] = 0xff5c2108;
+  glow->Color[0] = 0x00402008;
   glow->Combiner[sMCS_COLOR0] = sMCOA_SET;
   glow->AlphaCombiner = sMCA_ZERO;
   sVERIFY(glow->Compile());
-  gm->AddPass(glow,ENGU_POSTLIGHT,MPP_STATIC,0);
+  gm->AddPass(glow,ENGU_LIGHT,MPP_STATIC,0);
+
   return gm;
 }
 
