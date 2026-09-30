@@ -139,6 +139,33 @@ try{
   if(weapon.current!==weapon.next || weapon.optics!==1 || weapon.shot!==1 || weapon.event!==1)
     throw new Error("native first-person weapon/event resources are not live: "+JSON.stringify(weapon));
 
+  // Fire while the weapon is settled and the player is still stationary.
+  // Movement drives Krieger's weapon animation timer and made this proof
+  // needlessly timing-sensitive on slow SwiftShader runners.
+  const fireBefore=await page.evaluate(()=>({
+    shots:Module.ccall("kkLabPose","number",["number"],[10]),
+    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
+    cool:Module.ccall("kkLabPose","number",["number"],[12]),
+    timer:Module.ccall("kkLabPose","number",["number"],[13])
+  }));
+  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[1]));
+  await page.waitForFunction((b)=>{
+    const shots=Module.ccall("kkLabPose","number",["number"],[10]);
+    const ammo=Module.ccall("kkLabPose","number",["number"],[11]);
+    const cool=Module.ccall("kkLabPose","number",["number"],[12]);
+    return shots>b.shots || ammo<b.ammo || cool>b.cool+0.01;
+  },fireBefore,{timeout:60000});
+  const fireAfter=await page.evaluate(()=>({
+    shots:Module.ccall("kkLabPose","number",["number"],[10]),
+    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
+    cool:Module.ccall("kkLabPose","number",["number"],[12]),
+    timer:Module.ccall("kkLabPose","number",["number"],[13]),
+    fireKey:Module.ccall("kkLabPose","number",["number"],[14])
+  }));
+  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[0]));
+  if(!(fireAfter.shots>fireBefore.shots || fireAfter.ammo<fireBefore.ammo || fireAfter.cool>fireBefore.cool+0.01))
+    throw new Error("FIRE did not reach native Krieger gameplay state: "+JSON.stringify({fireBefore,fireAfter}));
+
   const v=before.viewport;
   const mw=v.master[2]-v.master[0], mh=v.master[3]-v.master[1];
   if(v.config[1] <= v.config[0]) throw new Error("proof is not running portrait");
@@ -186,31 +213,6 @@ try{
     cell:Module.ccall("kkLabPose","number",["number"],[5])
   }));
   await page.evaluate(()=>Module.ccall("kkLabKey",null,["number","number"],[119,0]));
-
-  // Real FIRE proof: verify the input crosses into KKriegerGame and causes a
-  // gameplay-state transition, not merely a button event. Ammo/cooldown are
-  // persistent enough to avoid missing a short-lived projectile under SwiftShader.
-  const fireBefore=await page.evaluate(()=>({
-    shots:Module.ccall("kkLabPose","number",["number"],[10]),
-    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
-    cool:Module.ccall("kkLabPose","number",["number"],[12])
-  }));
-  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[1]));
-  await page.waitForFunction((b)=>{
-    const shots=Module.ccall("kkLabPose","number",["number"],[10]);
-    const ammo=Module.ccall("kkLabPose","number",["number"],[11]);
-    const cool=Module.ccall("kkLabPose","number",["number"],[12]);
-    return shots>b.shots || ammo<b.ammo || cool>b.cool+0.01;
-  },fireBefore,{timeout:30000});
-  const fireAfter=await page.evaluate(()=>({
-    shots:Module.ccall("kkLabPose","number",["number"],[10]),
-    ammo:Module.ccall("kkLabPose","number",["number"],[11]),
-    cool:Module.ccall("kkLabPose","number",["number"],[12]),
-    fireKey:Module.ccall("kkLabPose","number",["number"],[14])
-  }));
-  await page.evaluate(()=>Module.ccall("kkLabFire",null,["number"],[0]));
-  if(!(fireAfter.shots>fireBefore.shots || fireAfter.ammo<fireBefore.ammo || fireAfter.cool>fireBefore.cool+0.01))
-    throw new Error("FIRE did not reach native Krieger gameplay state: "+JSON.stringify({fireBefore,fireAfter}));
 
   // Visual proof must measure the 3D framebuffer, not HTML controls. The old
   // oracle accidentally counted the cyan badge + joystick/buttons as scene
