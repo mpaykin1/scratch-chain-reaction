@@ -44,7 +44,8 @@ try{
     Module.ccall("kkWeaponProofGrantArsenal","number",[],[]);
     return Module.ccall("kkWeaponProofPauseLab","number",[],[]);
   });
-  await page.waitForFunction(()=>Module.ccall("kkWeaponProofGameState","number",[],[])===1,null,{timeout:3000});
+  await page.waitForFunction(()=>Module.ccall("kkWeaponProofFrozenGet","number",[],[])===1,null,{timeout:3000});
+  await page.waitForFunction(()=>Module.ccall("kkWeaponProofGameState","number",[],[])===0,null,{timeout:3000});
   await page.waitForFunction(()=>{
     const c=Module.ccall("kkWeaponProofCurrent","number",[],[]);
     const n=Module.ccall("kkWeaponProofNext","number",[],[]);
