@@ -198,6 +198,7 @@ static GenMaterial *kkReactorGlowMaterial()
 static void kkReactorInitMaterials()
 {
   if(kkStoneMat) return;
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"materials_begin\"}\n");
 
   kkStoneTex = Bitmap_Bricks(8,8,0xff54483b,0xff201b19,0xff30261f,
                              0.055f,0.055f,10,6,117,0,0,0.12f,0.22f);
@@ -214,6 +215,7 @@ static void kkReactorInitMaterials()
   kkStoneMat = kkReactorTexturedMaterial(kkStoneTex,kkStoneBump,0x00d3b89a,18.0f);
   kkMetalMat = kkReactorTexturedMaterial(kkMetalTex,kkMetalBump,0x00c8d9e8,56.0f);
   kkGlowMat = kkReactorGlowMaterial();
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"materials_done\"}\n");
 }
 
 void KriegerReactorInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
@@ -230,9 +232,11 @@ void KriegerReactorInstallRenderMesh(GenMesh *mesh,const sVector &lightPos)
     mesh->Mtrl[i].Pass = 0;
   }
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"engmesh_begin\",\"vertices\":%d,\"faces\":%d}\n",mesh->Vert.Count,mesh->Face.Count);
   sRelease(kkLevelLabMesh);
   kkLevelLabMesh = new EngMesh;
   kkLevelLabMesh->FromGenMesh(mesh);
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"engmesh_done\"}\n");
   kkLevelLabLightPos = lightPos;
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"render_mesh\",\"vertices\":%d,\"faces\":%d,\"collisions\":%d,\"basePasses\":3,\"lightPasses\":2,\"materialCategories\":3,\"proceduralTextures\":4,\"bumpMapped\":1}\n",
           mesh->Vert.Count,mesh->Face.Count,mesh->Coll.Count);
@@ -406,7 +410,7 @@ static void kkLabCylinder(GenMesh *&dst,sF32 sx,sF32 sy,sF32 sz,
                           sF32 rx,sF32 ry,sF32 rz,sF32 tx,sF32 ty,sF32 tz,
                           sInt material,sU32 color)
 {
-  GenMesh *m=Mesh_Cylinder(20,3,0,1,0);
+  GenMesh *m=Mesh_Cylinder(14,2,0,1,0);
   m=kkLabXform(m,sx,sy,sz,rx,ry,rz,tx,ty,tz);
   kkLabAddPart(dst,m,material,color);
 }
@@ -415,7 +419,7 @@ static void kkLabTorus(GenMesh *&dst,sF32 ro,sF32 ri,sF32 arc,
                        sF32 rx,sF32 ry,sF32 rz,sF32 tx,sF32 ty,sF32 tz,
                        sInt material,sU32 color)
 {
-  GenMesh *m=Mesh_Torus(30,10,ro,ri,0.0f,arc,1);
+  GenMesh *m=Mesh_Torus(18,7,ro,ri,0.0f,arc,1);
   m=kkLabXform(m,1,1,1,rx,ry,rz,tx,ty,tz);
   kkLabAddPart(dst,m,material,color);
 }
@@ -423,14 +427,14 @@ static void kkLabTorus(GenMesh *&dst,sF32 ro,sF32 ri,sF32 arc,
 static void kkLabSphere(GenMesh *&dst,sF32 scale,sF32 tx,sF32 ty,sF32 tz,
                         sInt material,sU32 color)
 {
-  GenMesh *m=Mesh_Sphere(24,12);
+  GenMesh *m=Mesh_Sphere(18,8);
   m=kkLabXform(m,scale,scale,scale,0,0,0,tx,ty,tz);
   kkLabAddPart(dst,m,material,color);
 }
 
 static void kkLabRibArray(GenMesh *&dst,sF32 z)
 {
-  GenMesh *m=Mesh_Cylinder(12,2,0,1,0);
+  GenMesh *m=Mesh_Cylinder(10,2,0,1,0);
   m=kkLabXform(m,0.28f,5.8f,0.28f,0,0,0,KKLAB_X-12.0f,4.3f,z);
   sFSRT step;
   step.s.Init(1,1,1); step.r.Init(0,0,0); step.t.Init(2.4f,0,0);
@@ -443,6 +447,7 @@ static GenMesh *kkLabBuildMesh()
 {
   static GenMesh *mesh=0;
   if(mesh) return mesh;
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_begin\"}\n");
 
   // Heavy stone shell: real textured/bump-lit material category 1.
   kkLabCube(mesh,34.0f,0.55f,18.0f,KKLAB_X, -0.28f,0,1,0xff6d6256);
@@ -452,6 +457,7 @@ static GenMesh *kkLabBuildMesh()
   kkLabCube(mesh,34.0f,10.5f,0.65f,KKLAB_X,5.0f,-9.0f,1,0xff4c433b);
   kkLabCube(mesh,34.0f,10.5f,0.65f,KKLAB_X,5.0f, 9.0f,1,0xff4c433b);
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_shell_done\",\"faces\":%d}\n",mesh->Face.Count);
   // Metallic floor rails and repeated structural ribs use the real Multiply op.
   kkLabCube(mesh,31.0f,0.16f,0.38f,KKLAB_X,0.12f,-4.7f,2,0xff5b6874);
   kkLabCube(mesh,31.0f,0.16f,0.38f,KKLAB_X,0.12f, 4.7f,2,0xff5b6874);
@@ -467,6 +473,7 @@ static GenMesh *kkLabBuildMesh()
     kkLabTorus(mesh,6.3f,5.0f,0.50f,0.25f,0,0,ax[i],6.25f,0,1,0xff806d59);
   }
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_arches_done\",\"faces\":%d}\n",mesh->Face.Count);
   // Overhead pipes with toroidal collars.
   kkLabCylinder(mesh,0.34f,24.0f,0.34f,0,0,0.25f,KKLAB_X,8.0f,-5.4f,2,0xff34414b);
   kkLabCylinder(mesh,0.46f,25.0f,0.46f,0,0,0.25f,KKLAB_X,8.5f, 5.2f,2,0xff48535e);
@@ -476,6 +483,7 @@ static GenMesh *kkLabBuildMesh()
     kkLabTorus(mesh,0.86f,0.56f,1.0f,0.25f,0,0,KKLAB_X+x,8.5f, 5.2f,2,0xff78838c);
   }
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_pipes_done\",\"faces\":%d}\n",mesh->Face.Count);
   // Central reactor: layered high-segment procedural surfaces.
   const sF32 rx=KKLAB_X+3.0f;
   kkLabCylinder(mesh,5.4f,0.9f,5.4f,0,0,0,rx,0.45f,0,2,0xff38414a);
@@ -502,6 +510,7 @@ static GenMesh *kkLabBuildMesh()
   kkLabSphere(mesh,0.72f,KKLAB_X-2.0f,1.35f, 5.7f,3,0xff7ab8ff);
   kkLabSphere(mesh,0.72f,KKLAB_X+12.0f,1.35f,-5.7f,3,0xffff8740);
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_reactor_done\",\"faces\":%d}\n",mesh->Face.Count);
   // Collision: one large ADD room plus solid reactor/columns.
   mesh=Mesh_CollisionCube(mesh,0,0,KKLAB_X-16.5f,KKLAB_X+16.5f,-1.0f,10.0f,-8.5f,8.5f,KCM_ADD,1,1,1);
   mesh=Mesh_CollisionCube(mesh,0,0,rx-2.7f,rx+2.7f,-0.5f,7.7f,-2.7f,2.7f,KCM_SUB,1,1,1);
@@ -511,7 +520,9 @@ static GenMesh *kkLabBuildMesh()
     mesh=Mesh_CollisionCube(mesh,0,0,ax[i]-0.65f,ax[i]+0.65f,-0.5f,6.4f, 5.5f, 6.8f,KCM_SUB,1,1,1);
   }
 
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_collision_done\",\"faces\":%d,\"collisions\":%d}\n",mesh->Face.Count,mesh->Coll.Count);
   mesh->CalcNormals();
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"build_normals_done\",\"vertices\":%d,\"faces\":%d}\n",mesh->Vert.Count,mesh->Face.Count);
   sVector light; light.Init(rx,6.3f,0,1.0f);
   KriegerReactorInstallRenderMesh(mesh,light);
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"built\",\"id\":\"dark-reactor-v2\",\"visualParts\":52,\"curvedOps\":31,\"multiplyOps\":2,\"materialCategories\":3,\"collisionCells\":%d,\"origin\":[%.1f,0,0]}\n",
