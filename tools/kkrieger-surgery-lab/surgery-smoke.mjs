@@ -74,13 +74,24 @@ try{
   await page.waitForFunction(()=>window.__kkPortraitProof?.master?.stage==="master",null,{timeout:90000});
 
   const stat=idx=>page.evaluate(i=>Module.ccall("kkSurgeryStat","number",["number"],[i]),idx);
+
+  // The native beta Reset/weapon animation can initially sit on slot 1 while
+  // NextWeapon is slot 0. Drive the *real* game input path with key "1"
+  // (weaponswap -> slot 0) rather than assuming the transient state.
+  await page.waitForTimeout(3500);
+  const preSelect=await Promise.all(Array.from({length:13},(_,i)=>stat(i)));
+  console.log("SURGERY_PRESELECT",JSON.stringify(preSelect));
+  await page.evaluate(()=>{
+    Module.ccall("kkSurgeryKey",null,["number","number"],["1".charCodeAt(0),1]);
+    Module.ccall("kkSurgeryKey",null,["number","number"],["1".charCodeAt(0),0]);
+  });
   await page.waitForFunction(()=>{
     try{
       return Module.ccall("kkSurgeryStat","number",["number"],[0])===0 &&
              Module.ccall("kkSurgeryStat","number",["number"],[2])===1 &&
              Module.ccall("kkSurgeryStat","number",["number"],[3])===1;
     }catch(e){ return false; }
-  },null,{timeout:45000});
+  },null,{timeout:30000});
 
   const state=await page.evaluate(()=>({
     inner:[innerWidth,innerHeight],
