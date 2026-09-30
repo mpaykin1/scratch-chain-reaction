@@ -101,6 +101,22 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofOpticsEffect(int weapon)
   if(!Game || weapon<0 || weapon>=8 || !Game->WeaponOptics[weapon]) return 0;
   return (int)(uintptr_t)Game->WeaponOptics[weapon];
 }
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireReady()
+{
+  return Game && Game->Environment && Game->PlayerCell &&
+    Game->Switches[KGS_GAME] == KGS_GAME_RUN &&
+    Game->Player.CurrentWeapon == Game->Player.NextWeapon ? 1 : 0;
+}
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireOnce()
+{
+  if(!kkWeaponProofFireReady()) return -1;
+  sInt weapon = Game->Player.CurrentWeapon;
+  if(weapon<0 || weapon>=8 || !Game->WeaponShot[weapon]) return -2;
+  // Use the original Krieger projectile constructor itself. This creates the
+  // real weapon-specific KEvent/ShotInfo object; no DOM/canvas imitation.
+  Game->FireShot(Game->Environment,weapon,0,0);
+  return kkWeaponProofShotCount[weapon];
+}
 
 extern "C" EMSCRIPTEN_KEEPALIVE void kkWeaponProofKey(int code,int down)
 {
@@ -343,10 +359,10 @@ def patch_shell(s):
   var useBtn=document.getElementById("weaponUse");
   var fireBtn=document.getElementById("weaponFire");
   useBtn.addEventListener("pointerdown",function(e){kkNextWeapon();e.preventDefault();});
-  fireBtn.addEventListener("pointerdown",function(e){kkCall("kkWeaponProofFire",[1]);e.preventDefault();});
-  function kkStopFire(e){kkCall("kkWeaponProofFire",[0]);e.preventDefault();}
-  fireBtn.addEventListener("pointerup",kkStopFire);
-  fireBtn.addEventListener("pointercancel",kkStopFire);
+  fireBtn.addEventListener("pointerdown",function(e){
+    window.__kkLastFireResult=kkReadNumber("kkWeaponProofFireOnce",[]);
+    e.preventDefault();
+  });
 '''
     s=one(s,start_anchor,controls+start_anchor,"weapon controls")
     s=s.replace("        startEl.remove();\n        statusEl=null;",
