@@ -67,9 +67,13 @@ try{
     }
     if(visited.size===slots.length) break;
     const beforeSeq=await page.evaluate(()=>window.__kkUseSeq||0);
-    await page.locator("#weaponUse").dispatchEvent("pointerdown",{pointerId:60+cycle,pointerType:"touch"});
-    await page.locator("#weaponUse").dispatchEvent("pointerup",{pointerId:60+cycle,pointerType:"touch"});
-    await page.waitForFunction(n=>(window.__kkUseSeq||0)>n,beforeSeq,{timeout:2000});
+    const afterSeq=await page.evaluate(({cycle})=>{
+      const b=document.getElementById("weaponUse");
+      b.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:60+cycle,pointerType:"touch",isPrimary:true}));
+      b.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:60+cycle,pointerType:"touch",isPrimary:true}));
+      return window.__kkUseSeq||0;
+    },{cycle});
+    if(afterSeq<=beforeSeq) throw new Error("USE pointerdown handler did not run");
     const target=await page.evaluate(()=>window.__kkLastUseTarget);
     if(!slots.includes(target)) throw new Error("USE returned invalid target "+target);
     if(target===current) throw new Error("USE did not choose a different weapon "+target);
