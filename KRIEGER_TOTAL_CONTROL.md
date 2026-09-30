@@ -169,3 +169,16 @@ New invariant: custom-level work must preserve `WeaponOptics`, `WeaponShot`, `We
 The converted real beta has now been parsed as a graph: **4,817 operators, 77 classes and 38 splines**. It contains hundreds of transforms/material links and substantial bitmap/material/scene/sector/portal machinery. First-person weapon optics alone reach 224–362 operators depending on slot.
 
 See [KRIEGER_KX_ARCHAEOLOGY_BASELINE.md](KRIEGER_KX_ARCHAEOLOGY_BASELINE.md). This is now the factual baseline for Native Level Lab v2.
+
+
+## 2026-09-30 physical-iPhone correction: human-visible difference is the gate
+
+Surgery Lab proved native KOp control, but the physical-iPhone user could not see an obvious difference between ORIGINAL and MODIFIED. The old pixel-diff gate was therefore too weak.
+
+New rule: a Krieger graphics-control MVP cannot PASS merely because pixels statistically changed. The visual change must be obvious to a physical-device user without hunting for it.
+
+The same phone test also exposed vertical page dragging. All future Krieger demos must hard-lock the document viewport so gestures belong to the game rather than browser scroll/rubber-band.
+
+Canonical verdict: [KRIEGER_SURGERY_PHYSICAL_IPHONE_VERDICT_2026-09-30.md](KRIEGER_SURGERY_PHYSICAL_IPHONE_VERDICT_2026-09-30.md)
+
+Current successor: Native Location Rebuild Lab — mutate many native Scene_Transform KOps in the real level while preserving native materials, procedural textures, weapons, effects, sectors/portals and renderer.
