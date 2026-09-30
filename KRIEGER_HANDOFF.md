@@ -288,3 +288,12 @@ When continuing this work:
 6. For portrait regressions, compare master viewport, projection aspect, RT dimensions and actual textured scene coverage; canvas size alone is not enough.
 7. Keep the public URL permanent.
 8. Update this handoff and the known-issues record when behavior changes.
+
+
+## 2026-09-30 Level Lab physical-iPhone result
+
+The black-screen defect in the custom Level Lab is solved, but the physical iPhone exposed three remaining failures: primitive non-Krieger-quality scene graphics, no visible first-person weapon, and no visible FIRE projectile/effect.
+
+Exact causes are documented in [KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md](KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md). In short, v1 builds mostly from `Mesh_Cube`, calls `KKriegerGame::Flush()` and clears `WeaponOptics/WeaponShot/WeaponExplode`, then clears native mesh/effect jobs in its isolated paint path.
+
+Do not improve v1 by adding more boxes. Keep it as a low-level harness. The product-relevant successor is Native Level Lab v2 using the real KX/operator -> procedural material/texture -> GenScene -> sector/portal/effect path while preserving weapons.
