@@ -2,7 +2,7 @@ name: Kkrieger Location Rebuild Lab
 
 on:
   push:
-    branches: ["feat/kkrieger-rebuild-lab-20260930", main]
+    branches: ["feat/kkrieger-location-rebuild-lab-20260930", main]
     paths:
       - "tools/kkrieger-rebuild-lab/**"
       - "tools/kkrieger-portrait-proof/**"
@@ -79,7 +79,7 @@ jobs:
           path: |
             work/kkrieger-rebuild-lab/index.html
             work/kkrieger-rebuild-lab/original.png
-            work/kkrieger-rebuild-lab/modified.png
+            work/kkrieger-rebuild-lab/rebuilt.png
             work/kkrieger-rebuild-lab/fired.png
           retention-days: 14
 
