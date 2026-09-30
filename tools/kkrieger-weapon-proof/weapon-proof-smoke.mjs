@@ -54,15 +54,16 @@ try{
 
   async function fireAndProve(slot){
     console.log("PROVING_FIRE_SLOT",slot);
-    await page.waitForFunction(()=>Module.ccall("kkWeaponProofFireReady","number",[],[])===1,null,{timeout:7000});
     const before=await page.evaluate(s=>Module.ccall("kkWeaponProofShotCountGet","number",["number"],[s]),slot);
-    const fireResult=await page.evaluate(({slot})=>{
+    const fire=await page.evaluate(({slot})=>{
+      window.__kkSelectedSlot=slot;
       const b=document.getElementById("weaponFire");
       b.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:80+slot,pointerType:"touch",isPrimary:true}));
       b.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:80+slot,pointerType:"touch",isPrimary:true}));
-      return window.__kkLastFireResult;
+      return {result:window.__kkLastFireResult, firedSlot:window.__kkLastFireSlot};
     },{slot});
-    if(!(fireResult>before)) throw new Error("FIRE button did not call real FireShot for slot "+slot+" result="+fireResult+" before="+before);
+    if(fire.firedSlot!==slot) throw new Error("FIRE button targeted wrong real weapon: "+JSON.stringify(fire));
+    if(!(fire.result>before)) throw new Error("FIRE button did not call real FireShot for slot "+slot+" result="+fire.result+" before="+before);
   }
 
   let current=await page.evaluate(()=>Module.ccall("kkWeaponProofCurrent","number",[],[]));
