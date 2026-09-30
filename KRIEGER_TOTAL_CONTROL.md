@@ -149,3 +149,16 @@ and one record:
 `capability -> exact source -> dependencies -> input -> output -> limits -> license/provenance -> World Server equivalent -> regression test -> status`.
 
 Licensing must be verified per source file and data set before extraction. A BSD header in an engine file does not automatically establish the status of every bundled data asset.
+
+
+## 2026-09-30 physical-iPhone correction: Level Lab v1 is not a fidelity architecture
+
+The user-confirmed iPhone result fixed the black framebuffer but exposed the larger failure: the scene is primitive, the first-person weapon is absent, and FIRE has no visible shot/effect.
+
+Root cause is concrete: v1 is mainly `Mesh_Cube + GenMesh::Add`, uses a minimal survival material, calls `KKriegerGame::Flush()` after the .kx weapon graph is populated, and clears native `MeshJobs/EffectJobs` before painting its isolated mesh.
+
+**Status:** v1 remains useful as a renderer/collision/viewport harness, but is FAILED as the architecture for a complete Krieger-quality custom level.
+
+Canonical postmortem: [KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md](KRIEGER_LEVEL_LAB_POSTMORTEM_2026-09-30.md)
+
+New invariant: custom-level work must preserve `WeaponOptics`, `WeaponShot`, `WeaponExplode`, event/effect jobs and the native operator graph unless a verified replacement is installed. Next target: KX archaeology + Native Level Lab v2 + Weapon Lab.
