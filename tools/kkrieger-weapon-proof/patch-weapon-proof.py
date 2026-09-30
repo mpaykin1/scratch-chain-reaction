@@ -119,24 +119,26 @@ extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireReady()
   sInt weapon = Game->Player.CurrentWeapon;
   return weapon>=0 && weapon<8 && Game->WeaponShot[weapon] ? 1 : 0;
 }
-extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireOnce()
+extern "C" EMSCRIPTEN_KEEPALIVE int kkWeaponProofFireSlot(int weapon)
 {
   if(!Game || !kkWeaponProofEnv) return -1;
   kkWeaponProofGrantArsenal();
-  sInt weapon = Game->Player.CurrentWeapon;
   if(weapon<0 || weapon>=8) return -2;
-  if(!Game->WeaponShot[weapon]) return -3;
-  // The original game may alter NextWeapon asynchronously (pickups/logic).
-  // For this isolated touch proof, keep the already-visible real weapon
-  // selected while invoking the original FireShot implementation.
+  if(!Game->Player.Weapon[weapon] || !Game->WeaponShot[weapon] || !Game->WeaponOptics[weapon]) return -3;
+  // Fire the exact weapon selected by USE. The live level may asynchronously
+  // change Current/NextWeapon because of pickups or game logic, so the proof
+  // re-binds that already-proven real model immediately before FireShot.
+  Game->Player.CurrentWeapon = weapon;
   Game->Player.NextWeapon = weapon;
-  // Use the original Krieger projectile constructor itself. This creates the
-  // real weapon-specific KEvent/ShotInfo object; no DOM/canvas imitation.
-  // Re-arm gameplay state first so the proof remains deterministic even if
-  // monsters altered the player's transient state during the previous shot.
+  Game->WeaponEvent.Exit();
+  Game->WeaponEvent.Init();
+  Game->WeaponEvent.Op = Game->WeaponOptics[weapon];
+  Game->WeaponTimer = 0.25f;
+  Game->Player.CoolTimer = 0;
   Game->Switches[KGS_GAME] = KGS_GAME_RUN;
   Game->Player.Life = Game->Player.LifeMax;
   Game->Player.Armor = Game->Player.ArmorMax;
+  // Original Krieger projectile constructor: real ShotInfo + WeaponShot event.
   Game->FireShot(kkWeaponProofEnv,weapon,0,0);
   return kkWeaponProofShotCount[weapon];
 }
@@ -383,8 +385,10 @@ def patch_shell(s):
     setTimeout(kkForceGameplay,220);
   }
   window.__kkUseSeq=0;
+  window.__kkSelectedSlot=null;
   function kkNextWeapon(){
     var target=kkReadNumber("kkWeaponProofUse",[]);
+    window.__kkSelectedSlot=target;
     window.__kkLastUseTarget=target;
     window.__kkLastUseEngineNext=kkReadNumber("kkWeaponProofNext",[]);
     window.__kkLastUseEngineCurrent=kkReadNumber("kkWeaponProofCurrent",[]);
@@ -396,7 +400,13 @@ def patch_shell(s):
   var fireBtn=document.getElementById("weaponFire");
   useBtn.addEventListener("pointerdown",function(e){kkNextWeapon();e.preventDefault();});
   fireBtn.addEventListener("pointerdown",function(e){
-    window.__kkLastFireResult=kkReadNumber("kkWeaponProofFireOnce",[]);
+    var slot=window.__kkSelectedSlot;
+    if(kkWeaponSlots.indexOf(slot)<0){
+      slot=kkReadNumber("kkWeaponProofCurrent",[]);
+      window.__kkSelectedSlot=slot;
+    }
+    window.__kkLastFireSlot=slot;
+    window.__kkLastFireResult=kkReadNumber("kkWeaponProofFireSlot",[slot]);
     e.preventDefault();
   });
 '''
