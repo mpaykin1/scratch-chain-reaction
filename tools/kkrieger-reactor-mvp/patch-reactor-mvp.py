@@ -549,14 +549,32 @@ static void kkLabInstallCollision(KKriegerGame *game)
   GenMesh *mesh=kkLabBuildMesh();
   sMatrix mat; mat.Init();
 
-  // Add our collision graph AFTER SetPainter has installed the native .kx
-  // graph. Do not Flush(): that would erase WeaponOptics/WeaponShot links.
+  // Append only our isolated collision island. Calling CellConnect() here
+  // would rebuild collision faces for every original .kkrieger ADD cell,
+  // which is both unnecessary and extremely expensive in WASM.
+  const sInt oldAdds=game->CellAdd.Count;
+  const sInt oldSubs=game->CellSub.Count;
+  const sInt oldZones=game->CellZone.Count;
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"collision_append_begin\",\"oldAdds\":%d,\"oldSubs\":%d}\n",oldAdds,oldSubs);
+
   game->CellList.Init();
   KKriegerMesh *cm=new KKriegerMesh(mesh);
   game->AddMesh(cm,mat,0);
   cm->Release();
-  game->CellConnect();
+
+  sVERIFY(game->CellAdd.Count==oldAdds+1);
+  KKriegerCellAdd *room=game->CellAdd[oldAdds];
+  for(sInt i=oldSubs;i<game->CellSub.Count;i++)
+    *room->Subs.Add()=game->CellSub[i];
+  for(sInt i=oldZones;i<game->CellZone.Count;i++)
+    *room->Zones.Add()=game->CellZone[i];
+
+  // Only the new room needs face generation. Existing original cells already
+  // have their prepared collision faces from SetPainter/SetScene.
+  game->CreateCollisionFaces(*room);
   game->CellList.Exit();
+  fprintf(stderr,"[reactor-mvp] {\"stage\":\"collision_append_done\",\"newSubs\":%d,\"newZones\":%d}\n",
+          game->CellSub.Count-oldSubs,game->CellZone.Count-oldZones);
 
   game->PlayerStartPos.Init(KKLAB_X-13.2f,1.0f,6.3f,1.0f);
   fprintf(stderr,"[reactor-mvp] {\"stage\":\"collision_ready\",\"adds\":%d,\"subs\":%d,\"zones\":%d,\"start\":[%.1f,1.0,6.3],\"startDir\":2.582993,\"startLook\":-0.08}\n",
