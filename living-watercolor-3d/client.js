@@ -95,7 +95,7 @@ async function ensureKayKitWorker(){
   if(active==='worker')document.getElementById('label').textContent='Работник · загружаю KayKit animations…';
   workerLoadPromise=createKayKitIllustrationWorker(THREE,{
     parent:stage,
-    baseUrl:'/assets/characters/kaykit-knight',
+    baseUrl:'../assets/characters/kaykit-knight',
     ink:style.inkColor,
     wash:'#aeb7c0',
     scale:3.0,
