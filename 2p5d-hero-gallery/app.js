@@ -101,7 +101,7 @@
       tree(x,w*.36,b-28*s,s*.8,k);tree(x,w*.62,b-36*s,s*.9,k);
     }
     const walk=Math.sin(sec*.55)*w*.12;
-    hero(x,w*.5+walk,b+30*s,s*1.18,sec,k);
+    hero(x,w*.5+walk,b+30*s,s*3.0,sec,k);
     x.save();x.globalAlpha=.08;x.fillStyle="#fff";for(let i=0;i<18;i++)x.fillRect((i*97+sec*7)%w,(i*53)%h,2,2);x.restore();
   }
   function render(now){
