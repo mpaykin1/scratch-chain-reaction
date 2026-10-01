@@ -4,7 +4,7 @@ export class CatRig2D{
   constructor(){
     this.pose=constrainPose();
     this.headPivot={x:64,y:-214};
-    this.tailBase={x:-92,y:222};
+    this.tailBase={x:-62,y:238};
   }
 
   setPose(next){ this.pose=constrainPose({...this.pose,...next}); }
