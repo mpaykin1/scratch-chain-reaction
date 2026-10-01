@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#11161c">
+<title>World Server — Trinity Lab</title>
+<link rel="stylesheet" href="./shared/world-server-game-viewport.css">
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:#11161c}
+#game-root{background:#11161c}
+#gl{display:block;width:100%;height:100%;outline:0}
+#topbar{position:fixed;z-index:20;left:50%;top:max(10px,env(safe-area-inset-top));transform:translateX(-50%);
+ display:flex;gap:6px;padding:5px;border:1px solid rgba(255,255,255,.12);border-radius:999px;
+ background:rgba(13,18,23,.68);backdrop-filter:blur(12px);box-shadow:0 8px 28px rgba(0,0,0,.24)}
+button{appearance:none;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.07);
+ color:#e7edf2;padding:8px 11px;font:700 10px/1 system-ui;letter-spacing:.08em;touch-action:manipulation}
+button.active{background:#e9edf0;color:#17202a;border-color:#fff}
+button:active{transform:scale(.97)}
+#modeLabel{position:fixed;z-index:12;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));
+ padding:6px 9px;border-radius:8px;background:rgba(10,14,18,.52);color:rgba(235,240,244,.82);
+ font:600 10px/1.2 ui-monospace,SFMono-Regular,monospace;pointer-events:none}
+#debug{position:fixed;z-index:30;right:max(8px,env(safe-area-inset-right));top:max(58px,calc(env(safe-area-inset-top) + 58px));
+ width:min(390px,calc(100vw - 16px));max-height:calc(100dvh - 78px);overflow:auto;overscroll-behavior:contain;touch-action:pan-y;
+ border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(9,13,17,.92);backdrop-filter:blur(14px);
+ padding:12px;box-shadow:0 18px 50px rgba(0,0,0,.38);font:10px/1.45 ui-monospace,SFMono-Regular,monospace}
+#debug[hidden]{display:none}
+#debug h2{font:800 12px/1 system-ui;margin:0 0 10px;letter-spacing:.08em}
+#debugGrid{display:grid;grid-template-columns:minmax(90px,1fr) 1.4fr;gap:3px 10px}
+.key{color:#8594a0}.value{color:#dce5eb;word-break:break-word}
+.real{color:#75d79b}.partial{color:#f3ca73}.fallback{color:#e99b69}.missing{color:#ef7474}.pass{color:#75d79b}.fail{color:#ef7474}
+#stage{position:fixed;z-index:12;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);
+ color:rgba(240,244,247,.72);font:700 10px/1.2 ui-monospace,SFMono-Regular,monospace;pointer-events:none}
+#touchHint{position:fixed;inset:auto 12px max(42px,calc(env(safe-area-inset-bottom) + 42px)) auto;z-index:9;
+ color:rgba(240,244,247,.30);font:700 9px system-ui;letter-spacing:.08em;pointer-events:none}
+@media(pointer:fine){#touchHint{display:none}}
+@media(max-width:560px){#topbar{gap:3px}button{padding:8px 8px;font-size:9px}#modeLabel{display:none}}
+</style>
+</head><body>
+<main id="game-root" data-world-server-game-root>
+  <canvas id="gl" data-world-server-game-surface aria-label="Trinity Lab game canvas"></canvas>
+</main>
+<nav id="topbar" aria-label="Trinity Lab modes">
+  <button type="button" data-mode="KRIEGER" class="active">KRIEGER</button>
+  <button type="button" data-mode="INK">INK</button>
+  <button type="button" data-mode="CUBE">CUBE</button>
+  <button type="button" id="debugButton">DEBUG</button>
+</nav>
+<div id="modeLabel">TRINITY / KRIEGER</div>
+<div id="stage"></div>
+<div id="touchHint">LEFT: MOVE · RIGHT: LOOK</div>
+<aside id="debug" data-world-server-scroll hidden>
+  <h2>TRINITY DIAGNOSTICS</h2>
+  <div id="debugGrid"></div>
+</aside>
+<script src="./shared/world-server-game-viewport.js"></script>
+<script type="module" src="./app.mjs"></script>
+</body>
+</html>
