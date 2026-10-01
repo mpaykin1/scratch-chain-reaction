@@ -44,9 +44,17 @@
     }
   };
 
+  const selected = new URLSearchParams(location.search).get("game");
+  const allSections = [...document.querySelectorAll(".scene[data-game]")];
+  if (selected && games[selected]) {
+    allSections.forEach(section => {
+      if (section.dataset.game !== selected) section.hidden = true;
+    });
+  }
+
   const states = [];
 
-  document.querySelectorAll(".scene[data-game]").forEach(section => {
+  allSections.filter(section => !section.hidden).forEach(section => {
     const def = games[section.dataset.game];
     const canvas = section.querySelector(".actor");
     const ctx = canvas.getContext("2d", {alpha:true});
