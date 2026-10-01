@@ -4,94 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Living Light Cat — World Server MVP</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;overscroll-behavior:none}
 body{position:fixed;inset:0}
 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#000}
-.badge{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));font:600 10px/1 system-ui,-apple-system,sans-serif;letter-spacing:.18em;color:rgba(255,220,150,.28);pointer-events:none;text-transform:uppercase}
+.badge{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));font:600 10px/1 system-ui,-apple-system,sans-serif;letter-spacing:.18em;color:rgba(255,220,150,.24);pointer-events:none;text-transform:uppercase}
 </style>
 </head>
 <body>
-<canvas id="c" aria-label="Animated cat silhouette drawn by one continuous line of light"></canvas>
-<div class="badge">LIVING LIGHT CAT · MVP</div>
-<script>
-(()=>{
-const c=document.getElementById('c'),g=c.getContext('2d');
-let W=0,H=0,D=1,t0=performance.now(),kick=0;
-function resize(){
-  D=Math.min(2,devicePixelRatio||1); W=innerWidth; H=innerHeight;
-  c.width=Math.round(W*D); c.height=Math.round(H*D);
-  g.setTransform(D,0,0,D,0,0);
-}
-addEventListener('resize',resize,{passive:true}); resize();
-
-function catPath(t){
-  const s=Math.min(W/470,H/860);
-  const cx=W*.50, cy=H*.50;
-  const breathe=Math.sin(t*1.45)*8*s;
-  const head=Math.sin(t*.58)*3*s;
-  const tail=Math.sin(t*.88)*16*s;
-  const twitch=Math.pow(Math.max(0,Math.sin(t*2.85)),7)*7*s;
-  const p=new Path2D();
-
-  // ONE continuous line: tail tip -> tail -> back -> ears -> face -> chest -> foreleg.
-  // No interior crossings: it reads as a clean rim-lit silhouette.
-  p.moveTo(cx+178*s+tail, cy+275*s);
-  p.bezierCurveTo(cx+128*s+tail,cy+268*s,cx+75*s,cy+248*s,cx+18*s,cy+252*s);
-  p.bezierCurveTo(cx-50*s,cy+258*s,cx-108*s,cy+250*s,cx-145*s,cy+220*s);
-  p.bezierCurveTo(cx-190*s,cy+184*s,cx-208*s,cy+118*s,cx-198*s,cy+45*s);
-  p.bezierCurveTo(cx-185*s,cy-54*s,cx-150*s,cy-146*s,cx-98*s-breathe,cy-218*s);
-  p.bezierCurveTo(cx-74*s-breathe,cy-252*s,cx-49*s,cy-276*s,cx-28*s,cy-294*s);
-  // rear ear
-  p.bezierCurveTo(cx-36*s,cy-319*s,cx-38*s,cy-349*s,cx-26*s,cy-381*s-twitch);
-  p.bezierCurveTo(cx+1*s,cy-356*s,cx+21*s,cy-333*s,cx+33*s,cy-316*s);
-  // crown
-  p.bezierCurveTo(cx+53*s,cy-322*s,cx+76*s,cy-322*s,cx+92*s,cy-314*s);
-  // front ear
-  p.bezierCurveTo(cx+106*s,cy-340*s,cx+119*s,cy-373*s,cx+139*s,cy-402*s-twitch*.7);
-  p.bezierCurveTo(cx+147*s,cy-364*s,cx+146*s,cy-328*s,cx+137*s,cy-300*s);
-  // forehead, muzzle, chin
-  p.bezierCurveTo(cx+153*s+head,cy-283*s,cx+161*s+head,cy-261*s,cx+156*s+head,cy-240*s);
-  p.bezierCurveTo(cx+166*s+head,cy-225*s,cx+163*s+head,cy-206*s,cx+148*s+head,cy-193*s);
-  p.bezierCurveTo(cx+139*s+head,cy-185*s,cx+129*s+head,cy-182*s,cx+118*s,cy-185*s);
-  // neck and chest
-  p.bezierCurveTo(cx+106*s,cy-156*s,cx+94*s,cy-123*s,cx+89*s,cy-84*s);
-  p.bezierCurveTo(cx+82*s,cy-28*s,cx+93*s,cy+16*s,cx+110*s,cy+58*s);
-  p.bezierCurveTo(cx+127*s,cy+101*s,cx+133*s,cy+151*s,cx+126*s,cy+201*s);
-  // foreleg / paw
-  p.bezierCurveTo(cx+121*s,cy+232*s,cx+108*s,cy+248*s,cx+86*s,cy+252*s);
-  p.bezierCurveTo(cx+67*s,cy+255*s,cx+52*s,cy+251*s,cx+42*s,cy+245*s);
-  return p;
-}
-
-function render(now){
-  const t=(now-t0)/1000+kick;
-  g.clearRect(0,0,W,H);
-  const p=catPath(t);
-  g.save();
-  g.translate(W*.5,H*.5); g.scale(.76,.96); g.translate(-W*.5,-H*.5);
-  g.lineCap='round'; g.lineJoin='round';
-  g.globalCompositeOperation='lighter';
-
-  g.strokeStyle='rgba(255,116,18,.08)'; g.lineWidth=26; g.shadowColor='rgba(255,132,30,.42)'; g.shadowBlur=30; g.stroke(p);
-  g.strokeStyle='rgba(255,162,45,.18)'; g.lineWidth=11; g.shadowColor='rgba(255,162,45,.72)'; g.shadowBlur=20; g.stroke(p);
-  g.strokeStyle='rgba(255,203,105,.72)'; g.lineWidth=4.2; g.shadowColor='rgba(255,189,70,1)'; g.shadowBlur=12; g.stroke(p);
-  g.strokeStyle='rgba(255,248,220,.98)'; g.lineWidth=1.35; g.shadowColor='rgba(255,235,180,1)'; g.shadowBlur=4; g.stroke(p);
-
-  // travelling light pulse follows the very same line
-  const dash=86, loop=1260;
-  g.setLineDash([dash,loop]);
-  g.lineDashOffset=-(t*155)%(dash+loop);
-  g.strokeStyle='rgba(255,255,242,.95)';
-  g.lineWidth=2.4; g.shadowColor='#ffe3a1'; g.shadowBlur=20; g.stroke(p);
-  g.setLineDash([]);
-  g.globalCompositeOperation='source-over';
-  g.restore();
-  requestAnimationFrame(render);
-}
-requestAnimationFrame(render);
-addEventListener('pointerdown',()=>{kick+=.8},{passive:true});
-})();
-</script>
-</body></html>
+<canvas id="c" aria-label="Living Light Cat: articulated luminous cat silhouette"></canvas>
+<div class="badge">LIVING LIGHT CAT · RIGGED MVP</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
