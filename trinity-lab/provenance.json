@@ -1,0 +1,50 @@
+{
+  "mvp": "World Server Trinity Lab",
+  "date": "2026-10-01",
+  "sources": [
+    {
+      "capability": "Living Ink WebGL NPR",
+      "repository": "mpaykin1/World_server",
+      "source": "PR #350",
+      "sha": "7e070bfd",
+      "files": ["shared/living-ink-webgl-npr.mjs", "vendor/three-r160/three.module.min.js"]
+    },
+    {
+      "capability": "Cube World Evolution Runtime",
+      "repository": "mpaykin1/World_server",
+      "source": "PR #385",
+      "sha": "af921a7e",
+      "files": ["shared/world-evolution-runtime.mjs"]
+    },
+    {
+      "capability": "Game Viewport Lock",
+      "repository": "mpaykin1/World_server",
+      "source": "PR #379",
+      "sha": "183f1bb3",
+      "files": ["shared/world-server-game-viewport.js", "shared/world-server-game-viewport.css"]
+    },
+    {
+      "capability": "Living Watercolor 3D",
+      "repository": "mpaykin1/scratch-chain-reaction",
+      "source": "main",
+      "sha": "46f338d1d7bdb0adcc85a5baa92bcb941ec2112d",
+      "files": ["living-watercolor-3d/living-watercolor-3d.js", "living-watercolor-3d/living-watercolor-generators.js"]
+    },
+    {
+      "capability": "Graphics Quality Governor",
+      "repository": "mpaykin1/scratch-chain-reaction",
+      "source": "main",
+      "sha": "46f338d1d7bdb0adcc85a5baa92bcb941ec2112d",
+      "files": ["graphics-quality-governor/graphics-quality-governor.mjs"]
+    }
+  ],
+  "licenses": {
+    "three": "MIT; local license at trinity-lab/vendor/three-r160/LICENSE",
+    "content": "original procedural content; no protected game assets copied"
+  },
+  "krieger": {
+    "nativeRuntimeReplaced": false,
+    "nativeCustomSceneAuthoringClaimed": false,
+    "status": "MISSING in Trinity adapter; current World Server procedural maximum is shown instead"
+  }
+}
