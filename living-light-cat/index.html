@@ -69,6 +69,8 @@ function render(now){
   const t=(now-t0)/1000+kick;
   g.clearRect(0,0,W,H);
   const p=catPath(t);
+  g.save();
+  g.translate(W*.5,H*.5); g.scale(.84,.96); g.translate(-W*.5,-H*.5);
   g.lineCap='round'; g.lineJoin='round';
   g.globalCompositeOperation='lighter';
 
@@ -85,6 +87,7 @@ function render(now){
   g.lineWidth=2.4; g.shadowColor='#ffe3a1'; g.shadowBlur=20; g.stroke(p);
   g.setLineDash([]);
   g.globalCompositeOperation='source-over';
+  g.restore();
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
