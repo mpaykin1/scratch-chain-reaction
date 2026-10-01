@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Living Light Cat — World Server MVP</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;overscroll-behavior:none}
+body{position:fixed;inset:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#000}
+.badge{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));font:600 11px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.18em;color:rgba(255,220,150,.42);pointer-events:none;text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Animated cat drawn by one continuous line of light"></canvas>
+<div class="badge">LIVING LIGHT CAT · MVP</div>
+<script>
+(()=>{
+const c=document.getElementById('c'),g=c.getContext('2d');
+let W=0,H=0,D=1,t0=performance.now(),phase=0;
+function resize(){
+  D=Math.min(2,devicePixelRatio||1); W=innerWidth; H=innerHeight;
+  c.width=Math.round(W*D); c.height=Math.round(H*D);
+  g.setTransform(D,0,0,D,0,0);
+}
+addEventListener('resize',resize,{passive:true}); resize();
+
+function pathCat(t){
+  const s=Math.min(W/620,H/920), cx=W*.5, cy=H*.51;
+  const breath=Math.sin(t*1.55)*7*s;
+  const ear=Math.max(0,Math.sin(t*2.7))*5*s;
+  const head=Math.sin(t*.72)*3*s;
+  const tail=Math.sin(t*1.05)*16*s;
+  const p=new Path2D();
+  // one single, unbroken Bézier path: nose -> head -> ears -> back -> tail -> belly -> chest -> muzzle
+  p.moveTo(cx+132*s+head,cy-176*s);
+  p.bezierCurveTo(cx+156*s,cy-164*s,cx+158*s,cy-137*s,cx+137*s,cy-123*s);
+  p.bezierCurveTo(cx+130*s,cy-111*s,cx+136*s,cy-94*s,cx+119*s,cy-88*s);
+  p.bezierCurveTo(cx+95*s,cy-79*s,cx+75*s,cy-92*s,cx+66*s,cy-111*s);
+  p.bezierCurveTo(cx+51*s,cy-129*s,cx+42*s,cy-143*s,cx+34*s,cy-158*s);
+  p.bezierCurveTo(cx+6*s,cy-183*s,cx-15*s,cy-212*s,cx-17*s,cy-248*s);
+  p.bezierCurveTo(cx-18*s,cy-277*s,cx-8*s,cy-315*s,cx+12*s,cy-344*s);
+  p.bezierCurveTo(cx+29*s,cy-367*s,cx+52*s,cy-377*s,cx+71*s,cy-383*s);
+  // front ear
+  p.bezierCurveTo(cx+87*s,cy-401*s,cx+102*s,cy-431*s,cx+118*s,cy-451*s-ear);
+  p.bezierCurveTo(cx+126*s,cy-430*s,cx+125*s,cy-397*s,cx+118*s,cy-378*s);
+  // crown to rear ear
+  p.bezierCurveTo(cx+85*s,cy-391*s,cx+44*s,cy-393*s,cx+10*s,cy-379*s);
+  p.bezierCurveTo(cx-18*s,cy-389*s,cx-48*s,cy-411*s,cx-76*s,cy-429*s-ear*.45);
+  p.bezierCurveTo(cx-75*s,cy-398*s,cx-68*s,cy-367*s,cx-54*s,cy-342*s);
+  // neck + back
+  p.bezierCurveTo(cx-102*s,cy-316*s,cx-133*s,cy-284*s,cx-157*s,cy-239*s);
+  p.bezierCurveTo(cx-210*s,cy-164*s,cx-227*s,cy-67*s,cx-214*s,cy+36*s);
+  p.bezierCurveTo(cx-204*s,cy+115*s,cx-167*s,cy+180*s,cx-105*s,cy+210*s);
+  p.bezierCurveTo(cx-58*s,cy+234*s,cx+9*s,cy+237*s,cx+70*s+breath,cy+220*s);
+  // tail: long expressive sweep
+  p.bezierCurveTo(cx+155*s,cy+197*s,cx+248*s,cy+190*s,cx+290*s+tail,cy+229*s);
+  p.bezierCurveTo(cx+334*s+tail,cy+270*s,cx+287*s,cy+326*s,cx+215*s,cy+335*s);
+  p.bezierCurveTo(cx+129*s,cy+345*s,cx+34*s,cy+309*s,cx-55*s,cy+293*s);
+  p.bezierCurveTo(cx-126*s,cy+280*s,cx-175*s,cy+265*s,cx-183*s,cy+231*s);
+  // belly inward and front legs up
+  p.bezierCurveTo(cx-149*s,cy+256*s,cx-75*s,cy+263*s,cx-14*s,cy+241*s);
+  p.bezierCurveTo(cx+37*s,cy+222*s,cx+59*s,cy+184*s,cx+51*s,cy+137*s);
+  p.bezierCurveTo(cx+45*s,cy+99*s,cx+32*s,cy+62*s,cx+35*s,cy+15*s);
+  p.bezierCurveTo(cx+39*s,cy-43*s,cx+61*s,cy-87*s,cx+86*s,cy-112*s);
+  p.bezierCurveTo(cx+103*s,cy-130*s,cx+115*s,cy-147*s,cx+132*s+head,cy-176*s);
+  return p;
+}
+function render(now){
+  const t=(now-t0)/1000+phase;
+  g.clearRect(0,0,W,H);
+  const p=pathCat(t);
+  g.lineCap='round'; g.lineJoin='round';
+  // bloom passes all follow the SAME geometric line
+  g.globalCompositeOperation='lighter';
+  g.strokeStyle='rgba(255,128,24,.08)'; g.lineWidth=22; g.shadowColor='rgba(255,145,45,.5)'; g.shadowBlur=28; g.stroke(p);
+  g.strokeStyle='rgba(255,174,64,.20)'; g.lineWidth=9; g.shadowColor='rgba(255,176,70,.8)'; g.shadowBlur=18; g.stroke(p);
+  g.strokeStyle='rgba(255,207,118,.72)'; g.lineWidth=3.2; g.shadowColor='rgba(255,197,90,1)'; g.shadowBlur=10; g.stroke(p);
+  g.strokeStyle='rgba(255,247,215,.96)'; g.lineWidth=1.15; g.shadowBlur=4; g.stroke(p);
+  // a moving bright pulse on the same continuous line
+  const dash=72, gap=1450;
+  g.setLineDash([dash,gap]); g.lineDashOffset=-(t*180)%(dash+gap);
+  g.strokeStyle='rgba(255,255,235,.9)'; g.lineWidth=2.2; g.shadowColor='#ffd38a'; g.shadowBlur=18; g.stroke(p);
+  g.setLineDash([]); g.globalCompositeOperation='source-over';
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+addEventListener('pointerdown',()=>{ phase+=.9; },{passive:true});
+})();
+</script>
+</body></html>
