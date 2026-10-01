@@ -15,5 +15,5 @@ export function constrainPose(input={}){
 export function layoutForViewport(width,height){
   const safeW=Math.max(280,width), safeH=Math.max(520,height);
   const scale=Math.min(safeW/520,safeH/900);
-  return {cx:width*0.49,cy:height*0.50,scale};
+  return {cx:width*0.43,cy:height*0.50,scale};
 }
