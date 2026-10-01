@@ -21,15 +21,15 @@ export function buildTailRibbon(rig){
   const base=rig.tailBase;
   const controls=[
     {x:base.x,y:base.y},
-    {x:-28+sw*5,y:248+sw*4},
-    {x:58+sw*14,y:252+sw*10},
-    {x:154+sw*28,y:232+sw*18},
-    {x:230+sw*40,y:236+sw*30-curl*8},
-    {x:267+sw*46,y:278+sw*38-curl*18},
-    {x:230+sw*40,y:319+sw*30-curl*22},
-    {x:145+sw*26,y:334+sw*20-curl*16},
-    {x:57+sw*13,y:319+sw*10-curl*8},
-    {x:-18+sw*6,y:286+sw*4}
+    {x:-12+sw*4,y:252+sw*4},
+    {x:48+sw*10,y:255+sw*9},
+    {x:118+sw*20,y:239+sw*16},
+    {x:174+sw*29,y:242+sw*27-curl*8},
+    {x:205+sw*33,y:279+sw*34-curl*18},
+    {x:174+sw*29,y:316+sw*28-curl*22},
+    {x:108+sw*20,y:330+sw*18-curl*16},
+    {x:38+sw*10,y:316+sw*9-curl*8},
+    {x:-28+sw*5,y:288+sw*4}
   ];
 
   controls.forEach((q,i)=>{
